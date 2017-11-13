@@ -285,7 +285,7 @@ double flux(struct fluxParams *pars) // determine flux for a given t_obs
     e_e * e_e * e_e / (m_e * v_light * v_light) * cgs2mJy;
 }
 
-void lc_tophat(double *t, int Nt, double nu_obs, double *F,
+void lc_tophat(double *t, double *nu, double *F, int Nt,
                 double E_iso, double theta_h, struct fluxParams *pars)
 {
     int i;
@@ -293,10 +293,10 @@ void lc_tophat(double *t, int Nt, double nu_obs, double *F,
     set_jet_params(pars, E_iso, theta_h);
 
     for(i=0; i<Nt; i++)
-        F[i] = flux_cone(t[i], nu_obs, -1, -1, 0.0, theta_h, pars);
+        F[i] = flux_cone(t[i], nu[i], -1, -1, 0.0, theta_h, pars);
 }
 
-void lc_powerlaw(double *t, int Nt, double nu_obs, double *F,
+void lc_powerlaw(double *t, double *nu, double *F, int Nt,
                     double E_iso_core, double theta_h_core, 
                     double theta_h_wing, double beta,
                     double *theta_c_arr, double *E_iso_arr,
@@ -305,7 +305,7 @@ void lc_powerlaw(double *t, int Nt, double nu_obs, double *F,
     //Flux from a powerlaw jet, Eiso ~ theta^beta
 
     //Core
-    lc_tophat(t, Nt, nu_obs, F, E_iso_core, theta_h_core, pars);
+    lc_tophat(t, nu, F, Nt, E_iso_core, theta_h_core, pars);
 
     double Dtheta, theta_cone_hi, theta_cone_low, theta_h, theta_c, E_iso;
 
@@ -329,12 +329,12 @@ void lc_powerlaw(double *t, int Nt, double nu_obs, double *F,
         set_jet_params(pars, E_iso, theta_h);
 
         for(j=0; j<Nt; j++)
-            F[j] += flux_cone(t[j], nu_obs, -1, -1, theta_cone_low, 
+            F[j] += flux_cone(t[j], nu[j], -1, -1, theta_cone_low, 
                                 theta_cone_hi, pars);
     }
 }
 
-void lc_Gaussian(double *t, int Nt, double nu_obs, double *F,
+void lc_Gaussian(double *t, double *nu, double *F, int Nt,
                         double E_iso_core, 
                         double theta_h_core, double theta_h_wing,
                         double *theta_c_arr, double *E_iso_arr,
@@ -370,12 +370,12 @@ void lc_Gaussian(double *t, int Nt, double nu_obs, double *F,
         set_jet_params(pars, E_iso, theta_h);
 
         for(j=0; j<Nt; j++)
-            F[j] += flux_cone(t[j], nu_obs, -1, -1, theta_cone_low,
+            F[j] += flux_cone(t[j], nu[j], -1, -1, theta_cone_low,
                                 theta_cone_hi, pars);
     }
 }
 
-void lc_GaussianCore(double *t, int Nt, double nu_obs, double *F,
+void lc_GaussianCore(double *t, double *nu, double *F, int Nt,
                         double E_iso_core,
                         double theta_h_core, double theta_h_wing,
                         double *theta_c_arr, double *E_iso_arr,
@@ -384,7 +384,7 @@ void lc_GaussianCore(double *t, int Nt, double nu_obs, double *F,
     //Flux from a Gaussian jet, with a core.
 
     //Core
-    lc_tophat(t, Nt, nu_obs, F, E_iso_core, theta_h_core, pars);
+    lc_tophat(t, nu, F, Nt, E_iso_core, theta_h_core, pars);
 
     double Dtheta, theta_cone_hi, theta_cone_low, theta_h, theta_c, E_iso;
 
@@ -409,7 +409,7 @@ void lc_GaussianCore(double *t, int Nt, double nu_obs, double *F,
         set_jet_params(pars, E_iso, theta_h);
 
         for(j=0; j<Nt; j++)
-            F[j] += flux_cone(t[j], nu_obs, -1, -1, theta_cone_low,
+            F[j] += flux_cone(t[j], nu[j], -1, -1, theta_cone_low,
                                 theta_cone_hi, pars);
     }
 }
@@ -445,6 +445,42 @@ double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
     return Fboth;
 }
 
+void calc_flux_density(int jet_type, double *t, double *nu, double *Fnu, int N,
+                            double theta_obs, double E_iso_core,
+                            double theta_h_core, double theta_h_wing, 
+                            double n_0, double p, double epsilon_E,
+                            double epsilon_B, double ksi_N, double d_L)
+{
+    double Rt0 = 1.0e-2 * day2sec;
+    double Rt1 = 1.0e6 * day2sec;
+    int table_entries = 10000;
+    int res_cones = 20;
+
+    struct fluxParams fp;
+    setup_fluxParams(&fp, d_L, theta_obs, n_0, p, epsilon_E, epsilon_B,
+                        ksi_N, Rt0, Rt1, table_entries);
+
+    if(jet_type == _tophat)
+    {
+        lc_tophat(t, nu, Fnu, N, E_iso_core, theta_h_core, &fp);
+    }
+    else if(jet_type == _powerlaw)
+    {
+        lc_powerlaw(t, nu, Fnu, N, E_iso_core, theta_h_core, 
+                theta_h_wing, -2, NULL, NULL, res_cones, &fp);
+    }
+    else if(jet_type == _Gaussian)
+    {
+        lc_Gaussian(t, nu, Fnu, N, E_iso_core, theta_h_core, 
+                    theta_h_wing, NULL, NULL, res_cones, &fp);
+    }
+    else if(jet_type == _Gaussian_core)
+    {
+        lc_GaussianCore(t, nu, Fnu, N, E_iso_core, theta_h_core, 
+                    theta_h_wing, NULL, NULL, res_cones, &fp);
+    }
+    free_fluxParams(&fp);
+}
 ///////////////////////////////////////////////////////////////////////////////
 
 void setup_fluxParams(struct fluxParams *pars, double d_L, double theta_obs,

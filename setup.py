@@ -17,7 +17,9 @@ inc.append(gsl_dir + "/include")
 libs = ["gsl"]
 libdirs = [gsl_dir + "/lib"]
 
-module = Extension("_grbpy", ["grbpy/_grbpy.c"], include_dirs=inc,
+sources = ["grbpy/_grbpy.c", "grbpy/offaxis_struct_funcs.c"]
+
+module = Extension("_grbpy", sources=sources, include_dirs=inc,
                         libraries=libs, library_dirs=libdirs)
 
 setup(

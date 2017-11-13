@@ -92,5 +92,89 @@ static PyObject *error_out(PyObject *m)
 
 static PyObject *grbpy_fluxDensity(PyObject *self, PyObject *args)
 {
-    Py_RETURN_NONE;
+    PyObject *t_obj = NULL;
+    PyObject *nu_obj = NULL;
+
+    int jet_type;
+    double theta_obs, E_iso_core, theta_h_core, theta_h_wing, n_0,
+           p, epsilon_E, epsilon_B, ksi_N, d_L;
+
+    //Parse Arguments
+    if(!PyArg_ParseTuple(args, "OOidddddddddd", &t_obj, &nu_obj, &jet_type,
+                &theta_obs, &E_iso_core, &theta_h_core, &theta_h_wing,
+                &n_0, &p, &epsilon_E, &epsilon_B, &ksi_N, &d_L))
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
+        return NULL;
+    }
+
+    //Grab NUMPY arrays
+    PyArrayObject *t_arr;
+    PyArrayObject *nu_arr;
+
+    t_arr = (PyArrayObject *) PyArray_FROM_OTF(t_obj, NPY_DOUBLE,
+                                                NPY_ARRAY_IN_ARRAY);
+    nu_arr = (PyArrayObject *) PyArray_FROM_OTF(nu_obj, NPY_DOUBLE,
+                                                NPY_ARRAY_IN_ARRAY);
+
+    if(t_arr == NULL || nu_arr == NULL)
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Could not read input arrays.");
+        Py_XDECREF(t_arr);
+        Py_XDECREF(nu_arr);
+        return NULL;
+    }
+
+    int t_ndim = (int) PyArray_NDIM(t_arr);
+    int nu_ndim = (int) PyArray_NDIM(nu_arr);
+
+    if(t_ndim != 1 || nu_ndim != 1)
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Arrays must be 1-D.");
+        Py_DECREF(t_arr);
+        Py_DECREF(nu_arr);
+        return NULL;
+    }
+
+    int N = (int)PyArray_DIM(t_arr, 0);
+    int Nnu = (int)PyArray_DIM(nu_arr, 0);
+
+    if(N != Nnu)
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Arrays must be same size.");
+        Py_DECREF(t_arr);
+        Py_DECREF(nu_arr);
+        return NULL;
+    }
+
+    double *t = (double *)PyArray_DATA(t_arr);
+    double *nu = (double *)PyArray_DATA(nu_arr);
+
+    //Allocate output array
+
+    npy_intp dims[1] = {N};
+    PyObject *Fnu_obj = PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+
+    if(Fnu_obj == NULL)
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Could not make flux array.");
+        Py_DECREF(t_arr);
+        Py_DECREF(nu_arr);
+        return NULL;
+    }
+    double *Fnu = PyArray_DATA((PyArrayObject *) Fnu_obj);
+
+    // Calculate the flux!
+    calc_flux_density(jet_type, t, nu, Fnu, N, theta_obs, E_iso_core, 
+                        theta_h_core, theta_h_wing, n_0, p, epsilon_E, 
+                        epsilon_B, ksi_N, d_L);
+
+    // Clean up!
+    Py_DECREF(t_arr);
+    Py_DECREF(nu_arr);
+
+    //Build output
+    PyObject *ret = Py_BuildValue("N", Fnu_obj);
+    
+    return ret;
 }

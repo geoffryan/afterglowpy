@@ -93,23 +93,28 @@ double flux(struct fluxParams *pars); // determine flux for a given t_obs
 double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
                     double theta_cone_low, double theta_cone_hi,
                     struct fluxParams *pars);
-void lc_tophat(double *t, int Nt, double nu_obs, double *F,
+void lc_tophat(double *t, double *nu_obs, double *F, int Nt,
                 double E_iso, double theta_h, struct fluxParams *pars);
-void lc_powerlaw(double *t, int Nt, double nu_obs, double *F,
+void lc_powerlaw(double *t, double *nu_obs, double *F, int Nt,
                     double E_iso_core, double theta_h_core, 
                     double theta_h_wing, double beta,
                     double *theta_c_arr, double *E_iso_arr,
                     int res_cones, struct fluxParams *pars);
-void lc_Gaussian(double *t, int Nt, double nu_obs, double *F,
+void lc_Gaussian(double *t, double *nu_obs, double *F, int Nt,
                         double E_iso_core, 
                         double theta_h_core, double theta_h_wing,
                         double *theta_c_arr, double *E_iso_arr,
                         int res_cones, struct fluxParams *pars);
-void lc_GaussianCore(double *t, int Nt, double nu_obs, double *F,
+void lc_GaussianCore(double *t, double *nu_obs, double *F, int Nt,
                         double E_iso_core,
                         double theta_h_core, double theta_h_wing,
                         double *theta_c_arr, double *E_iso_arr,
                         int res_cones, struct fluxParams *pars);
+void calc_flux_density(int jet_type, double *t, double *nu, double *Fnu, int N,
+                            double theta_obs, double E_iso_core,
+                            double theta_h_core, double theta_h_wing, 
+                            double n_0, double p, double epsilon_E,
+                            double epsilon_B, double ksi_N, double d_L);
 
 void setup_fluxParams(struct fluxParams *pars,
                     double d_L,
