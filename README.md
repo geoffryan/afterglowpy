@@ -15,3 +15,9 @@ To install
 ```bash
 $ python setup.py install
 ```
+
+To grab data from the Open Kilonova Catalog (OKC), ensure `json` and the security setup of `requests` are installed in your local Python environment
+
+```bash
+$ pip install requests[security] json
+```
