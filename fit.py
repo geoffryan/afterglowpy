@@ -130,7 +130,8 @@ def getFitForm(Y):
     X[logVars] = np.log10(X[logVars])
     return X
 
-def sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps, nburn, label):
+def sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps, nburn, label,
+            restart=False):
 
     filename = label+".h5"
     ndim = len(fitVars)
@@ -139,54 +140,65 @@ def sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps, nburn, label):
                 X0, fitVars, bounds[fitVars],
                 data[0], data[1], data[2], data[3], False)
 
-    x0 = X0[fitVars]
-    noiseFac = 0.02
-    p0 = [x0*(1+noiseFac*np.random.randn(ndim))
-                                for i in range(nwalkers)]
-
     nbuf = 10
     chainBuf = np.empty((nwalkers, nbuf, ndim))
     lnprobabilityBuf = np.empty((nwalkers, nbuf))
 
+    if not restart:
+        f = h5.File(filename, "w")
+        f.create_dataset("fitVars", data=fitVars)
+        f.create_dataset("t", data=data[0])
+        f.create_dataset("nu", data=data[1])
+        f.create_dataset("Fnu", data=data[2])
+        f.create_dataset("eFnu", data=data[3])
+        f.create_dataset("inst", data=data[4].astype("S32"))
+        f.create_dataset("X0", data=X0)
+        f.create_dataset("nburn", data=np.array([nburn]))
+        f.create_dataset("jetType", data=np.array([jetType]))
+        f.create_dataset("labels", data=labelsAll.astype("S32"))
+        f.create_dataset("chain", (nwalkers, nsteps, ndim), dtype=np.float)
+        f.create_dataset("lnprobability", (nwalkers, nsteps), dtype=np.float)
+        f.create_dataset("steps_taken", data=np.array([1]))
+        f.close()
+        steps_taken = 0
+    else:
+        f = h5.File(filename, "r")
+        steps_taken = f['steps_taken'][0]
+        p0 = f['chain'][:,steps_taken-1,:]
+        f.close()
 
-    f = h5.File(filename, "w")
-    f.create_dataset("fitVars", data=fitVars)
-    f.create_dataset("t", data=data[0])
-    f.create_dataset("nu", data=data[1])
-    f.create_dataset("Fnu", data=data[2])
-    f.create_dataset("eFnu", data=data[3])
-    f.create_dataset("inst", data=data[4].astype("S32"))
-    f.create_dataset("X0", data=X0)
-    f.create_dataset("jetType", data=np.array([jetType]))
-    f.create_dataset("labels", data=labelsAll.astype("S32"))
-    f.create_dataset("chain", (nwalkers, nsteps, ndim), dtype=np.float)
-    f.create_dataset("lnprobability", (nwalkers, nsteps), dtype=np.float)
-    f.create_dataset("steps_taken", data=np.array([1]))
-    f.close()
+    if steps_taken == 0:
+        x0 = X0[fitVars]
+        noiseFac = 0.02
+        p0 = [x0*(1+noiseFac*np.random.randn(ndim))
+                                    for i in range(nwalkers)]
 
     sampler = em.EnsembleSampler(nwalkers, ndim, logpost, args=lpargs)
 
     j=0
     k=0
-    for i, result in enumerate(sampler.sample(p0, iterations=nsteps, 
-                                                storechain=False)):
+    for i, result in enumerate(sampler.sample(
+                        p0, iterations=nsteps-steps_taken, storechain=False)):
         chainBuf[:,j,:] = result[0]
         lnprobabilityBuf[:,j] = result[1]
         if j == nbuf-1:
+            k0 = steps_taken + k*nbuf
             f = h5.File(filename, "a")
-            f['chain'][:,k*nbuf:(k+1)*nbuf,:] = chainBuf[:,:,:]
-            f['lnprobability'][:,k*nbuf:(k+1)*nbuf] = lnprobabilityBuf[:,:]
-            f['steps_taken'][0] = (k+1)*nbuf
+            f['chain'][:,k0:k0+nbuf,:] = chainBuf[:,:,:]
+            f['lnprobability'][:,k0:k0+nbuf] = lnprobabilityBuf[:,:]
+            f['steps_taken'][0] = k0+nbuf
             f.close()
             k += 1
             j = 0
         else:
             j += 1
-        sys.stdout.write("\r{0:5.1%}".format(float(i)/nsteps))
+        sys.stdout.write("\r{0:5.1%}".format(float(i+steps_taken)/nsteps))
         sys.stdout.flush()
+    k0 = steps_taken + k*nbuf
     f = h5.File(filename, "a")
-    f['chain'][:,k*nbuf:k*nbuf+j,:] = chainBuf[:,:j,:]
-    f['lnprobability'][:,k*nbuf:k*nbuf+j] = lnprobabiliyyBuf[:,:j]
+    f['chain'][:,k0:k0+j,:] = chainBuf[:,:j,:]
+    f['lnprobability'][:,k0:k0+j] = lnprobabilityBuf[:,:j]
+    f['steps_taken'][0] = k0+j
     f.close()
     sys.stdout.write("\r{0:5.1%}\n".format(1.0))
     sys.stdout.flush()
@@ -294,23 +306,52 @@ def parseParfile(parfile):
 
 
 def runFit(parfile):
-    
-    label, nwalkers, nburn, nsteps, fitVars, jetType, X0, datafile = parseParfile(parfile)
 
-    dataExt = datafile.split(".")[-1]
-    if dataExt == "json":
-        T, NU, FNU, FERR, INST = getDataOKC(datafile)
+    parExt = parfile.split(".")[-1]
+    if parExt == "h5":
+        restart = True
+        label = ".".join(parfile.split(".")[:-1])
+        f = h5.File(parfile, "r")
+        T = f['t'][...]
+        NU = f['nu'][...]
+        FNU = f['Fnu'][...]
+        FERR = f['eFnu'][...]
+        INST = f['inst'][...]
+        nwalkers = f['chain'].shape[0]
+        nsteps = f['chain'].shape[1]
+        ndim = f['chain'].shape[2]
+        X0 = f['X0'][...]
+        jetType = f['jetType'][0]
+        fitVars = f['fitVars'][...]
+        nburn = f['nburn'][0]
+        f.close()
+
     else:
-        T, NU, FNU, FERR, INST = getDataTxt(datafile)
+        restart = False
+        label, nwalkers, nburn, nsteps, fitVars, jetType, X0, datafile = parseParfile(parfile)
+        ndim = len(fitVars)
+
+        dataExt = datafile.split(".")[-1]
+        if dataExt == "json":
+            T, NU, FNU, FERR, INST = getDataOKC(datafile)
+        else:
+            T, NU, FNU, FERR, INST = getDataTxt(datafile)
 
     data = (T, NU, FNU, FERR, INST)
     N = len(T)
     
     sampler = sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps,
-                        nburn, label)
+                        nburn, label, restart=restart)
 
     print("Plotting chain")
-    plotChain(sampler.chain, labelsAll[fitVars], fitVars)
+    f = h5.File(label+".h5", "r")
+    chain = f['chain'][...]
+    lnprobability = f['lnprobability'][...]
+    flatchain = chain.reshape((-1,ndim))
+    flatlnprobability = lnprobability.reshape((-1,))
+    f.close()
+    plotChain(chain, labelsAll[fitVars], fitVars)
+
 
     print("Plotting final ensemble")
 
@@ -325,7 +366,7 @@ def runFit(parfile):
 
     X = X0.copy()
     for i in range(nwalkers):
-        X[fitVars] = sampler.chain[i,-1,:]
+        X[fitVars] = chain[i,-1,:]
         Y = getEvalForm(X)
         for v in nus:
             nu[:] = v
@@ -339,11 +380,11 @@ def runFit(parfile):
 
     print("Calculating best")
 
-    imax = np.argmax(sampler.flatlnprobability)
-    print("best: " + str(sampler.flatchain[imax]))
+    imax = np.argmax(flatlnprobability)
+    print("best: " + str(flatchain[imax]))
 
     X1 = X0.copy()
-    X1[fitVars] = sampler.flatchain[imax]
+    X1[fitVars] = flatchain[imax]
     Y1 = getEvalForm(X1)
 
     print("Plotting Best")
