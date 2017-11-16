@@ -131,7 +131,7 @@ def getFitForm(Y):
     return X
 
 def sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps, nburn, label,
-            restart=False):
+            threads, restart=False):
 
     filename = label+".h5"
     ndim = len(fitVars)
@@ -159,6 +159,7 @@ def sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps, nburn, label,
         f.create_dataset("chain", (nwalkers, nsteps, ndim), dtype=np.float)
         f.create_dataset("lnprobability", (nwalkers, nsteps), dtype=np.float)
         f.create_dataset("steps_taken", data=np.array([1]))
+        f.create_dataset("threads", data=np.array([threads]))
         f.close()
         steps_taken = 0
     else:
@@ -173,7 +174,8 @@ def sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps, nburn, label,
         p0 = [x0*(1+noiseFac*np.random.randn(ndim))
                                     for i in range(nwalkers)]
 
-    sampler = em.EnsembleSampler(nwalkers, ndim, logpost, args=lpargs)
+    sampler = em.EnsembleSampler(nwalkers, ndim, logpost, args=lpargs,
+                                    threads=threads)
 
     j=0
     k=0
@@ -286,6 +288,7 @@ def parseParfile(parfile):
     nburn = int(getPar(words, "nburn"))
     nsteps = int(getPar(words, "nsteps"))
     nwalkers = int(getPar(words, "nwalkers"))
+    threads = int(getPar(words, "threads"))
     fitVars = [int(x) for x in getPars(words, "fitVars")]
     jetType = int(getPar(words, "jetType"))
     thetaObs = float(getPar(words, "theta_obs"))
@@ -302,7 +305,7 @@ def parseParfile(parfile):
     Y0 = np.array([thetaObs, Eiso, thetaJ, thetaW, n0, p, epsE, epsB, xiN, dL])
     X0 = getFitForm(Y0)
 
-    return label, nwalkers, nburn, nsteps, fitVars, jetType, X0, datafile
+    return label, nwalkers, nburn, nsteps, fitVars, jetType, X0, threads, datafile
 
 
 def runFit(parfile):
@@ -324,11 +327,12 @@ def runFit(parfile):
         jetType = f['jetType'][0]
         fitVars = f['fitVars'][...]
         nburn = f['nburn'][0]
+        threads = f['threads'][0]
         f.close()
 
     else:
         restart = False
-        label, nwalkers, nburn, nsteps, fitVars, jetType, X0, datafile = parseParfile(parfile)
+        label, nwalkers, nburn, nsteps, fitVars, jetType, X0, threads, datafile = parseParfile(parfile)
         ndim = len(fitVars)
 
         dataExt = datafile.split(".")[-1]
@@ -341,7 +345,9 @@ def runFit(parfile):
     N = len(T)
     
     sampler = sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps,
-                        nburn, label, restart=restart)
+                        nburn, label, threads, restart=restart)
+
+    return
 
     print("Plotting chain")
     f = h5.File(label+".h5", "r")
