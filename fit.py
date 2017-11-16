@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 import numpy as np
 import scipy.optimize as opt
@@ -6,59 +7,72 @@ import h5py as h5
 import emcee as em
 import corner
 import grbpy as grb
-import getOKCData as data
+import getOKCData as OKCdata
 
-lvars = [1,4,6,7,8,9]
-labels_all = np.array([r"$\theta_{obs}$", r"$E_{iso}$", r"$\theta_j$",
+logVars = [1,4,6,7,8,9]
+labelsAll = np.array([r"$\theta_{obs}$", r"$E_{iso}$", r"$\theta_j$",
                 r"$\theta_w$", r"$n_0$", r"$p$", r"$\epsilon_e$",
                 r"$\epsilon_B$", r"$\xi_N$", r"$d_L$"] )
+day = 86400.0
 
-def logpost(x, logprior, loglike, jetType, fluxArg, freeVars, bounds,
+bounds = np.array([[0.0, 0.5*np.pi], [45.0, 57.0], [0.01, 0.5*np.pi],
+                    [0.0, 0.5*np.pi], [-10.0, 10.0], [1.0, 5.0], [-10.0, 0.0],
+                    [-10.0, 0.0], [-10.0, 0.0], [20, 40]])
+
+printLP = False
+
+def logpost(x, logprior, loglike, jetType, fluxArg, fitVars, bounds,
                 tDat, nuDat, FnuDat, dFnuDat, opt=False):
 
-    arg = fluxArg.copy()
-    arg[freeVars] = x[:]
-    arg[lvars] = np.power(10.0, arg[lvars])
+    X = fluxArg.copy()
+    X[fitVars] = x[:]
 
-    lp = logprior(jetType, bounds, *arg)
-
-    if bounds is not None:
-        if (x<bounds[:,0]).any() or (x>bounds[:,1]).any():
-            lp = -np.inf
+    lp = logprior(x, jetType, X, fitVars, bounds)
 
     if lp > -np.inf:
-        lp += loglike(jetType, arg, tDat, nuDat, FnuDat, dFnuDat)
+        lp += loglike(jetType, X, tDat, nuDat, FnuDat, dFnuDat)
 
-    print(str(x) + ": " + str(lp))
+    if printLP:
+        print(str(x) + ": " + str(lp))
 
     if(opt):
         lp *= -1.0
 
     return lp
 
-def chi2(jetType, arg, tDat, nuDat, FnuDat, dFnuDat):
-    argtup = tuple(arg)
-    Fnu = grb.fluxDensity(tDat, nuDat, jetType, *argtup)
-    x = (Fnu-FnuDat) / dFnuDat
-    x2 = (x*x).sum()
+def chi2(jetType, X, tDat, nuDat, FnuDat, dFnuDat):
+    Y = getEvalForm(X)
+    Fnu = grb.fluxDensity(tDat, nuDat, jetType, *Y)
+    chi = (Fnu-FnuDat) / dFnuDat
+    chi2 = (chi*chi).sum()
 
-    return x2 
+    return chi2 
 
-def logPriorFlat(jetType, bounds, *args):
-    return 0.0
+def logPriorFlat(x, jetType, X, fitVars, bounds):
+
+    lp = 0.0
+
+    if bounds is not None:
+        if (x<bounds[:,0]).any() or (x>bounds[:,1]).any():
+            lp = -np.inf
+
+    # Gaussian+Core, Wings must be larger than core.
+    if jetType == 2 and X[3] < X[2]:
+        lp = -np.inf
+
+    return lp
 
 
-def logLikeChi2(jetType, arg, tDat, nuDat, FnuDat, dFnuDat):
+def logLikeChi2(jetType, X, tDat, nuDat, FnuDat, dFnuDat):
 
-    ch2 = chi2(jetType, arg, tDat, nuDat, FnuDat, dFnuDat)
+    ch2 = chi2(jetType, X, tDat, nuDat, FnuDat, dFnuDat)
 
     return -0.5*ch2
 
-def plotChain(chain, fitPars):
-    labels = labels_all[fitPars]
-    ndim = len(fitPars)
+def plotChain(chain, labels, fitVars):
     nwalkers = chain.shape[0]
     nsteps = chain.shape[1]
+    ndim = chain.shape[2]
 
     for i in range(ndim):
         fig, ax = plt.subplots(1,1)
@@ -67,7 +81,7 @@ def plotChain(chain, fitPars):
         ax.set_xlabel("steps")
         ax.set_ylabel(labels[i])
         fig.tight_layout()
-        fig.savefig("trace_" + str(fitPars[i]) + ".png")
+        fig.savefig("trace_" + str(fitVars[i]) + ".png")
         plt.close(fig)
 
     samples = chain[:,:,:].reshape((-1,ndim))
@@ -76,192 +90,283 @@ def plotChain(chain, fitPars):
     fig.savefig("corner_all.png")
     plt.close(fig)
 
-    if nwalkers > 20:
-        for i in range(nsteps):
-            fig = corner.corner(chain[:,i,:], labels=labels)
-            fig.savefig("corner_{0:03d}.png".format(i))
-            plt.close(fig)
+    #if nwalkers > 20:
+    #    for i in range(nsteps):
+    #        fig = corner.corner(chain[:,i,:], labels=labels)
+    #        fig.savefig("corner_{0:03d}.png".format(i))
+    #        plt.close(fig)
     
-def plot_curve(ax, t, FNU, Nt, Nnu, alpha=1.0):
+def plot_curve(ax, t, Fnu, color=None, alpha=1.0):
 
     colors = ['k', 'b', 'g', 'r']
 
-    for i in range(Nnu):
-        ic = i % len(colors)
-        ax.plot(t, Fnu[i*Nt:(i+1)*Nt], color=colors[ic], ls='-', 
-                    marker='', alpha=alpha)
-    ax.set_xscale("log")
-    ax.set_yscale("log")
-    ax.set_xlabel(r"$t$ (s)")
-    ax.set_ylabel(r"$F_\nu$ (mJy)")
+    if color is None:
+        color = 'k'
+
+    ax.plot(t/day, Fnu, color=color, ls='-', marker='', alpha=alpha)
 
 
-def plot_data(ax, T, FNU, FERR):
+def plot_data(ax, t, Fnu, Ferr, inst):
 
-    real = FNU>0.0
-    lim = FNU<=0.0
+    real = Fnu>0.0
+    lim = Fnu<=0.0
 
-    ax.errorbar(T[real], FNU[real], FERR[real], color='b', ls='')
-    ax.plot(T[lim], FERR[lim], color='b', ls='', marker='v',
+    ax.errorbar(t[real]/day, Fnu[real], Ferr[real], color='b', ls='')
+    ax.plot(t[lim]/day, 3*Ferr[lim], color='b', ls='', marker='v',
                                         mew=0)
 
     ax.set_xscale("log")
     ax.set_yscale("log")
-    ax.set_xlabel(r"$t$ (s)")
+    ax.set_xlabel(r"$t$ (d)")
     ax.set_ylabel(r"$F_\nu$ (mJy)")
 
+def getEvalForm(X):
+    Y = X.copy()
+    Y[logVars] = np.power(10.0, Y[logVars])
+    return Y
 
-if __name__ == "__main__":
+def getFitForm(Y):
+    X = Y.copy()
+    X[logVars] = np.log10(X[logVars])
+    return X
 
-    t0 = 1.0e4
-    t1 = 1.0e7
-    Nt = 30
+def sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps, nburn, label):
 
-    nu0 = 6.0e9
-    nu1 = 1.0e18
-    Nnu = 2
+    filename = label+".h5"
+    ndim = len(fitVars)
 
-    t = np.logspace(np.log10(t0), np.log10(t1), num=Nt, base=10.0)
-    nu = np.logspace(np.log10(nu0), np.log10(nu1), num=Nnu, 
-                        base=10.0)
-
-    N = Nt*Nnu
-
-    TT = np.empty(N)
-    NNU = np.empty(N)
-    for i in range(Nnu):
-        TT[i*Nt:(i+1)*Nt] = t[:]
-        NNU[i*Nt:(i+1)*Nt] = nu[i]
-
-    jetType = -1
-    theta_obs = 0.5
-    E_iso = 1.0e50
-    theta_h = 0.2
-    theta_h_wing = 0.2
-    n0 = 1.0e-3
-    p = 2.2
-    epsE = 0.1
-    epsB = 0.01
-    xiN = 1.0
-    d_L = 1.23e26
-
-    defaults = np.array([0.5, 1.0e50, 0.2, 0.2, 1.0e-3, 2.2, 
-                            0.1, 0.01, 1.0, 1.23e26])
-    defaultPars = defaults.copy()
-    defaultPars[lvars] = np.log10(defaultPars[lvars])
-
-    errFac = 0.2
-
-    #fitPars = [0,1,2,5,7]
-    fitPars = [0,1,2,4,5,6,7]
-
-    bounds = np.array([
-                    [0.0, 0.5*np.pi],
-                    [45.0, 57.0],
-                    [0.01, 0.5*np.pi],
-                    [0.0, 0.5*np.pi],
-                    [-10.0, 10.0],
-                    [1.0, 5.0],
-                    [-10.0, 0.0],
-                    [-10.0, 0.0],
-                    [-10.0, 0.0],
-                    [20, 40]])
-
-    argtup = (theta_obs, E_iso, theta_h, theta_h_wing, n0, p, epsE,
-            epsB, xiN, d_L)
-    args = np.array(argtup)
-    args[lvars] = np.log10(args[lvars])
-
-    
-    dat = data.OKCData("GW170817")
-    tR, nuR, FnuR, eFnuR = dat.getRadio()
-    tX, nuX, FnuX, eFnuX = dat.getXRay()
-
-    T = np.concatenate((tR, tX))
-    NU = np.concatenate((nuR, nuX))
-    FNU = np.concatenate((FnuR, FnuX))
-    FERR = np.concatenate((eFnuR, eFnuX))
-
-    N = len(T)
-
-    ndim = len(fitPars)
-    fitArgs = np.array(args)
-
-    print("Truth: " + str(fitArgs[fitPars]))
-    fitArgs[fitPars] = defaultPars[fitPars]
-
-    #fitArgs[fitPars] *= 1.0 + errFac*(2*np.random.rand(ndim)-1)
-    FNU *= 1.0 + errFac*np.random.randn(N)
-   
     lpargs=(logPriorFlat, logLikeChi2, jetType, 
-                fitArgs, fitPars, bounds[fitPars], T, NU, FNU, FERR, 
-                False)
-    """
-    res = opt.minimize(logpost, fitArgs[fitPars],
-                    args=lpargs,
-                    bounds=bounds[fitPars])
+                X0, fitVars, bounds[fitVars],
+                data[0], data[1], data[2], data[3], False)
 
-    print(res)
-
-    fitArgs[fitPars] = res.x[:]
-    """
-
-    nwalkers = 100
-    nsteps = 500
-    x0 = fitArgs[fitPars]
+    x0 = X0[fitVars]
     noiseFac = 0.02
     p0 = [x0*(1+noiseFac*np.random.randn(ndim))
                                 for i in range(nwalkers)]
-    sampler = em.EnsembleSampler(nwalkers, ndim, logpost,
-                                    args=lpargs)
-    for i, result in enumerate(sampler.sample(p0, iterations=nsteps)):
-        sys.stdout.write("\r{0:5.1%}    ".format(float(i)/nsteps))
-    sys.stdout.write("\r{0:5.1%}    ".format(1.0))
-    print()
 
-    f = h5.File("samples.h5", "w")
-    f.create_dataset("chain", data=sampler.chain)
+    nbuf = 10
+    chainBuf = np.empty((nwalkers, nbuf, ndim))
+    lnprobabilityBuf = np.empty((nwalkers, nbuf))
+
+
+    f = h5.File(filename, "w")
+    f.create_dataset("fitVars", data=fitVars)
+    f.create_dataset("t", data=data[0])
+    f.create_dataset("nu", data=data[1])
+    f.create_dataset("Fnu", data=data[2])
+    f.create_dataset("eFnu", data=data[3])
+    f.create_dataset("inst", data=data[4].astype("S32"))
+    f.create_dataset("X0", data=X0)
+    f.create_dataset("jetType", data=np.array([jetType]))
+    f.create_dataset("labels", data=labelsAll.astype("S32"))
+    f.create_dataset("chain", (nwalkers, nsteps, ndim), dtype=np.float)
+    f.create_dataset("lnprobability", (nwalkers, nsteps), dtype=np.float)
+    f.create_dataset("steps_taken", data=np.array([1]))
     f.close()
 
-    print("best: " + str(sampler.flatchain[i]))
+    sampler = em.EnsembleSampler(nwalkers, ndim, logpost, args=lpargs)
+
+    j=0
+    k=0
+    for i, result in enumerate(sampler.sample(p0, iterations=nsteps, 
+                                                storechain=False)):
+        chainBuf[:,j,:] = result[0]
+        lnprobabilityBuf[:,j] = result[1]
+        if j == nbuf-1:
+            f = h5.File(filename, "a")
+            f['chain'][:,k*nbuf:(k+1)*nbuf,:] = chainBuf[:,:,:]
+            f['lnprobability'][:,k*nbuf:(k+1)*nbuf] = lnprobabilityBuf[:,:]
+            f['steps_taken'][0] = (k+1)*nbuf
+            f.close()
+            k += 1
+            j = 0
+        else:
+            j += 1
+        sys.stdout.write("\r{0:5.1%}".format(float(i)/nsteps))
+        sys.stdout.flush()
+    f = h5.File(filename, "a")
+    f['chain'][:,k*nbuf:k*nbuf+j,:] = chainBuf[:,:j,:]
+    f['lnprobability'][:,k*nbuf:k*nbuf+j] = lnprobabiliyyBuf[:,:j]
+    f.close()
+    sys.stdout.write("\r{0:5.1%}\n".format(1.0))
+    sys.stdout.flush()
+    
+    return sampler
+
+def getDataTxt(datafile):
+
+    t, nu, Fnu, Ferr, inst = np.loadtxt(datafile, unpack=True)
+    return t, nu, Fnu, Ferr, inst
+
+def getDataOKC(datafile):
+
+    dat = OKCdata.OKCData("GW170817")
+    tR, nuR, FnuR, eFnuR, instR = dat.getRadio()
+    tX, nuX, FnuX, eFnuX, instX = dat.getXRay()
+
+    realR = FnuR > 0.0
+    tR = tR[realR]
+    nuR = nuR[realR]
+    FnuR = FnuR[realR]
+    eFnuR = eFnuR[realR]
+    instR = instR[realR]
+
+    realX = FnuX > 0.0
+    limX = FnuX <= 0.0
+    bestLim = eFnuX[limX].min()
+    keep = realX + (limX * (eFnuX<=1.1*bestLim))
+    tX = tX[keep]
+    nuX = nuX[keep]
+    FnuX = FnuX[keep]
+    eFnuX = eFnuX[keep]
+    instX = instX[keep]
+
+    tA = np.array([9. * 86400.0])
+    nuA = np.array([nuX.mean()])
+    FnuA = np.array([4.e-15 * 3.8e7])
+    eFnuA = np.array([1.1e-15 * 3.8e7])
+    instA = np.array(['Chandra'])
+
+    t = np.concatenate((tR, tX, tA))
+    nu = np.concatenate((nuR, nuX, nuA))
+    Fnu = np.concatenate((FnuR, FnuX, FnuA))
+    Ferr = np.concatenate((eFnuR, eFnuX, eFnuA))
+    inst = np.concatenate((instR, instX, instA)).astype("S32")
+
+    return t, nu, Fnu, Ferr, inst
+
+def getPar(words, name):
+
+    for line in words:
+        if len(line) > 0 and line[0] != '#':
+            if line[0] == name:
+                return line[1]
+
+    raise KeyError("Parameter ("+name+") not in parfile")
+
+def getPars(words, name):
+
+    for line in words:
+        if len(line) > 0 and line[0] != '#':
+            if line[0] == name:
+                pars = []
+                for val in line[1:]:
+                    if val[0] != '#':
+                        pars.append(val)
+                    else:
+                        break
+                return pars
+
+    raise KeyError("Parameter ("+name+") not in parfile")
+
+def parseParfile(parfile):
+
+    f = open(parfile, "r")
+    lines = f.readlines()
+    f.close()
+
+    words = []
+    for line in lines:
+        words.append(line.split())
+
+    label = getPar(words, "label")
+    datafile = getPar(words, "datafile")
+    nburn = int(getPar(words, "nburn"))
+    nsteps = int(getPar(words, "nsteps"))
+    nwalkers = int(getPar(words, "nwalkers"))
+    fitVars = [int(x) for x in getPars(words, "fitVars")]
+    jetType = int(getPar(words, "jetType"))
+    thetaObs = float(getPar(words, "theta_obs"))
+    Eiso = float(getPar(words, "E_iso_core"))
+    thetaJ = float(getPar(words, "theta_h_core"))
+    thetaW = float(getPar(words, "theta_h_wing"))
+    n0 = float(getPar(words, "n_0"))
+    p = float(getPar(words, "p"))
+    epsE = float(getPar(words, "epsilon_E"))
+    epsB = float(getPar(words, "epsilon_B"))
+    xiN = float(getPar(words, "ksi_N"))
+    dL = float(getPar(words, "d_L"))
+
+    Y0 = np.array([thetaObs, Eiso, thetaJ, thetaW, n0, p, epsE, epsB, xiN, dL])
+    X0 = getFitForm(Y0)
+
+    return label, nwalkers, nburn, nsteps, fitVars, jetType, X0, datafile
+
+
+def runFit(parfile):
+    
+    label, nwalkers, nburn, nsteps, fitVars, jetType, X0, datafile = parseParfile(parfile)
+
+    dataExt = datafile.split(".")[-1]
+    if dataExt == "json":
+        T, NU, FNU, FERR, INST = getDataOKC(datafile)
+    else:
+        T, NU, FNU, FERR, INST = getDataTxt(datafile)
+
+    data = (T, NU, FNU, FERR, INST)
+    N = len(T)
+    
+    sampler = sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps,
+                        nburn, label)
 
     print("Plotting chain")
-    plotChain(sampler.chain, fitPars)
+    plotChain(sampler.chain, labelsAll[fitVars], fitVars)
 
     print("Plotting final ensemble")
+
+    t0 = 1.0*day
+    t1 = 300*day
+
+    t = np.logspace(np.log10(t0), np.log10(t1), base=10.0, num=200)
+    nu = np.empty(t.shape)
+    nus = [6.0e9, 1.0e18]
+
     fig, ax = plt.subplots(1,1)
+
+    X = X0.copy()
     for i in range(nwalkers):
-        fluxArgs = fitArgs.copy()
-        fluxArgs[fitPars] = sampler.chain[i,-1]
-        fluxArgs[lvars] = np.power(10.0, fluxArgs[lvars])
-        Fnu = grb.fluxDensity(TT, NNU, jetType, *fluxArgs)
-        plot_curve(ax, t, Fnu, Nt, Nnu, alpha=0.2)
-    plot_data(ax, T, FNU, FERR)
+        X[fitVars] = sampler.chain[i,-1,:]
+        Y = getEvalForm(X)
+        for v in nus:
+            nu[:] = v
+            Fnu = grb.fluxDensity(t, nu, jetType, *Y)
+            plot_curve(ax, t, Fnu, alpha=0.2)
+    plot_data(ax, T, FNU, FERR, INST)
+    ax.set_xlim(t0/day, t1/day)
+    ax.set_ylim(1.0e-9, 1.0e-1)
     fig.savefig("lc_dist.png")
     plt.close(fig)
 
     print("Calculating best")
-    i = np.argmax(sampler.flatlnprobability)
-    fitArgs[fitPars] = sampler.flatchain[i]
 
-    #fitArgs[fitPars] = args[fitPars]
+    imax = np.argmax(sampler.flatlnprobability)
+    print("best: " + str(sampler.flatchain[imax]))
 
-    fluxArgs = fitArgs.copy()
-    fluxArgs[lvars] = np.power(10.0, fluxArgs[lvars])
-
-    Fnu = grb.fluxDensity(TT, NNU, jetType, *fluxArgs)
+    X1 = X0.copy()
+    X1[fitVars] = sampler.flatchain[imax]
+    Y1 = getEvalForm(X1)
 
     print("Plotting Best")
+
     fig, ax = plt.subplots(1,1)
 
-    plot_curve(ax, t, Fnu, Nt, Nnu)
-    plot_data(ax, T, FNU, FERR)
-
-    ax.set_xscale("log")
-    ax.set_yscale("log")
-    ax.set_xlabel(r"$t$ (s)")
-    ax.set_ylabel(r"$F_\nu$ (mJy)")
+    for v in nus:
+        nu[:] = v
+        Fnu = grb.fluxDensity(t, nu, jetType, *Y1)
+        plot_curve(ax, t, Fnu)
+    plot_data(ax, T, FNU, FERR, INST)
+    ax.set_xlim(t0/day, t1/day)
+    ax.set_ylim(1.0e-9, 1.0e-1)
 
     fig.savefig("lc_best.png")
 
+
+if __name__ == "__main__":
+
+    if len(sys.argv) < 2:
+        print("Please provide at least one parameter file")
+
+    files = sys.argv[1:]
+    for file in files:
+        runFit(file)
 

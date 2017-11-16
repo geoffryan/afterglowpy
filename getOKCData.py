@@ -55,6 +55,7 @@ class OKCData:
         nu = np.empty(N, dtype=np.float)
         Fnu = np.empty(N, dtype=np.float)
         eFnu = np.empty(N, dtype=np.float)
+        inst = []
 
         for i,obj in enumerate(radioList):
             time = float(obj['time'])
@@ -92,8 +93,11 @@ class OKCData:
             nu[i] = freq
             Fnu[i] = flux
             eFnu[i] = eflux
+            inst.append(obj['instrument'])
         
-        return t, nu, Fnu, eFnu
+        inst = np.array(inst)
+
+        return t, nu, Fnu, eFnu, inst
 
     def getXRay(self):
 
@@ -105,6 +109,7 @@ class OKCData:
         nu = np.empty(N, dtype=np.float)
         Fnu = np.empty(N, dtype=np.float)
         eFnu = np.empty(N, dtype=np.float)
+        inst = []
 
         for i,obj in enumerate(xrayList):
             time = np.array([float(x) for x in obj['time']])
@@ -128,8 +133,8 @@ class OKCData:
                 en *= eV
 
             if obj['u_flux'] == 'ergs/s/cm^2':
-                flux *= 1.0e23
-                eflux *= 1.0e23
+                flux *= 1.0e26
+                eflux *= 1.0e26
 
             freq = en/h
 
@@ -137,8 +142,11 @@ class OKCData:
             nu[i] = freq.mean()
             Fnu[i] = flux / (freq[1] - freq[0])
             eFnu[i] = eflux.mean() / (freq[1] - freq[0])
+            inst.append(obj['instrument'])
         
-        return t, nu, Fnu, eFnu
+        inst = np.array(inst)
+
+        return t, nu, Fnu, eFnu, inst
 
 def getUnique(lis):
 
@@ -152,8 +160,8 @@ if __name__ == "__main__":
 
     dat = OKCData("GW170817")
 
-    tR, nuR, FnuR, eFnuR = dat.getRadio()
-    tX, nuX, FnuX, eFnuX = dat.getXRay()
+    tR, nuR, FnuR, eFnuR, instR = dat.getRadio()
+    tX, nuX, FnuX, eFnuX, instX = dat.getXRay()
 
     print(len(tR))
     print(len(tX))

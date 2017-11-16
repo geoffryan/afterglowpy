@@ -41,6 +41,7 @@ double romb(double (*f)(double, void *), double xa, double xb, int N, double ato
     hk = xb - xa;
     Nk = 1;
     R[KMAX-1] = 0.5*(xb-xa)*(f(xa, args) + f(xb, args));
+    R[0] = R[KMAX-1];
 
     for(k=1; k<KMAX; k++)
     {
