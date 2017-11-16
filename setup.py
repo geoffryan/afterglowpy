@@ -7,17 +7,21 @@ import imp
 
 version = imp.load_source('grbpy.version', 'version.py')
 
-#gsl_dir = os.system("gsl-config --prefix")
+inc = numpy.distutils.misc_util.get_numpy_include_dirs()
+libs = []
+libdirs = []
+"""
 gsl_dir = subprocess.check_output(["gsl-config", "--prefix"])[:-1]
 if sys.version_info >= (3,0):
     gsl_dir = gsl_dir.decode("utf-8")
 
-inc = numpy.distutils.misc_util.get_numpy_include_dirs()
 inc.append(gsl_dir + "/include")
-libs = ["gsl"]
-libdirs = [gsl_dir + "/lib"]
+libs.append("gsl")
+libdirs.append(gsl_dir + "/lib")
+"""
 
-sources = ["grbpy/_grbpy.c", "grbpy/offaxis_struct_funcs.c"]
+sources = ["grbpy/_grbpy.c", "grbpy/offaxis_struct_funcs.c",
+                "grbpy/integrate.c"]
 
 module = Extension("_grbpy", sources=sources, include_dirs=inc,
                         libraries=libs, library_dirs=libdirs)

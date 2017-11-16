@@ -33,7 +33,7 @@ class OKCData:
             json.dump(res_dict, f)
             f.close()
             self.alldata = res_dict[objname]['photometry']
-        
+
 
     def filterData(self, tok):
 

@@ -1,11 +1,16 @@
 // offaxis.h
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <math.h>
+#ifdef USEGSL
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_sf.h>
 #include <gsl/gsl_spline.h>
 #include <gsl/gsl_integration.h>
+#else
+#include "integrate.h"
+#endif
 
 // some physical and mathematical constants
 #define PI          3.14159265358979323846
@@ -35,10 +40,18 @@
 #define _powerlaw 1
 #define _Gaussian_core 2 // has a core as well
 
+//Integration accuracy targets (for non GSL functions)
+#define R_ACC 1.0e-6
+#define THETA_ACC 1.0e-6
+#define PHI_ACC 1.0e-6   
+
 struct fluxParams
 {
     double theta;
     double phi;
+    double cp;
+    double cto;
+    double sto;
     
     double theta_obs;
     double t_obs;
@@ -93,19 +106,19 @@ double flux(struct fluxParams *pars); // determine flux for a given t_obs
 double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
                     double theta_cone_low, double theta_cone_hi,
                     struct fluxParams *pars);
-void lc_tophat(double *t, double *nu_obs, double *F, int Nt,
+void lc_tophat(double *t, double *nu, double *F, int Nt,
                 double E_iso, double theta_h, struct fluxParams *pars);
-void lc_powerlaw(double *t, double *nu_obs, double *F, int Nt,
+void lc_powerlaw(double *t, double *nu, double *F, int Nt,
                     double E_iso_core, double theta_h_core, 
                     double theta_h_wing, double beta,
                     double *theta_c_arr, double *E_iso_arr,
                     int res_cones, struct fluxParams *pars);
-void lc_Gaussian(double *t, double *nu_obs, double *F, int Nt,
+void lc_Gaussian(double *t, double *nu, double *F, int Nt,
                         double E_iso_core, 
                         double theta_h_core, double theta_h_wing,
                         double *theta_c_arr, double *E_iso_arr,
                         int res_cones, struct fluxParams *pars);
-void lc_GaussianCore(double *t, double *nu_obs, double *F, int Nt,
+void lc_GaussianCore(double *t, double *nu, double *F, int Nt,
                         double E_iso_core,
                         double theta_h_core, double theta_h_wing,
                         double *theta_c_arr, double *E_iso_arr,

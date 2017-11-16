@@ -12,14 +12,14 @@ double dmin(const double a, const double b)
 
 double get_lfacbetashocksqrd(double a_t_e, double C_BMsqrd, double C_STsqrd)
 {
-    return C_BMsqrd * pow(a_t_e, -3.0) + C_STsqrd * pow(a_t_e, -6.0/5.0);
+    return C_BMsqrd / (a_t_e*a_t_e*a_t_e) + C_STsqrd * pow(a_t_e, -6.0/5.0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 double get_lfacbetasqrd(double a_t_e, double C_BMsqrd, double C_STsqrd)
 {
-    return 0.5 * C_BMsqrd * pow(a_t_e, -3.0) + 9.0 / 16.0 * C_STsqrd * 
+    return 0.5 * C_BMsqrd / (a_t_e*a_t_e*a_t_e) + 9.0 / 16.0 * C_STsqrd * 
         pow(a_t_e, -6.0/5.0);
 }
 
@@ -112,7 +112,7 @@ void make_R_table(struct fluxParams *pars)
     double *alpha_table = pars->alpha_table;
     int table_entries = pars->table_entries;
 
-    double error, DR, R;
+    double DR, R;
     double t;
     double tp = 0.0; // time for previous table entry
     double Rp = 0.0; // R value of previous table entry
@@ -120,20 +120,41 @@ void make_R_table(struct fluxParams *pars)
 
     // prepare integration function
     double Rpar[2] = {C_BMsqrd, C_STsqrd};
+#ifdef USEGSL
     gsl_function F;
     F.function = &Rintegrand;
     F.params = Rpar;
     gsl_integration_workspace * w = gsl_integration_workspace_alloc (1000);
+    double error;
+#endif
 
     // set up R table. Each entry is equal to previous plus additional distance
-    for (i=0; i < table_entries; i++)
+    double fac0 = pow(Rt1/Rt0, 1.0/(table_entries-1.0));
+    double fac = 1.0;
+    for (i=0; i < table_entries-1; i++)
     {
-        t = Rt0 * pow( Rt1 / Rt0, (double) i / (double) (table_entries - 1.0));
-        gsl_integration_qag (&F, tp, t, 0, 1e-6, 1000, 1, w, &DR, &error);
+        //t = Rt0 * pow( Rt1 / Rt0, (double) i / (double) (table_entries - 1.0));
+        t = Rt0 * fac;
+        fac *= fac0;
+#ifdef USEGSL
+        gsl_integration_qag (&F, tp, t, 0, 1.0e-6, 1000, 1, w, &DR, &error);
+#else
+        DR = romb(&Rintegrand, tp, t, 1000, 0, R_ACC, Rpar);
+#endif
         R = Rp + DR;
         t_table[i] = t; R_table[i] = R;
         Rp = R; tp = t;
     }
+    t = Rt1;
+#ifdef USEGSL
+    gsl_integration_qag (&F, tp, t, 0, 1.0e-6, 1000, 1, w, &DR, &error);
+#else
+    DR = romb(&Rintegrand, tp, t, 1000, 0, R_ACC, Rpar);
+#endif
+    R = Rp + DR;
+    t_table[table_entries-1] = t;
+    R_table[table_entries-1] = R;
+    Rp = R; tp = t;
 
     // set power law slopes at table times
     for (i=1; i < table_entries - 1; i++)
@@ -145,7 +166,9 @@ void make_R_table(struct fluxParams *pars)
     }
 
     // free memory for integration routine
+#ifdef USEGSL
     gsl_integration_workspace_free(w);
+#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -154,12 +177,13 @@ double theta_integrand(double a_theta, void* params) // inner integral
 {
     struct fluxParams *pars = (struct fluxParams *) params;
     
-    double cp = cos(pars->phi); 
-    double cto = cos(pars->theta_obs_cur);
-    double sto = sin(pars->theta_obs_cur);
+    //double cp = cos(pars->phi); 
+    //double cto = cos(pars->theta_obs_cur);
+    //double sto = sin(pars->theta_obs_cur);
     double ast = sin(a_theta);
     double act = cos(a_theta);
-    double mu = ast * cp * sto + act * cto;
+
+    double mu = ast * (pars->cp) * (pars->sto) + act * (pars->cto);
 
   double t_e = get_t_e(mu, pars->t_obs, pars->mu_table, pars->t_table, 
                         pars->table_entries);
@@ -201,6 +225,7 @@ double theta_integrand(double a_theta, void* params) // inner integral
   if (nu_c > nu_m)
   {
     if (nuprime < nu_m && nuprime < nu_c) 
+      //freq = cbrt(nuprime / nu_m);
       freq = pow(nuprime / nu_m, 1.0 / 3.0 );
     if (nuprime >= nu_m && nuprime < nu_c)
       freq = pow(nuprime / nu_m, 0.5 * (1.0 - p));
@@ -210,11 +235,11 @@ double theta_integrand(double a_theta, void* params) // inner integral
   if ( nu_c <= nu_m)
   {
     if (nuprime < nu_m && nuprime < nu_c)
-      freq = pow(nuprime / nu_c, 1.0 / 3.0);
+      freq = pow(nuprime / nu_c, 1.0/3.0);
     if (nuprime >= nu_c && nuprime < nu_m)
-      freq = pow(nuprime / nu_c, -0.5);
+      freq = sqrt(nu_c / nuprime);
     if (nuprime >= nu_m)
-      freq = pow(nu_m / nu_c, -0.5) * pow(nuprime / nu_m, -0.5 * p);
+      freq = sqrt(nu_c/nu_m) * pow(nuprime / nu_m, -0.5 * p);
   }
 
   return R * R * ast * DR * em * freq / (lfacsqrd * a * a);
@@ -224,15 +249,19 @@ double theta_integrand(double a_theta, void* params) // inner integral
 
 double phi_integrand(double a_phi, void* params) // outer integral
 {
-  double result, error;
+  double result;
 
   struct fluxParams *pars = (struct fluxParams *) params;
   
   // set up integration routine
+#ifdef USEGSL
   gsl_integration_workspace * w = gsl_integration_workspace_alloc (1000);
   gsl_function F; F.function = &theta_integrand; F.params = params;
+  double error;
+#endif
 
   pars->phi = a_phi;
+  pars->cp = cos(a_phi);
   
   // implement sideways spreading approximation until spherical symmetry reached
   double theta_1 = pars->current_theta_cone_hi;
@@ -247,10 +276,17 @@ double phi_integrand(double a_phi, void* params) // outer integral
   //printf("# theta integration domain: %e - %e\n", theta_1 - Dtheta, theta_1); fflush(stdout);
  
   // For a given phi, integrate over theta
-  gsl_integration_qags(&F, theta_1 - Dtheta, theta_1, 0, 1e-4, 1000, w, &result, &error);
-  
-  // free integration routine memory and return result
+#ifdef USEGSL
+  gsl_integration_qags(&F, theta_1 - Dtheta, theta_1, 0, 1.0e-4, 1000, w, 
+                        &result, &error);
+  // free integration routine memory
   gsl_integration_workspace_free(w);
+#else
+  result = romb(&theta_integrand, theta_1-Dtheta, theta_1, 1000, 0, THETA_ACC,
+                    params);
+#endif
+  
+  //return result
   return result;
 }
 
@@ -259,27 +295,34 @@ double phi_integrand(double a_phi, void* params) // outer integral
 double flux(struct fluxParams *pars) // determine flux for a given t_obs
 {
   double result;
-  double error;
   double phi_0 = 0.0;
   double phi_1 = 2.0 * PI;
   
   // set up integration routines for integration over phi
-  gsl_integration_workspace * w = gsl_integration_workspace_alloc (1000);
-  gsl_function F;
-  F.function = &phi_integrand;
-  F.params = pars;
+#ifdef USEGSL
+    gsl_integration_workspace * w = gsl_integration_workspace_alloc (1000);
+    gsl_function F;
+    F.function = &phi_integrand;
+    F.params = pars;
+    double error;
+#endif
 
   // at this stage t_obs is known, so mu_table can be made
   make_mu_table(pars); 
   
   //printf("about to integrate phi between %e and %e\n", phi_0, phi_1); fflush(stdout);
-  gsl_integration_qags (&F, phi_0, phi_1, 0, 1e-3, 1000, w, &result, &error); 
-
-  // free memory and return result
+#ifdef USEGSL
+  gsl_integration_qags (&F, phi_0, phi_1, 0, 1.0e-3, 1000, w, 
+                            &result, &error); 
+  // free memory
   gsl_integration_workspace_free(w);
+#else
+  result = romb(&phi_integrand, phi_0, phi_1, 1000, 0, PHI_ACC, pars);
+#endif
 
-    double d_L = pars->d_L;
-    double p = pars->p;
+  //return result
+  double d_L = pars->d_L;
+  double p = pars->p;
 
   return result / (4.0 * PI * d_L * d_L) * (p - 1.0) / 2.0 * sqrt(3.0) *
     e_e * e_e * e_e / (m_e * v_light * v_light) * cgs2mJy;
@@ -535,6 +578,8 @@ void set_obs_params(struct fluxParams *pars, double t_obs, double nu_obs,
     pars->t_obs = t_obs;
     pars->nu_obs = nu_obs;
     pars->theta_obs_cur = theta_obs_cur;
+    pars->cto = cos(theta_obs_cur);
+    pars->sto = sin(theta_obs_cur);
     pars->current_theta_cone_hi = current_theta_cone_hi;
     pars->current_theta_cone_low = current_theta_cone_low;
 }
