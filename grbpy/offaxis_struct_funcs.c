@@ -392,6 +392,9 @@ void lc_Gaussian(double *t, double *nu, double *F, int Nt,
 
     double Dtheta, theta_cone_hi, theta_cone_low, theta_h, theta_c, E_iso;
 
+    if(theta_h_wing > 10*theta_h_core)
+        theta_h_wing = 10*theta_h_core;
+
     Dtheta = theta_h_wing / res_cones;
 
     for(i=0; i<res_cones; i++)
@@ -430,6 +433,9 @@ void lc_GaussianCore(double *t, double *nu, double *F, int Nt,
     lc_tophat(t, nu, F, Nt, E_iso_core, theta_h_core, pars);
 
     double Dtheta, theta_cone_hi, theta_cone_low, theta_h, theta_c, E_iso;
+
+    if(theta_h_wing > 10*theta_h_core)
+        theta_h_wing = 10*theta_h_core;
 
     Dtheta = (theta_h_wing - theta_h_core) / res_cones;
 

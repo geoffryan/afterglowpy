@@ -1,4 +1,5 @@
 from __future__ import print_function
+import os
 import sys
 import numpy as np
 import scipy.optimize as opt
@@ -15,8 +16,10 @@ labelsAll = np.array([r"$\theta_{obs}$", r"$E_{iso}$", r"$\theta_j$",
                 r"$\epsilon_B$", r"$\xi_N$", r"$d_L$"] )
 day = 86400.0
 
-bounds = np.array([[0.0, 0.5*np.pi], [45.0, 57.0], [0.01, 0.5*np.pi],
-                    [0.0, 0.5*np.pi], [-10.0, 10.0], [1.0, 5.0], [-10.0, 0.0],
+theta_min = 0.01
+
+bounds = np.array([[0.0, 0.5*np.pi], [45.0, 57.0], [theta_min, 0.5*np.pi],
+                    [theta_min, 0.5*np.pi], [-10.0, 10.0], [1.0, 5.0], [-10.0, 0.0],
                     [-10.0, 0.0], [-10.0, 0.0], [20, 40]])
 
 printLP = False
@@ -30,6 +33,7 @@ def logpost(x, logprior, loglike, jetType, fluxArg, fitVars, bounds,
     lp = logprior(x, jetType, X, fitVars, bounds)
 
     if lp > -np.inf:
+        #print(str(os.getpid()) + " - " + str(x))
         lp += loglike(jetType, X, tDat, nuDat, FnuDat, dFnuDat)
 
     if printLP:
@@ -347,7 +351,6 @@ def runFit(parfile):
     sampler = sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps,
                         nburn, label, threads, restart=restart)
 
-    return
 
     print("Plotting chain")
     f = h5.File(label+".h5", "r")
