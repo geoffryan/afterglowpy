@@ -3,6 +3,7 @@ import os
 import sys
 import numpy as np
 import scipy.optimize as opt
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import h5py as h5
 import emcee as em
@@ -23,6 +24,11 @@ bounds = np.array([[0.0, 0.5*np.pi], [45.0, 57.0], [theta_min, 0.5*np.pi],
                     [-10.0, 0.0], [-10.0, 0.0], [20, 40]])
 
 printLP = False
+
+figsize = (12,9)
+labelsize = 24
+legendsize = 18
+ticksize = 18
 
 def logpost(x, logprior, loglike, jetType, fluxArg, fitVars, bounds,
                 tDat, nuDat, FnuDat, dFnuDat, opt=False):
@@ -110,19 +116,72 @@ def plot_curve(ax, t, Fnu, color=None, alpha=1.0):
     ax.plot(t/day, Fnu, color=color, ls='-', marker='', alpha=alpha)
 
 
-def plot_data(ax, t, Fnu, Ferr, inst):
+def plot_data(ax, t, nu, Fnu, Ferr, ul, inst):
 
-    real = Fnu>0.0
-    lim = Fnu<=0.0
+    cmapR = mpl.cm.get_cmap('Greens')
+    cmapO = mpl.cm.get_cmap('Blues')
+    cmapX = mpl.cm.get_cmap('Purples')
 
-    ax.errorbar(t[real]/day, Fnu[real], Ferr[real], color='b', ls='')
-    ax.plot(t[lim]/day, 3*Ferr[lim], color='b', ls='', marker='v',
-                                        mew=0)
+    insts = np.unique(inst)
+    for instrument in insts:
+        ind = inst==instrument
+        nus = np.unique(nu[ind])
+        for v in nus:
+            ind2 = v==nu[ind]
+            myt = t[ind][ind2]
+            mynu = nu[ind][ind2]
+            myFnu = Fnu[ind][ind2]
+            myFerr = Ferr[ind][ind2]
+            myul = ul[ind][ind2]
 
+            if v < 1.0e11:
+                nuRhi = 1.0e11
+                nuRlo = 1.0e9
+                mycolor=cmapR(np.log(v/nuRhi)/np.log(nuRlo/nuRhi))
+                label = "{0:.1f} GHz".format(v/1.0e9)
+            elif v < 1.0e15:
+                nuOhi = 1.0e14
+                nuOlo = 1.0e15
+                mycolor=cmapO(np.log(v/nuOhi)/np.log(nuOlo/nuOhi))
+                label = "i"
+            elif v < 1.0e20:
+                if instrument == 'NuSTAR':
+                    mycolor=cmapX(0.2)
+                    label = instrument
+                elif instrument == 'Swift':
+                    mycolor=cmapX(0.5)
+                    label = instrument
+                elif instrument == 'Chandra':
+                    mycolor=cmapX(0.8)
+                    label = instrument
+                else:
+                    mycolor=cmap(1.0)
+                    label = ''
+            else:
+                mycolor='k'
+                label = ''
+            real = myul <= 0.0
+            lim = myul > 0.0
+            if lim.any():
+                ax.plot(myt[lim]/day, (myul*myFerr)[lim],
+                            marker='v', color=mycolor, mew=0.0, ls='',
+                            ms=10, label=label)
+            if real.any():
+                ax.errorbar(myt[real]/day, myFnu[real], myFerr[real],
+                            marker='', color=mycolor, ls='',
+                            lw=2, label=label)
+   
+    ax.axvline(110, lw=4, ls='--', color='grey')
+
+    plt.legend(fontsize=legendsize)
     ax.set_xscale("log")
     ax.set_yscale("log")
-    ax.set_xlabel(r"$t$ (d)")
-    ax.set_ylabel(r"$F_\nu$ (mJy)")
+    ax.set_xlabel(r"$t$ (d)", fontsize=labelsize)
+    ax.set_ylabel(r"$F_\nu$ (mJy)", fontsize=labelsize)
+    ax.tick_params(labelsize=ticksize)
+    ax.set_xlim(1.0, 1.0e3)
+    ax.set_ylim(1.0e-9, 1.0e0)
+    ax.get_figure().tight_layout()
 
 def getEvalForm(X):
     Y = X.copy()
@@ -213,8 +272,10 @@ def sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps, nburn, label,
 
 def getDataTxt(datafile):
 
-    t, nu, Fnu, Ferr, inst = np.loadtxt(datafile, unpack=True)
-    return t, nu, Fnu, Ferr, inst
+    t, nu, Fnu, Ferr, ul = np.loadtxt(datafile, unpack=True,
+                                            usecols=[0,1,2,3,4])
+    inst = np.loadtxt(datafile, unpack=True, usecols=[5], dtype='S32')
+    return t, nu, Fnu, Ferr, ul, inst
 
 def getDataOKC(datafile):
 
@@ -251,7 +312,11 @@ def getDataOKC(datafile):
     Ferr = np.concatenate((eFnuR, eFnuX, eFnuA))
     inst = np.concatenate((instR, instX, instA)).astype("S32")
 
-    return t, nu, Fnu, Ferr, inst
+    ul = np.empty(t.shape)
+    ul[Fnu>0.0] = 0.0
+    ul[Fnu<=0.0] = 3.0
+
+    return t, nu, Fnu, Ferr, ul, inst
 
 def getPar(words, name):
 
@@ -341,9 +406,9 @@ def runFit(parfile):
 
         dataExt = datafile.split(".")[-1]
         if dataExt == "json":
-            T, NU, FNU, FERR, INST = getDataOKC(datafile)
+            T, NU, FNU, FERR, UL, INST = getDataOKC(datafile)
         else:
-            T, NU, FNU, FERR, INST = getDataTxt(datafile)
+            T, NU, FNU, FERR, UL, INST = getDataTxt(datafile)
 
     data = (T, NU, FNU, FERR, INST)
     N = len(T)
@@ -371,7 +436,7 @@ def runFit(parfile):
     nu = np.empty(t.shape)
     nus = [6.0e9, 1.0e18]
 
-    fig, ax = plt.subplots(1,1)
+    fig, ax = plt.subplots(1,1, figsize=figsize)
 
     X = X0.copy()
     for i in range(nwalkers):
@@ -381,9 +446,7 @@ def runFit(parfile):
             nu[:] = v
             Fnu = grb.fluxDensity(t, nu, jetType, *Y)
             plot_curve(ax, t, Fnu, alpha=0.2)
-    plot_data(ax, T, FNU, FERR, INST)
-    ax.set_xlim(t0/day, t1/day)
-    ax.set_ylim(1.0e-9, 1.0e-1)
+    plot_data(ax, T, NU, FNU, FERR, UL, INST)
     fig.savefig("lc_dist.png")
     plt.close(fig)
 
@@ -398,15 +461,13 @@ def runFit(parfile):
 
     print("Plotting Best")
 
-    fig, ax = plt.subplots(1,1)
+    fig, ax = plt.subplots(1,1, figsize=figsize)
 
     for v in nus:
         nu[:] = v
         Fnu = grb.fluxDensity(t, nu, jetType, *Y1)
         plot_curve(ax, t, Fnu)
-    plot_data(ax, T, FNU, FERR, INST)
-    ax.set_xlim(t0/day, t1/day)
-    ax.set_ylim(1.0e-9, 1.0e-1)
+    plot_data(ax, T, NU, FNU, FERR, UL, INST)
 
     fig.savefig("lc_best.png")
 
