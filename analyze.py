@@ -23,6 +23,7 @@ T = f['t'][...]
 NU = f['nu'][...]
 FNU = f['Fnu'][...]
 FERR = f['eFnu'][...]
+UL = f['ul'][...]
 INST = f['inst'][...]
 f.close()
 
@@ -122,6 +123,6 @@ ax.plot(t/fit.day, Fnu, color='r', ls='-')
 ax.set_xlim(t0/fit.day, t1/fit.day)
 ax.set_ylim(1.0e-9, 1.0e-1)
 
-fit.plot_data(ax, T, FNU, FERR, INST)
+fit.plot_data(ax, T, NU, FNU, FERR, UL, INST)
 fig.savefig("lc_all.png")
 

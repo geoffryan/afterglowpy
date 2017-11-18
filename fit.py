@@ -20,7 +20,7 @@ day = 86400.0
 theta_min = 0.01
 
 bounds = np.array([[0.0, 0.5*np.pi], [45.0, 57.0], [theta_min, 0.5*np.pi],
-                    [theta_min, 0.5*np.pi], [-10.0, 10.0], [1.0, 5.0], [-10.0, 0.0],
+                    [theta_min, 0.5*np.pi], [-10.0, 10.0], [2.0, 5.0], [-10.0, 0.0],
                     [-10.0, 0.0], [-10.0, 0.0], [20, 40]])
 
 printLP = False
@@ -214,7 +214,8 @@ def sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps, nburn, label,
         f.create_dataset("nu", data=data[1])
         f.create_dataset("Fnu", data=data[2])
         f.create_dataset("eFnu", data=data[3])
-        f.create_dataset("inst", data=data[4].astype("S32"))
+        f.create_dataset("ul", data=data[4])
+        f.create_dataset("inst", data=data[5].astype("S32"))
         f.create_dataset("X0", data=X0)
         f.create_dataset("nburn", data=np.array([nburn]))
         f.create_dataset("jetType", data=np.array([jetType]))
@@ -388,6 +389,7 @@ def runFit(parfile):
         NU = f['nu'][...]
         FNU = f['Fnu'][...]
         FERR = f['eFnu'][...]
+        UL = f['ul'][...]
         INST = f['inst'][...]
         nwalkers = f['chain'].shape[0]
         nsteps = f['chain'].shape[1]
@@ -410,7 +412,7 @@ def runFit(parfile):
         else:
             T, NU, FNU, FERR, UL, INST = getDataTxt(datafile)
 
-    data = (T, NU, FNU, FERR, INST)
+    data = (T, NU, FNU, FERR, UL, INST)
     N = len(T)
     
     sampler = sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps,
