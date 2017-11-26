@@ -19,7 +19,7 @@ day = 86400.0
 
 theta_min = 0.01
 
-bounds = np.array([[0.0, 0.5*np.pi], [45.0, 57.0], [theta_min, 0.5*np.pi],
+bounds = np.array([[0.0, 0.5], [45.0, 57.0], [theta_min, 0.5*np.pi],
                     [theta_min, 0.5*np.pi], [-10.0, 10.0], [2.0, 5.0], [-10.0, 0.0],
                     [-10.0, 0.0], [-10.0, 0.0], [20, 40]])
 
@@ -69,6 +69,10 @@ def logPriorFlat(x, jetType, X, fitVars, bounds):
     # Gaussian+Core, Wings must be larger than core.
     if jetType == 2 and X[3] < X[2]:
         lp = -np.inf
+
+    #Physics
+    if np.isfinite(lp):
+        lp += np.log(np.sin(X[0]))
 
     return lp
 
