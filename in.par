@@ -1,18 +1,18 @@
-label           gaussian_OKC_epsEepsB
-threads         1
+label           gaussian_some_phys
+threads         15
 nburn           0
-nsteps          2000
-nwalkers        128
+nsteps          8000
+nwalkers        300
 jetType         0
-fitVars         0 1 2 3 4 5
-theta_obs       0.5     # (rad)
+fitVars         0 1 2 3 4 5 6 7
+theta_obs       0.3     # (rad)
 E_iso_core      1.0e50  # (erg)
-theta_h_core    0.2     # (rad)
-theta_h_wing    0.4     # (rad)
+theta_h_core    0.1     # (rad)
+theta_h_wing    0.2     # (rad)
 n_0             1.0e-3  # (#/cm^3)
 p               2.2
 epsilon_E       1.0e-1
 epsilon_B       1.0e-2
 ksi_N           1.0     
 d_L             1.23e26 # (cm)
-datafile        dataAll.txt
+datafile        dataSome.txt
