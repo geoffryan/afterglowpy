@@ -15,6 +15,25 @@ green = (44.0/255, 160.0/255, 44.0/255)
 red = (214.0/255, 39.0/255, 40.0/255)
 purple = (148.0/255, 103.0/255, 189.0/255)
 
+def plotTraces(chain, steps_taken, fitVars, labels, name):
+
+    ndim = chain.shape[2]
+    nwalkers = chain.shape[0]
+
+    t = np.arange(steps_taken)
+
+    for i in range(ndim):
+        fig, ax = plt.subplots(1,1, figsize=fit.figsize)
+        for j in range(nwalkers):
+            trace = chain[j,:steps_taken,i]
+            ax.plot(t, trace, alpha=0.1, color='k', ls='-')
+        ax.set_xlabel("steps", fontsize=fit.labelsize)
+        ax.set_ylabel(labels[fitVars[i]], fontsize=fit.labelsize)
+        ax.tick_params(labelsize=fit.ticksize)
+        fig.savefig("{0:s}_{1:d}.png".format(name, fitVars[i]))
+        plt.close(fig)
+
+
 def calcFluxStats(samples, fitVars, jetType, X0, t, nu):
 
     N = samples.shape[0]
@@ -85,7 +104,7 @@ def calcAutocorr(chain, c=10):
 
     return taus
 
-def plotStatsTimeSeries(tmeans, tsigs, tquantiles, fitVars, labels):
+def plotStatsTimeSeries(tmeans, tsigs, tquantiles, fitVars, labels, name):
 
     steps = range(tmeans.shape[0])
     ndim = tmeans.shape[1]
@@ -100,7 +119,7 @@ def plotStatsTimeSeries(tmeans, tsigs, tquantiles, fitVars, labels):
             ax.plot(steps, tquantiles[j,:,i], color='k', ls='--')
         ax.set_xlabel("steps", fontsize=fit.labelsize)
         ax.set_ylabel(labels[i], fontsize=fit.labelsize)
-        fig.savefig("trace_dist_{0:d}.png".format(fitVars[i]))
+        fig.savefig("{0:s}_{1:d}.png".format(name, fitVars[i]))
         plt.close(fig)
 
 if __name__ == "__main__":
@@ -108,6 +127,8 @@ if __name__ == "__main__":
     bounds = fit.bounds
 
     file = sys.argv[1]
+
+    print("Loading file.")
 
     f = h5.File(file, "r")
     steps_taken = f['steps_taken'][0]
@@ -125,7 +146,9 @@ if __name__ == "__main__":
     INST = f['inst'][...]
     f.close()
 
-    nburn = 1000
+    #nburn = 14000
+    nburn = 100
+    #nburn = 1000
     nwalkers = chain.shape[0]
     nsteps = chain.shape[1]
     ndim = chain.shape[2]
@@ -137,16 +160,33 @@ if __name__ == "__main__":
     flatlnprobabilityBurned = lnprobabilityBurned.reshape((-1,))
     flatchainBurned = chainBurned.reshape((-1,ndim))
 
+    print("Calculating summary statistics")
+
     means, vars, quantiles, tmeans, tvars, tquantiles = calcStats(chain)
-    means, vars, quantiles, _,_,_ = calcStats(chainBurned)
+    tsigs = np.sqrt(tvars)
+    print("Plotting summary statistic time series")
+    plotStatsTimeSeries(tmeans, tsigs, tquantiles, fitVars, labels,
+                            "trace_dist")
+
+    print("Calculating burned-in summary statistics")
+
+    means, vars, quantiles, tmeans, tvars, tquantiles = calcStats(chainBurned)
     sigs = np.sqrt(vars)
     tsigs = np.sqrt(tvars)
     print(means)
     print(vars)
     print(quantiles)
 
-    plotStatsTimeSeries(tmeans, tsigs, tquantiles, fitVars, labels)
+    print("Plotting burned-in summary statistic time series")
+    plotStatsTimeSeries(tmeans, tsigs, tquantiles, fitVars, labels,
+                            "trace_dist_noburn")
+    
+    print("Plotting walker traces")
+    plotTraces(chain, steps_taken, fitVars, labels, "trace")
+    print("Plotting burned-in walker traces")
+    plotTraces(chainBurned, steps_taken-nburn, fitVars, labels, "trace_noburn")
 
+    print("Autocorrelations:")
     taus = calcAutocorr(chain[:,:,:], 1)
     print(taus)
     taus = calcAutocorr(chain[:,:,:], 2)

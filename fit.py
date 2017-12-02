@@ -238,7 +238,7 @@ def sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps, nburn, label,
 
     if steps_taken == 0:
         x0 = X0[fitVars]
-        noiseFac = 0.02
+        noiseFac = 1.0e-4
         p0 = [x0*(1+noiseFac*np.random.randn(ndim))
                                     for i in range(nwalkers)]
 
