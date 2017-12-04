@@ -30,6 +30,12 @@ labelsize = 24
 legendsize = 18
 ticksize = 18
 
+blue = (31.0/255, 119.0/255, 180.0/255)
+orange = (255.0/255, 127.0/255, 14.0/255)
+green = (44.0/255, 160.0/255, 44.0/255)
+red = (214.0/255, 39.0/255, 40.0/255)
+purple = (148.0/255, 103.0/255, 189.0/255)
+
 def logpost(x, logprior, loglike, jetType, fluxArg, fitVars, bounds,
                 tDat, nuDat, FnuDat, dFnuDat, opt=False):
 
@@ -116,7 +122,7 @@ def plot_curve(ax, t, Fnu, color=None, alpha=1.0):
     ax.plot(t/day, Fnu, color=color, ls='-', marker='', alpha=alpha)
 
 
-def plot_data(ax, t, nu, Fnu, Ferr, ul, inst):
+def plot_data(ax, t, nu, Fnu, Ferr, ul, inst, spec=False):
 
     cmapR = mpl.cm.get_cmap('Greens')
     cmapO = mpl.cm.get_cmap('Blues')
@@ -163,23 +169,42 @@ def plot_data(ax, t, nu, Fnu, Ferr, ul, inst):
             real = myul <= 0.0
             lim = myul > 0.0
             if lim.any():
-                ax.plot(myt[lim]/day, (myul*myFerr)[lim],
+                if not spec:
+                    ax.plot(myt[lim]/day, (myul*myFerr)[lim],
+                            marker='v', color=mycolor, mew=0.0, ls='',
+                            ms=10, label=label)
+                else:
+                    ax.plot(mynu[lim], (myul*myFerr)[lim],
                             marker='v', color=mycolor, mew=0.0, ls='',
                             ms=10, label=label)
             if real.any():
-                ax.errorbar(myt[real]/day, myFnu[real], myFerr[real],
+                if not spec:
+                    ax.errorbar(myt[real]/day, myFnu[real], myFerr[real],
                             marker='', color=mycolor, ls='',
                             lw=2, label=label)
-   
-    ax.axvline(110, lw=4, ls='--', color='grey')
+                else:
+                    ax.errorbar(mynu[real], myFnu[real], myFerr[real],
+                            marker='', color=mycolor, ls='',
+                            lw=2, label=label)
+
+
+
+    if not spec:
+        ax.axvline(110, lw=4, ls='--', color='grey')
 
     plt.legend(fontsize=legendsize)
     ax.set_xscale("log")
     ax.set_yscale("log")
-    ax.set_xlabel(r"$t$ (d)", fontsize=labelsize)
+    if not spec:
+        ax.set_xlabel(r"$t$ (d)", fontsize=labelsize)
+    else:
+        ax.set_xlabel(r"$\nu$ (Hz)", fontsize=labelsize)
     ax.set_ylabel(r"$F_\nu$ (mJy)", fontsize=labelsize)
     ax.tick_params(labelsize=ticksize)
-    ax.set_xlim(1.0, 1.0e3)
+    if not spec:
+        ax.set_xlim(1.0, 1.0e3)
+    else:
+        ax.set_xlim(1.0e6, 1.0e20)
     ax.set_ylim(1.0e-9, 1.0e0)
     ax.get_figure().tight_layout()
 
