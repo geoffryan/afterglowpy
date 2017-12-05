@@ -122,7 +122,7 @@ def plot_curve(ax, t, Fnu, color=None, alpha=1.0):
     ax.plot(t/day, Fnu, color=color, ls='-', marker='', alpha=alpha)
 
 
-def plot_data(ax, t, nu, Fnu, Ferr, ul, inst, spec=False):
+def plot_data(ax, t, nu, Fnu, Ferr, ul, inst, spec=False, legend=True):
 
     cmapR = mpl.cm.get_cmap('Greens')
     cmapO = mpl.cm.get_cmap('Blues')
@@ -192,7 +192,8 @@ def plot_data(ax, t, nu, Fnu, Ferr, ul, inst, spec=False):
     if not spec:
         ax.axvline(110, lw=4, ls='--', color='grey')
 
-    plt.legend(fontsize=legendsize)
+    if legend:
+        plt.legend(fontsize=legendsize)
     ax.set_xscale("log")
     ax.set_yscale("log")
     if not spec:
