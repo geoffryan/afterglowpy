@@ -31,6 +31,9 @@ double get_t_e(double a_mu, double t_obs, double *mu_table, double *t_table,
   if(a_mu > mu_table[table_entries-1])
   {
     printf("mu >> 1? this should not have happened\n");
+    printf("   t_obs=%.6lg mu=%.6lg mu_table[-1]=%.6lg, t_table[-1]=%.6lg\n",
+                t_obs, a_mu, mu_table[table_entries-1], 
+                t_table[table_entries-1]);
     abort();
   }
 
@@ -501,8 +504,8 @@ void calc_flux_density(int jet_type, double *t, double *nu, double *Fnu, int N,
                             double epsilon_B, double ksi_N, double d_L)
 {
     double Rt0 = 1.0e-2 * day2sec;
-    double Rt1 = 1.0e6 * day2sec;
-    int table_entries = 10000;
+    double Rt1 = 1.0e7 * day2sec;
+    int table_entries = 12000;
     int res_cones = 20;
 
     struct fluxParams fp;
