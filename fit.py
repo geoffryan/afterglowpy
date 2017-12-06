@@ -9,7 +9,6 @@ import h5py as h5
 import emcee as em
 import corner
 import grbpy as grb
-import getOKCData as OKCdata
 
 logVarsJet = [1,4,6,7,8,9]
 labelsJetAll = np.array([r"$\theta_{obs}$", r"$E_{iso}$", r"$\theta_j$",
@@ -342,6 +341,7 @@ def getDataTxt(datafile):
 
 def getDataOKC(datafile):
 
+    import getOKCData as OKCdata
     dat = OKCdata.OKCData("GW170817")
     tR, nuR, FnuR, eFnuR, instR = dat.getRadio()
     tX, nuX, FnuX, eFnuX, instX = dat.getXRay()

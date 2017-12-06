@@ -15,6 +15,8 @@ green = (44.0/255, 160.0/255, 44.0/255)
 red = (214.0/255, 39.0/255, 40.0/255)
 purple = (148.0/255, 103.0/255, 189.0/255)
 
+fluxFunc = None
+
 def plotTraces(chain, steps_taken, fitVars, labels, name):
 
     ndim = chain.shape[2]
@@ -47,8 +49,8 @@ def calcFluxStats(samples, fitVars, jetType, X0, t, nu):
         sys.stdout.write("\rCalculating flux {0:d} of {1:d}".format(i+1,N))
         sys.stdout.flush()
         X[fitVars] = samples[i]
-        Y = fit.getEvalForm(X)
-        Fnu[i] = grb.fluxDensity(T, NU, jetType, *Y)
+        Y = fit.getEvalForm(jetType, X)
+        Fnu[i] = fluxFunc(T, NU, jetType, *Y)
     sys.stdout.write("\n")
 
     mean = Fnu.mean()
@@ -124,7 +126,6 @@ def plotStatsTimeSeries(tmeans, tsigs, tquantiles, fitVars, labels, name):
 
 if __name__ == "__main__":
     
-    bounds = fit.bounds
 
     file = sys.argv[1]
 
@@ -145,10 +146,17 @@ if __name__ == "__main__":
     UL = f['ul'][...]
     INST = f['inst'][...]
     f.close()
+    
+    if jetType == 3:
+        bounds = fit.boundsCocoon
+        fluxFunc = grb.fluxDensityCocoon
+    else:
+        bounds = fit.boundsJet
+        fluxFunc = grb.fluxDensity
 
     #nburn = 14000
-    nburn = 100
-    #nburn = 1000
+    #nburn = 100
+    nburn = 1000
     nwalkers = chain.shape[0]
     nsteps = chain.shape[1]
     ndim = chain.shape[2]
@@ -213,12 +221,14 @@ if __name__ == "__main__":
     print(x1)
 
     fig = corner.corner(flatchainBurned, labels=labels[fitVars],
-                        quantiles=[0.025,0.16,0.50,0.86,0.975], truths=x1)
+                        quantiles=[0.16,0.50,0.84], truths=x1,
+                        show_titles=True)
     fig.savefig("corner_noburn.png")
     plt.close(fig)
 
     fig = corner.corner(flatchain, labels=labels[fitVars],
-                        quantiles=[0.025,0.16,0.50,0.86,0.975], truths=x1)
+                        quantiles=[0.16,0.50,0.84], truths=x1,
+                        show_titles=True)
     fig.savefig("corner_all.png")
     plt.close(fig)
 
@@ -271,18 +281,18 @@ if __name__ == "__main__":
         sys.stdout.write("\rCalculating Fnu for walker " + str(i))
         sys.stdout.flush()
         X[fitVars] = chain[i,-1,:]
-        Y = fit.getEvalForm(X)
+        Y = fit.getEvalForm(jetType, X)
         nu[:] = nuR
-        FnuR[i,:] = grb.fluxDensity(t, nu, jetType, *Y)
+        FnuR[i,:] = fluxFunc(t, nu, jetType, *Y)
         nu[:] = nuX
-        FnuX[i,:] = grb.fluxDensity(t, nu, jetType, *Y)
+        FnuX[i,:] = fluxFunc(t, nu, jetType, *Y)
     sys.stdout.write("\n")
     
-    Y1 = fit.getEvalForm(X1)
+    Y1 = fit.getEvalForm(jetType, X1)
     nu[:] = 6.0e9
-    FnuR1 = grb.fluxDensity(t, nu, jetType, *Y1)
+    FnuR1 = fluxFunc(t, nu, jetType, *Y1)
     nu[:] = nuX.mean()
-    FnuX1 = grb.fluxDensity(t, nu, jetType, *Y1)
+    FnuX1 = fluxFunc(t, nu, jetType, *Y1)
 
     #Y2 = fit.getEvalForm(X2)
     #nu[:] = 6.0e9
