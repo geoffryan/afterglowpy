@@ -502,8 +502,6 @@ def runFit(parfile):
     sampler = sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps,
                         nburn, label, threads, restart=restart)
 
-    sys.exit()
-
     print("Plotting chain")
     f = h5.File(label+".h5", "r")
     chain = f['chain'][...]
