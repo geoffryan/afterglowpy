@@ -11,17 +11,25 @@ import corner
 import grbpy as grb
 import getOKCData as OKCdata
 
-logVars = [1,4,6,7,8,9]
-labelsAll = np.array([r"$\theta_{obs}$", r"$E_{iso}$", r"$\theta_j$",
+logVarsJet = [1,4,6,7,8,9]
+labelsJetAll = np.array([r"$\theta_{obs}$", r"$E_{iso}$", r"$\theta_j$",
                 r"$\theta_w$", r"$n_0$", r"$p$", r"$\epsilon_e$",
+                r"$\epsilon_B$", r"$\xi_N$", r"$d_L$"] )
+
+logVarsCocoon = [0,1,2,4,5,7,8,9,10]
+labelsCocoonAll = np.array([r"$u_{max}$", r"$E_{inj}$", r"$t_{inj}$",
+                r"$q$", r"$M_{ej}$", r"$n_0$", r"$p$", r"$\epsilon_e$",
                 r"$\epsilon_B$", r"$\xi_N$", r"$d_L$"] )
 day = 86400.0
 
 theta_min = 0.01
 
-bounds = np.array([[0.0, 0.8], [45.0, 57.0], [theta_min, 0.5*np.pi],
+boundsJet = np.array([[0.0, 0.8], [45.0, 57.0], [theta_min, 0.5*np.pi],
                     [theta_min, 0.5*np.pi], [-10.0, 10.0], [2.0, 5.0],
                     [-4.0, 0.0], [-4.0, 0.0], [-4.0, 0.0], [20, 40]])
+boundsCocoon = np.array([[-5, 3], [45.0, 57.0], [0,10], [-1,1],
+                    [23, 33], [-10.0, 10.0], [2.0, 5.0], [-4.0, 0.0],
+                    [-4.0, 0.0], [-4.0,0.0], [20.0, 40.0]])
 
 printLP = False
 
@@ -57,8 +65,12 @@ def logpost(x, logprior, loglike, jetType, fluxArg, fitVars, bounds,
     return lp
 
 def chi2(jetType, X, tDat, nuDat, FnuDat, dFnuDat):
-    Y = getEvalForm(X)
-    Fnu = grb.fluxDensity(tDat, nuDat, jetType, *Y)
+
+    Y = getEvalForm(jetType, X)
+    if jetType == 3:
+        Fnu = grb.fluxDensityCocoon(tDat, nuDat, jetType, *Y)
+    else:
+        Fnu = grb.fluxDensity(tDat, nuDat, jetType, *Y)
     chi = (Fnu-FnuDat) / dFnuDat
     chi2 = (chi*chi).sum()
 
@@ -77,7 +89,7 @@ def logPriorFlat(x, jetType, X, fitVars, bounds):
         lp = -np.inf
 
     #Physics
-    if np.isfinite(lp):
+    if jetType != 3 and np.isfinite(lp):
         lp += np.log(np.sin(X[0]))
 
     return lp
@@ -213,14 +225,20 @@ def plot_data(ax, t, nu, Fnu, Ferr, ul, inst, spec=False, legend=True):
     ax.set_ylim(1.0e-9, 1.0e0)
     ax.get_figure().tight_layout()
 
-def getEvalForm(X):
+def getEvalForm(jetType, X):
     Y = X.copy()
-    Y[logVars] = np.power(10.0, Y[logVars])
+    if jetType == 3:
+        Y[logVarsCocoon] = np.power(10.0, Y[logVarsCocoon])
+    else:
+        Y[logVarsJet] = np.power(10.0, Y[logVarsJet])
     return Y
 
-def getFitForm(Y):
+def getFitForm(jetType, Y):
     X = Y.copy()
-    X[logVars] = np.log10(X[logVars])
+    if jetType == 3:
+        X[logVarsCocoon] = np.log10(X[logVarsCocoon])
+    else:
+        X[logVarsJet] = np.log10(X[logVarsJet])
     return X
 
 def sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps, nburn, label,
@@ -237,6 +255,11 @@ def sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps, nburn, label,
     chainBuf = np.empty((nwalkers, nbuf, ndim))
     lnprobabilityBuf = np.empty((nwalkers, nbuf))
 
+    if jetType == 3:
+        varLabels = labelsCocoonAll
+    else:
+        varLabels = labelsJetAll
+
     if not restart:
         f = h5.File(filename, "w")
         f.create_dataset("fitVars", data=fitVars)
@@ -249,7 +272,7 @@ def sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps, nburn, label,
         f.create_dataset("X0", data=X0)
         f.create_dataset("nburn", data=np.array([nburn]))
         f.create_dataset("jetType", data=np.array([jetType]))
-        f.create_dataset("labels", data=labelsAll.astype("S32"))
+        f.create_dataset("labels", data=varLabels.astype("S32"))
         f.create_dataset("chain", (nwalkers, nsteps, ndim), dtype=np.float)
         f.create_dataset("lnprobability", (nwalkers, nsteps), dtype=np.float)
         f.create_dataset("steps_taken", data=np.array([1]))
@@ -265,8 +288,15 @@ def sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps, nburn, label,
     if steps_taken == 0:
         x0 = X0[fitVars]
         noiseFac = 1.0e-4
-        p0 = [x0*(1+noiseFac*np.random.randn(ndim))
-                                    for i in range(nwalkers)]
+        p0 = np.array([x0*(1+noiseFac*np.random.randn(ndim))
+                                    for i in range(nwalkers)])
+        for i in range(ndim):
+            if x0[i] == 0.0:
+                p0[:,i] = noiseFac * np.random.randn(nwalkers)
+
+    #for i in range(nwalkers):
+    #    p = logpost(p0[i], *lpargs)
+    #    print(str(i) + ": " + str(p) + " - " + str(p0[i]))
 
     sampler = em.EnsembleSampler(nwalkers, ndim, logpost, args=lpargs,
                                     threads=threads)
@@ -297,6 +327,8 @@ def sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps, nburn, label,
     f['steps_taken'][0] = k0+j
     f.close()
     sys.stdout.write("\r{0:5.1%}\n".format(1.0))
+    sys.stdout.write("Mean Acceptance Fraction: {0:.3f}\n".format(np.mean(
+                        sampler.acceptance_fraction)))
     sys.stdout.flush()
     
     return sampler
@@ -391,19 +423,34 @@ def parseParfile(parfile):
     threads = int(getPar(words, "threads"))
     fitVars = [int(x) for x in getPars(words, "fitVars")]
     jetType = int(getPar(words, "jetType"))
-    thetaObs = float(getPar(words, "theta_obs"))
-    Eiso = float(getPar(words, "E_iso_core"))
-    thetaJ = float(getPar(words, "theta_h_core"))
-    thetaW = float(getPar(words, "theta_h_wing"))
-    n0 = float(getPar(words, "n_0"))
-    p = float(getPar(words, "p"))
-    epsE = float(getPar(words, "epsilon_E"))
-    epsB = float(getPar(words, "epsilon_B"))
-    xiN = float(getPar(words, "ksi_N"))
-    dL = float(getPar(words, "d_L"))
+    if jetType == 3:
+        umax = float(getPar(words, "u_max"))
+        Ei = float(getPar(words, "E_i"))
+        ti = float(getPar(words, "t_i"))
+        q = float(getPar(words, "q"))
+        Mej = float(getPar(words, "M_ej"))
+        n0 = float(getPar(words, "n_0"))
+        p = float(getPar(words, "p"))
+        epsE = float(getPar(words, "epsilon_E"))
+        epsB = float(getPar(words, "epsilon_B"))
+        ksiN = float(getPar(words, "ksi_N"))
+        dL = float(getPar(words, "d_L"))
 
-    Y0 = np.array([thetaObs, Eiso, thetaJ, thetaW, n0, p, epsE, epsB, xiN, dL])
-    X0 = getFitForm(Y0)
+        Y0 = np.array([umax, Ei, ti, q, Mej, n0, p, epsE, epsB, ksiN, dL])
+    else:
+        thetaObs = float(getPar(words, "theta_obs"))
+        Eiso = float(getPar(words, "E_iso_core"))
+        thetaJ = float(getPar(words, "theta_h_core"))
+        thetaW = float(getPar(words, "theta_h_wing"))
+        n0 = float(getPar(words, "n_0"))
+        p = float(getPar(words, "p"))
+        epsE = float(getPar(words, "epsilon_E"))
+        epsB = float(getPar(words, "epsilon_B"))
+        xiN = float(getPar(words, "ksi_N"))
+        dL = float(getPar(words, "d_L"))
+
+        Y0 = np.array([thetaObs, Eiso, thetaJ, thetaW, n0, p, epsE, epsB, xiN, dL])
+    X0 = getFitForm(jetType, Y0)
 
     return label, nwalkers, nburn, nsteps, fitVars, jetType, X0, threads, datafile
 
@@ -444,10 +491,18 @@ def runFit(parfile):
 
     data = (T, NU, FNU, FERR, UL, INST)
     N = len(T)
+
+    if jetType == 3:
+        bounds = boundsCocoon
+        varLabels = labelsCocoonAll
+    else:
+        bounds = boundsJet
+        varLabels = labelsJetAll
     
     sampler = sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps,
                         nburn, label, threads, restart=restart)
 
+    sys.exit()
 
     print("Plotting chain")
     f = h5.File(label+".h5", "r")
@@ -456,7 +511,7 @@ def runFit(parfile):
     flatchain = chain.reshape((-1,ndim))
     flatlnprobability = lnprobability.reshape((-1,))
     f.close()
-    plotChain(chain, labelsAll[fitVars], fitVars)
+    plotChain(chain, varLabels[fitVars], fitVars)
 
 
     print("Plotting final ensemble")
@@ -470,13 +525,18 @@ def runFit(parfile):
 
     fig, ax = plt.subplots(1,1, figsize=figsize)
 
+    if jetType == 3:
+        flux = grb.fluxDensityCocoon
+    else:
+        flux = grb.fluxDensity
+
     X = X0.copy()
     for i in range(nwalkers):
         X[fitVars] = chain[i,-1,:]
-        Y = getEvalForm(X)
+        Y = getEvalForm(jetType, X)
         for v in nus:
             nu[:] = v
-            Fnu = grb.fluxDensity(t, nu, jetType, *Y)
+            Fnu = flux(t, nu, jetType, *Y)
             plot_curve(ax, t, Fnu, alpha=0.2)
     plot_data(ax, T, NU, FNU, FERR, UL, INST)
     fig.savefig("lc_dist.png")
@@ -489,7 +549,7 @@ def runFit(parfile):
 
     X1 = X0.copy()
     X1[fitVars] = flatchain[imax]
-    Y1 = getEvalForm(X1)
+    Y1 = getEvalForm(jetType, X1)
 
     print("Plotting Best")
 
@@ -497,7 +557,7 @@ def runFit(parfile):
 
     for v in nus:
         nu[:] = v
-        Fnu = grb.fluxDensity(t, nu, jetType, *Y1)
+        Fnu = flux(t, nu, jetType, *Y1)
         plot_curve(ax, t, Fnu)
     plot_data(ax, T, NU, FNU, FERR, UL, INST)
 

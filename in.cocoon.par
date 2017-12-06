@@ -1,0 +1,19 @@
+label           cocoon
+threads         1
+nburn           0
+nsteps          100
+nwalkers        30
+jetType         3
+fitVars         0 1 2 3 4 5 6 7
+umax            5.0
+Ei              1.0e49  # (erg)
+ti              1.0e7   # (s)
+q               0.0
+Mej             1.0e-27 # (g)
+n_0             1.0e-2  # (#/cm^3)
+p               2.13
+epsilon_E       3.0e-2
+epsilon_B       1.0e-4
+ksi_N           1.0     
+d_L             1.23e26 # (cm)
+datafile        dataAll.txt

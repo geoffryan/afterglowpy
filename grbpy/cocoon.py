@@ -21,6 +21,8 @@ parsec = 3.0857e18
 Hz2eV = 4.13566553853599e-15
 eV2Hz = 1.0/Hz2eV
 
+intrtol = 1.0e-3
+
 
 def dfdt(f, t, Ei, ts, q, Mej, Vej0, rho0):
 
@@ -97,7 +99,7 @@ def dP(theta, amu, ate, aus, ar, nu, n0, p, epsE, epsB, ksiN):
 
     return 2*np.pi * r*r*math.sin(theta) * DR * em * freq / (g*g*a*a)
 
-def fluxDensityCocoon(t, nu, umax, Ei, ts, q, Mej, n0, p, epsE, epsB, 
+def fluxDensityCocoon(t, nu, jetType, umax, Ei, ts, q, Mej, n0, p, epsE, epsB, 
                         ksiN, dL):
 
     r0 = 1.0e9
@@ -108,8 +110,8 @@ def fluxDensityCocoon(t, nu, umax, Ei, ts, q, Mej, n0, p, epsE, epsB,
     #t0 = 1.0e-2 * day2sec
     t0 = r0 / c
     #t1 = 1.0e7 * day2sec
-    t1 = 1.0e10 * t0
-    NT = 12000
+    t1 = 1.0e12 * t0
+    NT = 15000
     ate = np.logspace(math.log10(t0), math.log10(t1), num=NT, base=10.0)
 
     f0 = np.array([r0, umax])
@@ -129,7 +131,8 @@ def fluxDensityCocoon(t, nu, umax, Ei, ts, q, Mej, n0, p, epsE, epsB,
 
         args = (amu, ate, au, ar, nu[i], n0, p, epsE, epsB, ksiN)
 
-        res = integrate.quad(dP, 0.0, np.pi, args, full_output=1, wopts=wopts)
+        res = integrate.quad(dP, 0.0, np.pi, args, full_output=1, wopts=wopts,
+                                epsrel=intrtol)
         P[i] = res[0]
         #print(res)
         #wopts = (res[2]['momcom'], res[2]['chebmo'])
@@ -159,7 +162,7 @@ if __name__ == "__main__":
     nu = np.empty(t.shape)
     nu[:] = 6.0e9
 
-    Fnu = fluxDensityCocoon(t, nu, *Y)
+    Fnu = fluxDensityCocoon(t, nu, 3, *Y)
 
     import sys
     import matplotlib.pyplot as plt
@@ -170,6 +173,28 @@ if __name__ == "__main__":
     ax.set_yscale("log")
     ax.set_xlabel(r"$t$ (s)")
     ax.set_ylabel(r"$F_\nu$ (mJy)")
+    
+    intrtol = 1.0e-16
+    Fnu0 = fluxDensityCocoon(t, nu, 3, *Y)
+    intrtol = 1.0e-14
+    Fnu1 = fluxDensityCocoon(t, nu, 3, *Y)
+    intrtol = 1.0e-12
+    Fnu2 = fluxDensityCocoon(t, nu, 3, *Y)
+    intrtol = 1.0e-8
+    Fnu3 = fluxDensityCocoon(t, nu, 3, *Y)
+    intrtol = 1.0e-6
+    Fnu4 = fluxDensityCocoon(t, nu, 3, *Y)
+    intrtol = 1.0e-4
+    Fnu5 = fluxDensityCocoon(t, nu, 3, *Y)
+    intrtol = 1.0e-2
+    Fnu6 = fluxDensityCocoon(t, nu, 3, *Y)
+
+    print(np.fabs((Fnu6-Fnu0)/Fnu0).max())
+    print(np.fabs((Fnu5-Fnu0)/Fnu0).max())
+    print(np.fabs((Fnu4-Fnu0)/Fnu0).max())
+    print(np.fabs((Fnu3-Fnu0)/Fnu0).max())
+    print(np.fabs((Fnu2-Fnu0)/Fnu0).max())
+    print(np.fabs((Fnu1-Fnu0)/Fnu0).max())
 
     plt.draw()
     plt.show()
