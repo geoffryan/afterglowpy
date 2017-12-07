@@ -12,7 +12,7 @@ theta_h_wing    0.2     # (rad)
 n_0             1.0e-2  # (#/cm^3)
 p               2.13
 epsilon_E       3.0e-2
-epsilon_B       1.0e-4
+epsilon_B       1.0e-3
 ksi_N           1.0     
 d_L             1.23e26 # (cm)
 datafile        dataAll.txt

@@ -16,8 +16,8 @@ labelsJetAll = np.array([r"$\theta_{obs}$", r"$E_{iso}$", r"$\theta_j$",
                 r"$\epsilon_B$", r"$\xi_N$", r"$d_L$"] )
 
 logVarsCocoon = [0,1,2,4,5,7,8,9,10]
-labelsCocoonAll = np.array([r"$u_{max}$", r"$E_{inj}$", r"$t_{inj}$",
-                r"$q$", r"$M_{ej}$", r"$n_0$", r"$p$", r"$\epsilon_e$",
+labelsCocoonAll = np.array([r"$u_{max}$", r"$u_{min}$", r"$E_{inj}$",
+                r"$k$", r"$M_{ej}$", r"$n_0$", r"$p$", r"$\epsilon_e$",
                 r"$\epsilon_B$", r"$\xi_N$", r"$d_L$"] )
 day = 86400.0
 
@@ -26,8 +26,8 @@ theta_min = 0.01
 boundsJet = np.array([[0.0, 0.8], [45.0, 57.0], [theta_min, 0.5*np.pi],
                     [theta_min, 0.5*np.pi], [-10.0, 10.0], [2.0, 5.0],
                     [-4.0, 0.0], [-4.0, 0.0], [-4.0, 0.0], [20, 40]])
-boundsCocoon = np.array([[-5, 3], [45.0, 57.0], [0,10], [-1,1],
-                    [23, 33], [-10.0, 10.0], [2.0, 5.0], [-4.0, 0.0],
+boundsCocoon = np.array([[-5, 3], [-5, 3], [45.0, 57.0], [0,8],
+                    [-10, 0], [-10.0, 10.0], [2.0, 5.0], [-4.0, 0.0],
                     [-4.0, 0.0], [-4.0,0.0], [20.0, 40.0]])
 
 printLP = False
@@ -117,7 +117,8 @@ def plotChain(chain, labels, fitVars):
 
     samples = chain[:,:,:].reshape((-1,ndim))
 
-    fig = corner.corner(samples, labels=labels)
+    fig = corner.corner(samples, labels=labels, quantiles=[0.16,0.5,0.84],
+                            show_titles=True)
     fig.savefig("corner_all.png")
     plt.close(fig)
 
@@ -425,9 +426,9 @@ def parseParfile(parfile):
     jetType = int(getPar(words, "jetType"))
     if jetType == 3:
         umax = float(getPar(words, "u_max"))
+        umin = float(getPar(words, "u_min"))
         Ei = float(getPar(words, "E_i"))
-        ti = float(getPar(words, "t_i"))
-        q = float(getPar(words, "q"))
+        k = float(getPar(words, "k"))
         Mej = float(getPar(words, "M_ej"))
         n0 = float(getPar(words, "n_0"))
         p = float(getPar(words, "p"))
@@ -436,7 +437,7 @@ def parseParfile(parfile):
         ksiN = float(getPar(words, "ksi_N"))
         dL = float(getPar(words, "d_L"))
 
-        Y0 = np.array([umax, Ei, ti, q, Mej, n0, p, epsE, epsB, ksiN, dL])
+        Y0 = np.array([umax, umin, Ei, k, Mej, n0, p, epsE, epsB, ksiN, dL])
     else:
         thetaObs = float(getPar(words, "theta_obs"))
         Eiso = float(getPar(words, "E_iso_core"))

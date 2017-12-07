@@ -24,26 +24,38 @@ eV2Hz = 1.0/Hz2eV
 intrtol = 1.0e-3
 
 
-def dfdt(f, t, Ei, ts, q, Mej, Vej0, rho0):
+def dfdt(f, t, umax, umin, Ei, q, Mej_solar, Vej0, rho0):
 
     R = f[0]
     u = f[1]
 
     g = math.sqrt(u*u+1)
+    beta = u/g
+
+    Mej = Mej_solar * Msun
 
     dRdt = 4*c* u * g / (4*u*u + 3)
 
     dEdt = 0.0
-    if ts > 0.0 and t < ts:
-        dEdt = Ei/ts * math.pow(t/ts, q)
+    #if ts > 0.0 and t < ts:
+    #    dEdt = Ei/ts * math.pow(t/ts, q)
+
+    dEdu = 0.0
+    if u > umin and u < umax:
+        dEdu = -q*Ei/(c*c) * math.pow(u, -(q+1))
+
 
     A_g1 = 4.0/3.0 * np.pi * rho0 * R*R/(g*g) * (4*g*g*g*g - 5*g*g + 1) * dRdt
-    A_g2 = (Mej - 4.0/3.0 * rho0 * Vej0 * (19*g*g + 4*g)
-            + 8.0/9.0*np.pi*rho0 * R*R*R * (4*g*g*g*g - 5*g*g*g + 5*g*g - 1.0)
+    A_g2 = beta * (Mej - 4.0/3.0 * rho0 * Vej0 * (19*g*g + 4*g)
+            + 8.0/9.0*np.pi*rho0 * R*R*R * (4*g*g*g*g - 1.0)
                 / (g*g*g))
-    dgdt = (dEdt/(c*c) - A_g1) / A_g2
 
-    dudt = g*dgdt/u
+    #ai = 5.0/3.0
+    #A_g1 = np.pi * R*R * rho0 * u*u*(1+(g-1)*ai)*(1+g*ai) / (g*g*(ai-1)) * dRdt
+    #A_g2 = beta * (Mej + np.pi * R*R*R * rho0 * (2 + 2*(g*g*g+g-1)*ai
+    #                    + g*(g-1)*(1+g+2*g*g)*ai*ai) / (3*g*g*g*(ai-1)))
+
+    dudt = (dEdt/(c*c) - A_g1) / (A_g2 - dEdu)
 
     return np.array([dRdt,dudt])
 
@@ -99,8 +111,8 @@ def dP(theta, amu, ate, aus, ar, nu, n0, p, epsE, epsB, ksiN):
 
     return 2*np.pi * r*r*math.sin(theta) * DR * em * freq / (g*g*a*a)
 
-def fluxDensityCocoon(t, nu, jetType, umax, Ei, ts, q, Mej, n0, p, epsE, epsB, 
-                        ksiN, dL):
+def fluxDensityCocoon(t, nu, jetType, umax, umin, Ei, q, Mej, n0, p, 
+                        epsE, epsB, ksiN, dL):
 
     r0 = 1.0e9
     rho0 = mp * n0
@@ -115,7 +127,7 @@ def fluxDensityCocoon(t, nu, jetType, umax, Ei, ts, q, Mej, n0, p, epsE, epsB,
     ate = np.logspace(math.log10(t0), math.log10(t1), num=NT, base=10.0)
 
     f0 = np.array([r0, umax])
-    args = (Ei, ts, q, Mej, Vej0, rho0)
+    args = (umax, umin, Ei, q, Mej, Vej0, rho0)
 
     f = integrate.odeint(dfdt, f0, ate, args)
 
@@ -146,19 +158,19 @@ if __name__ == "__main__":
     
     gmax = 3.5
     umax = np.sqrt(gmax*gmax-1.0)
-    Ei = 1.0e49
-    ts = 1.0e7
-    q = 0.0
-    Mej = 1.0e-8 * Msun
-    n0 = 1.0e-4
+    umin = 0.1
+    q = 5
+    Ei = 2.0e51
+    Mej = 1.0e-5
+    n0 = 8.0e-5
     p = 2.2
     epsE = 1.0e-1
     epsB = 1.0e-2
     ksiN = 1.0
     dL = 1.23e26
 
-    Y = np.array([umax, Ei, ts, q, Mej, n0, p, epsE, epsB, ksiN, dL])
-    t = np.logspace(3, 7, num=100, base=10.0)
+    Y = np.array([umax, umin, Ei, q, Mej, n0, p, epsE, epsB, ksiN, dL])
+    t = np.logspace(3, 9, num=100, base=10.0)
     nu = np.empty(t.shape)
     nu[:] = 6.0e9
 
@@ -171,9 +183,43 @@ if __name__ == "__main__":
     ax.plot(t, Fnu, 'k-')
     ax.set_xscale("log")
     ax.set_yscale("log")
-    ax.set_xlabel(r"$t$ (s)")
+    ax.set_xlabel(r"$t_{obs}$ (s)")
     ax.set_ylabel(r"$F_\nu$ (mJy)")
     
+    fig, ax = plt.subplots(1,1)
+    ax.plot(t*sec2day, Fnu, 'k-')
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlim(1.0, 1.0e3)
+    ax.set_xlabel(r"$t_{obs}$ (d)")
+    ax.set_ylabel(r"$F_\nu$ (mJy)")
+
+    r0 = 1.0e9
+    rho0 = mp * n0
+    Vej0 = 4.0/3.0*np.pi*r0*r0*r0
+
+    t0 = r0 / c
+    t1 = 1.0e12 * t0
+    NT = 15000
+    ate = np.logspace(math.log10(t0), math.log10(t1), num=NT, base=10.0)
+    f0 = np.array([r0, umax])
+    args = (umax, umin, Ei, q, Mej, Vej0, rho0)
+    f = integrate.odeint(dfdt, f0, ate, args)
+    ar = f[:,0]
+    au = f[:,1]
+
+    fig, ax = plt.subplots(2,1)
+    ax[0].plot(ate, ar, 'k-')
+    ax[0].set_xscale("log")
+    ax[0].set_yscale("log")
+    ax[0].set_xlabel(r"$t_{lab}$ (s)")
+    ax[0].set_ylabel(r"$r$ (cm)")
+    ax[1].plot(ate, au, 'k-')
+    ax[1].set_xscale("log")
+    ax[1].set_yscale("log")
+    ax[1].set_xlabel(r"$t_{lab}$ (s)")
+    ax[1].set_ylabel(r"$u$")
+
     intrtol = 1.0e-16
     Fnu0 = fluxDensityCocoon(t, nu, 3, *Y)
     intrtol = 1.0e-14

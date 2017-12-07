@@ -5,15 +5,15 @@ nsteps          10
 nwalkers        30
 jetType         3
 fitVars         0 1 2 3 4 5 6 7 8
-u_max           5.0
-E_i             1.0e49  # (erg)
-t_i             1.0e7   # (s)
-q               0.0
-M_ej            1.0e27 # (g)
+u_max           3.35
+u_min           0.1
+E_i             2.0e51  # (erg)
+k               5.0
+M_ej            3.0e-5 # (Solar Masses)
 n_0             1.0e-2  # (#/cm^3)
 p               2.13
 epsilon_E       3.0e-2
 epsilon_B       1.0e-3
 ksi_N           1.0     
 d_L             1.23e26 # (cm)
-datafile        dataAll.txt
+datafile        dataSome.txt
