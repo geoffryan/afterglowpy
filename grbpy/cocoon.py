@@ -59,17 +59,25 @@ def dfdt(f, t, umax, umin, Ei, q, Mej_solar, Vej0, rho0):
 
     return np.array([dRdt,dudt])
 
-def dP(theta, amu, ate, aus, ar, nu, n0, p, epsE, epsB, ksiN):
+def dP(theta, amu, ate, au, ar, nu, n0, p, epsE, epsB, ksiN):
 
     mu = math.cos(theta)
     ib = np.searchsorted(amu, mu)
-    ia = ib-1
-
     N = amu.shape[0]
-   
+    if ib <= 0:
+        ib = 1
+    elif ib >= N:
+        ib = N-1
+    ia = ib-1
     te = ((mu-amu[ia])*ate[ib] + (amu[ib]-mu)*ate[ia]) / (amu[ib]-amu[ia])
-    u = ((mu-amu[ia])*aus[ib] + (amu[ib]-mu)*aus[ia]) / (amu[ib]-amu[ia])
-    r = ((mu-amu[ia])*ar[ib] + (amu[ib]-mu)*ar[ia]) / (amu[ib]-amu[ia])
+    #u = ((mu-amu[ia])*au[ib] + (amu[ib]-mu)*au[ia]) / (amu[ib]-amu[ia])
+    #r = ((mu-amu[ia])*ar[ib] + (amu[ib]-mu)*ar[ia]) / (amu[ib]-amu[ia])
+    #te = ate[ia]*math.pow(mu/amu[ia], math.log(ate[ib]/ate[ia])
+    #                                    / math.log(amu[ib]/amu[ia]))
+    u = au[ia]*math.pow(te/ate[ia], math.log(au[ib]/au[ia]) 
+                                        / math.log(ate[ib]/ate[ia]))
+    r = ar[ia]*math.pow(te/ate[ia], math.log(ar[ib]/ar[ia])
+                                        / math.log(ate[ib]/ate[ia]))
 
     g = math.sqrt(u*u+1)
     beta = u/g
