@@ -203,13 +203,16 @@ def plot_data(ax, t, nu, Fnu, Ferr, ul, inst, spec=False, legend=True):
                             marker='', color=mycolor, ls='',
                             lw=2, label=label)
 
+    formatAxes(ax, legend, spec)
 
 
-    if not spec:
-        ax.axvline(110, lw=4, ls='--', color='grey')
+def formatAxes(ax, legend=True, spec=False, loc='upper left'):
+
+    #if not spec:
+    #    ax.axvline(110, lw=4, ls='--', color='grey')
 
     if legend:
-        plt.legend(fontsize=legendsize)
+        plt.legend(loc=loc, fontsize=legendsize)
     ax.set_xscale("log")
     ax.set_yscale("log")
     if not spec:
@@ -224,6 +227,7 @@ def plot_data(ax, t, nu, Fnu, Ferr, ul, inst, spec=False, legend=True):
         ax.set_xlim(1.0e6, 1.0e20)
     ax.set_ylim(1.0e-9, 1.0e0)
     ax.get_figure().tight_layout()
+
 
 def getEvalForm(jetType, X):
     Y = X.copy()

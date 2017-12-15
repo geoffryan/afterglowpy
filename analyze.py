@@ -1,8 +1,10 @@
 import sys
+import math
 import numpy as np
 import h5py as h5
 import matplotlib.pyplot as plt
 import scipy.optimize as opt
+import scipy.integrate as integrate
 import emcee
 import corner
 import grbpy as grb
@@ -16,6 +18,48 @@ red = (214.0/255, 39.0/255, 40.0/255)
 purple = (148.0/255, 103.0/255, 189.0/255)
 
 fluxFunc = None
+
+def dEjet_gaussian(theta, theta_j):
+    return math.sin(theta)*math.exp(-0.5*theta*theta/(theta_j*theta_j))
+
+def calcEjet(jetType, Y):
+    if jetType == 0:
+        theta_j = Y[2]
+        theta_w = Y[3]
+        Eiso_core = Y[1]
+        res = integrate.quad(dEjet_gaussian, 0.0, theta_w, args=(theta_j,))
+        thetaI = res[0]
+        # Eiso/4pi * (integral over phi) * (integral over theta)
+        # Eiso/4pi * 2pi * ...
+        # 0.5*Eiso * (integral over theta)
+        Ejet = 0.5 * Eiso_core * thetaI
+    elif jetType == 1:
+        Eiso = Y[1]
+        theta_j = Y[2]
+        theta_w = Y[3]
+
+        # int_{theta_j}^{theta_w} (theta_j/theta)^2 dtheta
+        thetaI = theta_j*(1.0 - theta_j/theta_w)
+        Ejet = 0.5 * Eiso * (1-math.cos(theta_j) + theta_I)
+
+    elif jetType == 3:
+        umax = Y[0]
+        umin = Y[1]
+        Ei = Y[2]
+        k = Y[3]
+        Mi = Y[4] * grb.Msun * grb.c*grb.c
+
+        gmax = math.sqrt(1+umax*umax)
+        EiTot = Ei*(math.pow(umin,-k) - math.pow(umax,-k))
+        Ejet = (gmax-1) * Mi + EiTot
+    else:
+        # Tophat (-1)
+        Eiso = Y[1]
+        theta_j = Y[2]
+        Ejet = 0.5 * Eiso * (1-math.cos(theta_j))
+
+    return Ejet
+
 
 def plotTraces(chain, steps_taken, fitVars, labels, name):
 
@@ -317,22 +361,22 @@ if __name__ == "__main__":
     fit.plot_data(ax, T, NU, FNU, FERR, UL, INST)
     fig.savefig("lc_all.png")
 
-    t_obs = 110.0 * fit.day
+    #t_obs = 110.0 * fit.day
 
-    ns = chainBurned.shape[1]
-    step = 50
-    samples = chainBurned[:,nsteps/2::step,:].reshape((-1,ndim))
-    nsamps = samples.shape[0]
+    #ns = chainBurned.shape[1]
+    #step = 50
+    #samples = chainBurned[:,nsteps/2::step,:].reshape((-1,ndim))
+    #nsamps = samples.shape[0]
 
-    mean110X, sig110X = calcFluxStats(samples, fitVars, jetType, X0,
-                                        t_obs, nuX)
-    mean110R, sig110R = calcFluxStats(samples, fitVars, jetType, X0,
-                                        t_obs, nuR)
+    #mean110X, sig110X = calcFluxStats(samples, fitVars, jetType, X0,
+    #                                    t_obs, nuX)
+    #mean110R, sig110R = calcFluxStats(samples, fitVars, jetType, X0,
+    #                                    t_obs, nuR)
 
-    print("110 day Radio Flux = {0:.3g} +/- {1:.3g} mJy (MCMC {2:.1g})".format(
-                mean110R, sig110R, mean110R/np.sqrt(nsamps)))
-    print("110 day X-Ray Flux = {0:.3g} +/- {1:.3g} mJy (MCMC {2:.1g})".format(
-                mean110X, sig110X, mean110X/np.sqrt(nsamps)))
+    #print("110 day Radio Flux = {0:.3g} +/- {1:.3g} mJy (MCMC {2:.1g})".format(
+    #            mean110R, sig110R, mean110R/np.sqrt(nsamps)))
+    #print("110 day X-Ray Flux = {0:.3g} +/- {1:.3g} mJy (MCMC {2:.1g})".format(
+    #            mean110X, sig110X, mean110X/np.sqrt(nsamps)))
 
     sys.exit()
 

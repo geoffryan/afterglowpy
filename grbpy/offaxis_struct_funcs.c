@@ -227,21 +227,21 @@ double theta_integrand(double a_theta, void* params) // inner integral
   // set frequency dependence
   if (nu_c > nu_m)
   {
-    if (nuprime < nu_m && nuprime < nu_c) 
+    if (nuprime < nu_m) 
       //freq = cbrt(nuprime / nu_m);
       freq = pow(nuprime / nu_m, 1.0 / 3.0 );
-    if (nuprime >= nu_m && nuprime < nu_c)
+    else if (nuprime < nu_c)
       freq = pow(nuprime / nu_m, 0.5 * (1.0 - p));
-    if (nuprime >= nu_c)
+    else
       freq = pow(nu_c / nu_m, 0.5 * (1.0 - p)) * pow(nuprime / nu_c, -0.5*p);
   }
-  if ( nu_c <= nu_m)
+  else
   {
-    if (nuprime < nu_m && nuprime < nu_c)
+    if (nuprime < nu_c)
       freq = pow(nuprime / nu_c, 1.0/3.0);
-    if (nuprime >= nu_c && nuprime < nu_m)
+    else if (nuprime < nu_m)
       freq = sqrt(nu_c / nuprime);
-    if (nuprime >= nu_m)
+    else
       freq = sqrt(nu_c/nu_m) * pow(nuprime / nu_m, -0.5 * p);
   }
 
