@@ -188,6 +188,22 @@ def analyze(chain, lp, weights, jetType, X0, fitVars, labels, data, label):
     fig.savefig("{0:s}_lc_MAP.png".format(label))
     plt.close(fig)
 
+    f = open("{0:s}_lc_MAP_radio.txt", "w")
+    f.write("# nu={0.6g} Hz\n".format(nuR))
+    f.write("# " + str(jetType) + " " + " ".join([str(y) for y in Y]) + "\n")
+    f.write("# t(d) Fnu(mJy)\n")
+    for i in range(t.shape[0])
+        f.write("{0:.8g} {1:.8g}\n".format(t[i]/fit.day, FnuRMAP))
+    f.close()
+
+    f = open("{0:s}_lc_MAP_xray.txt", "w")
+    f.write("# nu={0.6g} Hz\n".format(nuX))
+    f.write("# " + str(jetType) + " " + " ".join([str(y) for y in Y]) + "\n")
+    f.write("# t(d) Fnu(mJy)\n")
+    for i in range(t.shape[0])
+        f.write("{0:.8g} {1:.8g}\n".format(t[i]/fit.day, FnuXMAP))
+    f.close()
+
     nu = np.logspace(3, 20, num=t.shape[0], base=10.0)
     t[:] = 17*fit.day
     Fnu17dMAP = fluxFunc(t, nu, jetType, *Y)
@@ -247,6 +263,8 @@ if __name__ == "__main__":
     wS = weightSHoES(chainBurned)
     wL = weightLIGO(chainBurned)
 
+    analyze(chainBurned, lnprobabilityBurned, wP, jetType, X0, fitVars, labels,
+            data, "em")
     analyze(chainBurned, lnprobabilityBurned, wP, jetType, X0, fitVars, labels,
             data, "em+LIGO+Planck")
     analyze(chainBurned, lnprobabilityBurned, wP, jetType, X0, fitVars, labels,

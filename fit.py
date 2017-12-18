@@ -32,9 +32,9 @@ boundsCocoon = np.array([[-5, 3], [-5, 3], [45.0, 57.0], [0,8],
 
 printLP = False
 
-figsize = (12,9)
+figsize = (8,6)
 labelsize = 24
-legendsize = 18
+legendsize = 14
 ticksize = 18
 
 blue = (31.0/255, 119.0/255, 180.0/255)
