@@ -228,6 +228,16 @@ def formatAxes(ax, legend=True, spec=False, loc='upper left'):
     ax.set_ylim(1.0e-9, 1.0e0)
     ax.get_figure().tight_layout()
 
+def dumpLCTxt(t, nu, Fnu, jetType, Y, name):
+
+    f = open(name, "w")
+    f.write("# nu={0:.6g} Hz\n".format(nuR))
+    f.write("# " + str(jetType) + " " + " ".join([str(y) for y in Y]) + "\n")
+    f.write("# t(d) Fnu(mJy)\n")
+    for i in range(t.shape[0]):
+        f.write("{0:.8g} {1:.8g}\n".format(t[i]/day, Fnu[i]))
+    f.close()
+
 
 def getEvalForm(jetType, X):
     Y = X.copy()
