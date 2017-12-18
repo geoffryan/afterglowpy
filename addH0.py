@@ -188,8 +188,10 @@ def analyze(chain, lp, weights, jetType, X0, fitVars, labels, data, label):
     fig.savefig("{0:s}_lc_MAP.png".format(label))
     plt.close(fig)
 
-    fit.dumpLCTxt(t, nuR, FnuRMAP, jetType, Y, "{0:s}_lc_MAP_radio.txt")
-    fit.dumpLCTxt(t, nuX, FnuXMAP, jetType, Y, "{0:s}_lc_MAP_xray.txt")
+    fit.dumpLCTxt(t, nuR, FnuRMAP, jetType, Y, 
+                    "{0:s}_lc_MAP_radio.txt".format(label))
+    fit.dumpLCTxt(t, nuX, FnuXMAP, jetType, Y, 
+                    "{0:s}_lc_MAP_xray.txt".format(label))
 
     nu = np.logspace(3, 20, num=t.shape[0], base=10.0)
     t[:] = 17*fit.day

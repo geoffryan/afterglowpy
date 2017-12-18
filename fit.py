@@ -231,7 +231,7 @@ def formatAxes(ax, legend=True, spec=False, loc='upper left'):
 def dumpLCTxt(t, nu, Fnu, jetType, Y, name):
 
     f = open(name, "w")
-    f.write("# nu={0:.6g} Hz\n".format(nuR))
+    f.write("# nu={0:.6g} Hz\n".format(nu))
     f.write("# " + str(jetType) + " " + " ".join([str(y) for y in Y]) + "\n")
     f.write("# t(d) Fnu(mJy)\n")
     for i in range(t.shape[0]):
