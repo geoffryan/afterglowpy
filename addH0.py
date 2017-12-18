@@ -16,6 +16,9 @@ green = (44.0/255, 160.0/255, 44.0/255)
 red = (214.0/255, 39.0/255, 40.0/255)
 purple = (148.0/255, 103.0/255, 189.0/255)
 
+cornerLabelsize = 24
+cornerTitlesize = 18
+
 fluxFunc = None
 
 def weightPlanck(chain):
@@ -115,8 +118,10 @@ def analyze(chain, lp, weights, jetType, X0, fitVars, labels, data, label):
     for i in range(ndim):
         q = corner.quantile(flatchain[:,i], [0.025, 0.16, 0.5, 0.84, 0.975],
                                 flatweights)
-        print("{0:d}: {1:.3g} {2:.3g} {3:.3g} {4:.3g} {5:.3g}".format(
+        print("{0:d}: {1:.5g} {2:.5g} {3:.5g} {4:.5g} {5:.5g}".format(
                 i, q[0], q[1], q[2], q[3], q[4]))
+        print("       68%: ({0:.2g} {1:.2g}) 95%: ({2:.2g} {3:.2g})".format(
+                q[3]-q[2], q[1]-q[2], q[4]-q[2], q[0]-q[2]))
 
     print("Finding MAP")
     imax = np.argmax(flatlp + np.log(flatweights))
@@ -126,22 +131,17 @@ def analyze(chain, lp, weights, jetType, X0, fitVars, labels, data, label):
     print("Making Corner Plot")
     fig = corner.corner(flatchain, labels=labels[fitVars],
                         quantiles=[0.16,0.50,0.84], truths=xMAP,
-                        weights=flatweights, show_titles=True)
+                        weights=flatweights, show_titles=True,
+                        label_kwargs={'fontsize': cornerLabelsize},
+                        title_kwargs={'fontsize': cornerTitlesize})
     fig.savefig("{0:s}_corner.png".format(label))
     plt.close(fig)
 
     NDataTotal = len(data[0])
     NUL = len(data[0][data[4]==0.0])
 
-    X = X0.copy()
-    X[fitVars] = xMAP[:]
-
-    lpargs=(fit.logPriorFlat, fit.logLikeChi2, jetType, 
-                X1, fitVars, None, data[0], data[1], data[2], data[3], 
-                False)
-    lpargsOpt=(fit.logPriorFlat, fit.logLikeChi2, jetType, 
-                X1, fitVars, None, T, NU, FNU, FERR, 
-                True)
+    XMAP = X0.copy()
+    XMAP[fitVars] = xMAP[:]
 
     T = data[0]
     NU = data[1]
@@ -259,15 +259,18 @@ if __name__ == "__main__":
     chainBurned = chain[:,nburn:,:]
     lnprobabilityBurned = lnprobability[:,nburn:]
 
+    w1 = np.ones(lnprobabilityBurned.shape)
     wP = weightPlanck(chainBurned)
     wS = weightSHoES(chainBurned)
     wL = weightLIGO(chainBurned)
 
+    analyze(chainBurned, lnprobabilityBurned, w1, jetType, X0, fitVars, labels,
+            data, "em")
     analyze(chainBurned, lnprobabilityBurned, wP, jetType, X0, fitVars, labels,
             data, "em")
     analyze(chainBurned, lnprobabilityBurned, wP, jetType, X0, fitVars, labels,
             data, "em+LIGO+Planck")
-    analyze(chainBurned, lnprobabilityBurned, wP, jetType, X0, fitVars, labels,
+    analyze(chainBurned, lnprobabilityBurned, wS, jetType, X0, fitVars, labels,
             data, "em+LIGO+SHoES")
-    analyze(chainBurned, lnprobabilityBurned, wP, jetType, X0, fitVars, labels,
+    analyze(chainBurned, lnprobabilityBurned, wL, jetType, X0, fitVars, labels,
             data, "em+LIGO")
