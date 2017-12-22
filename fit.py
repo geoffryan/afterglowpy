@@ -42,6 +42,26 @@ orange = (255.0/255, 127.0/255, 14.0/255)
 green = (44.0/255, 160.0/255, 44.0/255)
 red = (214.0/255, 39.0/255, 40.0/255)
 purple = (148.0/255, 103.0/255, 189.0/255)
+brown = (140.0/255, 86.0/255, 75.0/255)
+pink = (227.0/255, 119.0/255, 194.0/255)
+grey = (127.0/255, 127.0/255, 127.0/255)
+yellow = (188.0/255, 189.0/255, 34.0/255)
+teal = (23.0/255, 190.0/255, 207.0/255)
+
+lightblue = (174.0/255, 199.0/255, 232.0/255)
+lightorange = (255.0/255, 187.0/255, 120.0/255)
+lightgreen = (152.0/255, 223.0/255, 138.0/255)
+lightred = (255.0/255, 152.0/255, 150.0/255)
+lightpurple = (197.0/255, 176.0/255, 213.0/255)
+lightbrown = (196.0/255, 156.0/255, 148.0/255)
+lightpink = (247.0/255, 182.0/255, 210.0/255)
+lightgrey = (199.0/255, 199.0/255, 199.0/255)
+lightyellow = (219.0/255, 219.0/255, 141.0/255)
+lightteal = (23.0/255, 190.0/255, 207.0/255)
+
+colors = [blue, orange, green, red, purple, brown, pink, grey, yellow, teal]
+lightcolors = [lightblue, lightorange, lightgreen, lightred, lightpurple,
+                    lightbrown, lightpink, lightgrey, lightyellow, lightteal]
 
 def logpost(x, logprior, loglike, jetType, fluxArg, fitVars, bounds,
                 tDat, nuDat, FnuDat, dFnuDat, opt=False):
