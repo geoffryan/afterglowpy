@@ -223,10 +223,10 @@ def analyze(flatchain, flatlp, weights, jetType, X0, fitVars, labels, data,
                 q[3]-q[2], q[1]-q[2], q[4]-q[2], q[0]-q[2]))
 
     print("Finding MAP")
-    if weights != None:
-        imax = np.argmax(flatlp + np.log(weights))
-    else:
+    if weights is None:
         imax = np.argmax(flatlp)
+    else:
+        imax = np.argmax(flatlp + np.log(weights))
     xMAP0 = flatchain[imax]
     print("MAP0: ", xMAP0, flatlp[imax])
 
@@ -330,7 +330,7 @@ def analyze(flatchain, flatlp, weights, jetType, X0, fitVars, labels, data,
     fig.savefig("{0:s}_corner.png".format(label))
     plt.close(fig)
 
-    if derivedVals != None:
+    if derivedVals is not None:
         print("Calculating Derived Vals")
         nval = len(derivedVals)
         labelsFull = np.empty((ndim+nval,), dtype=labels.dtype)
@@ -392,7 +392,7 @@ if __name__ == "__main__":
     nwalkers = chain.shape[0]
     nsteps = chain.shape[1]
     ndim = chain.shape[2]
-    nburn = nsteps/2
+    nburn = nsteps/4
 
     chainBurned = chain[:,nburn:,:]
     lnprobabilityBurned = lnprobability[:,nburn:]
