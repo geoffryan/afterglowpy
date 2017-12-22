@@ -286,12 +286,15 @@ def analyze(flatchain, flatlp, weights, jetType, X0, fitVars, labels, data,
         nuX = NU[NU>1.0e16].mean()
         nuR = 6.0e9
 
+        print("Calculating MAP LC")
+
         Y = fit.getEvalForm(jetType, XMAP)
         nu[:] = nuR
         FnuRMAP = fluxFunc(t, nu, jetType, *Y)
         nu[:] = nuX
         FnuXMAP = fluxFunc(t, nu, jetType, *Y)
 
+        print("Plotting MAP LC")
         fig, ax = plt.subplots(1,1, figsize=fit.figsize)
         ax.plot(t/fit.day, FnuRMAP, color='k', ls='-', lw=2)
         ax.plot(t/fit.day, FnuXMAP, color='k', ls='-', lw=2)
@@ -304,12 +307,14 @@ def analyze(flatchain, flatlp, weights, jetType, X0, fitVars, labels, data,
         fit.dumpLCTxt(t, nuX, FnuXMAP, jetType, Y, 
                         "{0:s}_lc_MAP_xray.txt".format(label))
 
+        print("Calculating MAP Spectrum")
         nu = np.logspace(3, 20, num=t.shape[0], base=10.0)
         t[:] = 17*fit.day
         Fnu17dMAP = fluxFunc(t, nu, jetType, *Y)
         t[:] = 110*fit.day
         Fnu110dMAP = fluxFunc(t, nu, jetType, *Y)
 
+        print("Plotting MAP Spectrum")
         fig, ax = plt.subplots(1,1, figsize=fit.figsize)
         ax.plot(nu, Fnu17dMAP, color='k', ls='-', lw=2)
         ax.plot(nu, Fnu110dMAP, color='k', ls='-', lw=2)
