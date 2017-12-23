@@ -53,7 +53,7 @@ def weightSHoES(flatchain):
 
 def weightLIGO(flatchain):
 
-    thv = flatchain[:,:,0]
+    thv = flatchain[:,0]
     cthv = np.cos(thv)
 
     cv0 = 0.958
@@ -207,11 +207,6 @@ def analyze(flatchain, flatlp, weights, jetType, X0, fitVars, labels, data,
     
     ndim = flatchain.shape[1]
     print("Analyzing {0:s}".format(label))
-    #nwalkers = chain.shape[0]
-    #nsteps = chain.shape[1]
-    #ndim = chain.shape[2]
-    #flatchain = chain.reshape((-1,ndim))
-    #flatlp = lp.reshape((-1,))
 
     print("Calculating quantiles")
     for i in range(ndim):
@@ -227,6 +222,11 @@ def analyze(flatchain, flatlp, weights, jetType, X0, fitVars, labels, data,
         imax = np.argmax(flatlp)
     else:
         imax = np.argmax(flatlp + np.log(weights))
+
+    maxinds = np.arange(flatlp.shape[0])[flatlp==flatlp[imax]]
+    print(maxinds)
+    print(maxinds.shape)
+
     xMAP0 = flatchain[imax]
     print("MAP0: ", xMAP0, flatlp[imax])
 
@@ -268,11 +268,23 @@ def analyze(flatchain, flatlp, weights, jetType, X0, fitVars, labels, data,
     FERRo = FERR[obs]
     No = len(To)
 
+    Y = fit.getEvalForm(jetType, XMAP)
+    print(XMAP)
+    print(Y)
+    fnu = fluxFunc(T, NU, jetType, *Y)
+
+    f = open("best_data.txt", "w")
+    for i in range(len(T)):
+        f.write("{0:.6g} {1:.6g} {2:.6g} {3:.6g} {4:.6g}\n".format(
+                    T[i], NU[i], FERR[i], FNU[i], fnu[i]))
+    f.close()
+    
     try:
         chi2MAP = fit.chi2(jetType, XMAP, T, NU, FNU, FERR) 
         redchi2MAP = chi2MAP / (N - ndim)
         chi2MAPo = fit.chi2(jetType, XMAP, To, NUo, FNUo, FERRo) 
         redchi2MAPo = chi2MAPo / (No - ndim)
+
         print("MAP(obs+ul) chi2={0:.3g} chi2/dof={1:.3g}".format(
                                                         chi2MAP, redchi2MAP))
         print("MAP(obs)    chi2={0:.3g} chi2/dof={1:.3g}".format(
@@ -397,7 +409,7 @@ if __name__ == "__main__":
     nwalkers = chain.shape[0]
     nsteps = chain.shape[1]
     ndim = chain.shape[2]
-    nburn = nsteps/4
+    nburn = 36000/thin #nsteps/4
 
     chainBurned = chain[:,nburn:,:]
     lnprobabilityBurned = lnprobability[:,nburn:]
