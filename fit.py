@@ -34,7 +34,7 @@ printLP = False
 
 figsize = (8,6)
 labelsize = 24
-legendsize = 14
+legendsize = 18
 ticksize = 18
 
 blue = (31.0/255, 119.0/255, 180.0/255)

@@ -200,6 +200,84 @@ def calcEjet_quick(jetType, x, X0, fitVars):
 
     return Ejet
 
+def plotRange(flatchain, flatlp, jetType, X0, fitVars, data, label, cut=0.95, nrand=100,
+                npoints=100):
+
+    lpcut = np.percentile(flatlp, cut*100.0)
+
+    ind = flatlp > lpcut
+    cutchain = flatchain[ind]
+    cutlp = flatlp[ind]
+
+    N = cutchain.shape[0]
+
+    t0 = 1.0 * fit.day
+    t1 = 1.0e3 * fit.day
+    t = np.logspace(np.log10(t0), np.log10(t1), npoints)
+    nu = np.empty(t.shape)
+    tSpec = np.empty(t.shape)
+    nuSpec = np.logspace(6, 20, npoints)
+    nuR = 3.0e9
+    nuX = 1.2e18
+    t110 = 110.0 * fit.day
+    tSpec[:] = t110
+
+    FnuR = np.empty((nrand, npoints))
+    FnuX = np.empty((nrand, npoints))
+    FnuSpec = np.empty((nrand, npoints))
+
+    arri = np.random.randint(0,N,nrand)
+    arri = np.empty((nrand,), dtype=np.int)
+
+    X = X0.copy()
+
+    for i in range(nrand):
+        sys.stdout.write("\rCalculating draw {0:d} of {1:d}".format(i+1,nrand))
+        sys.stdout.flush()
+        j = np.random.randint(0,N,1)
+        while i>0 and (cutlp[j]==cutlp[arri[:i]]).any():
+            j = np.random.randint(0,N,1)
+        arri[i] = j
+        X[fitVars] = cutchain[arri[i],:]
+        Y = fit.getEvalForm(jetType, X)
+        nu[:] = nuR
+        FnuR[i,:] = fluxFunc(t, nu, jetType, *Y)
+        nu[:] = nuX
+        FnuX[i,:] = fluxFunc(t, nu, jetType, *Y)
+        FnuSpec[i,:] = fluxFunc(tSpec, nuSpec, jetType, *Y)
+    sys.stdout.write("\n")
+    sys.stdout.flush()
+
+    imax = np.argmax(FnuR[:,-1])
+    imin = np.argmin(FnuR[:,-1])
+
+    print("max", cutchain[arri[imax]], cutlp[arri[imax]])
+    print("min", cutchain[arri[imin]], cutlp[arri[imax]])
+
+    fig, ax = plt.subplots(1,1, figsize=fit.figsize)
+    ax.fill_between(t/fit.day, FnuR.min(axis=0), FnuR.max(axis=0), color='grey')
+    ax.fill_between(t/fit.day, FnuX.min(axis=0), FnuX.max(axis=0), color='grey')
+    lmax, = ax.plot(t/fit.day, FnuR[imax], color='k', lw=2, ls='-')
+    ax.plot(t/fit.day, FnuX[imax], color='k', lw=2, ls='-')
+    lmin, = ax.plot(t/fit.day, FnuR[imin], color='k', lw=2, ls='--')
+    ax.plot(t/fit.day, FnuX[imin], color='k', lw=2, ls='--')
+    fit.plot_data(ax, *data, legend=False)
+    ax.legend((lmax, lmin), ("Late Peak", "Early Peak"), fontsize=fit.legendsize, 
+                loc='lower right')
+    fig.tight_layout()
+    fig.savefig("{0:s}_lc_range.png".format(label))
+    plt.close(fig)
+
+    fig, ax = plt.subplots(1,1, figsize=fit.figsize)
+    ax.fill_between(nuSpec, FnuSpec.min(axis=0), FnuSpec.max(axis=0), color='grey')
+    lmax, = ax.plot(nuSpec, FnuSpec[imax], color='k', lw=2, ls='-')
+    lmin, = ax.plot(nuSpec, FnuSpec[imin], color='k', lw=2, ls='--')
+    fit.plot_data(ax, *data, legend=False, spec=True)
+    ax.legend((lmax, lmin), ("Late Peak", "Early Peak"), fontsize=fit.legendsize, 
+                loc='upper right')
+    fig.tight_layout()
+    fig.savefig("{0:s}_spec_range.png".format(label))
+    plt.close(fig)
 
 
 def analyze(flatchain, flatlp, weights, jetType, X0, fitVars, labels, data, 
@@ -218,17 +296,19 @@ def analyze(flatchain, flatlp, weights, jetType, X0, fitVars, labels, data,
                 q[3]-q[2], q[1]-q[2], q[4]-q[2], q[0]-q[2]))
 
     print("Finding MAP")
-    if weights is None:
-        imax = np.argmax(flatlp)
-    else:
-        imax = np.argmax(flatlp + np.log(weights))
 
-    maxinds = np.arange(flatlp.shape[0])[flatlp==flatlp[imax]]
+    if weights is None:
+        lpw = flatlp
+    else:
+        lpw = flatlp + np.log(weights)
+    imax = np.argmax(lpw)
+
+    maxinds = np.arange(lpw.shape[0])[lpw==lpw[imax]]
     print(maxinds)
     print(maxinds.shape)
 
     xMAP0 = flatchain[imax]
-    print("MAP0: ", xMAP0, flatlp[imax])
+    print("MAP0: ", xMAP0, lpw[imax])
 
     if optimizeMAP:
         print("Optimizing MAP")
@@ -337,6 +417,9 @@ def analyze(flatchain, flatlp, weights, jetType, X0, fitVars, labels, data,
     except ValueError:
         print("Value Error in MAP calculation??")
     
+    print("Plotting Range")
+    plotRange(flatchain, lpw, jetType, X0, fitVars, data, label, cut=0.95, nrand=200,
+                npoints=32)
 
     print("Making Corner Plot")
     fig = corner.corner(flatchain, labels=labels[fitVars],
@@ -363,6 +446,7 @@ def analyze(flatchain, flatlp, weights, jetType, X0, fitVars, labels, data,
             f = derivedVals[i]['f']
             flatchainFull[:,ndim+i] = f(flatchain, jetType, X0, fitVars)
             truthFull[ndim+i] = f(truth, jetType, X0, fitVars)
+        print("Full xMAP", truthFull)
         print("Making Full Corner Plot")
         fig = corner.corner(flatchainFull, labels=labelsFull,
                             quantiles=[0.16,0.50,0.84], truths=truthFull,
