@@ -197,7 +197,7 @@ def plot_data(ax, t, nu, Fnu, Ferr, ul, inst, spec=False, legend=True):
                     mycolor=cmapX(0.8)
                     label = instrument
                 else:
-                    mycolor=cmap(1.0)
+                    mycolor=cmapX(1.0)
                     label = ''
             else:
                 mycolor='k'

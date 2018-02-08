@@ -199,8 +199,8 @@ if __name__ == "__main__":
         fluxFunc = grb.fluxDensity
 
     #nburn = 14000
-    #nburn = 100
-    nburn = 1000
+    nburn = 100
+    #nburn = 32000
     nwalkers = chain.shape[0]
     nsteps = chain.shape[1]
     ndim = chain.shape[2]

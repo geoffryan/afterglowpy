@@ -441,11 +441,19 @@ def analyze(flatchain, flatlp, weights, jetType, X0, fitVars, labels, data,
         flatchainFull[:,:ndim] = flatchain[:,:]
         truthFull[:ndim] = xMAP[:]
         truth = np.array([xMAP])
+        print("Derived quantiles")
         for i in range(nval):
             labelsFull[ndim+i] = derivedVals[i]['label']
             f = derivedVals[i]['f']
             flatchainFull[:,ndim+i] = f(flatchain, jetType, X0, fitVars)
             truthFull[ndim+i] = f(truth, jetType, X0, fitVars)
+            q = corner.quantile(flatchainFull[:,ndim+i],
+                                    [0.025, 0.16, 0.5, 0.84, 0.975], weights)
+            print("{0:d}: {1:.5g} {2:.5g} {3:.5g} {4:.5g} {5:.5g}".format(
+                ndim+i, q[0], q[1], q[2], q[3], q[4]))
+            print("       68%: ({0:.2g} {1:.2g}) 95%: ({2:.2g} {3:.2g})".format(
+                q[3]-q[2], q[1]-q[2], q[4]-q[2], q[0]-q[2]))
+
         print("Full xMAP", truthFull)
         print("Making Full Corner Plot")
         fig = corner.corner(flatchainFull, labels=labelsFull,
@@ -493,7 +501,7 @@ if __name__ == "__main__":
     nwalkers = chain.shape[0]
     nsteps = chain.shape[1]
     ndim = chain.shape[2]
-    nburn = 36000/thin #nsteps/4
+    nburn = nsteps/4 #36000/thin #nsteps/4
 
     chainBurned = chain[:,nburn:,:]
     lnprobabilityBurned = lnprobability[:,nburn:]
