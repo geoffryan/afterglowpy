@@ -12,6 +12,7 @@ import fit
 
 optimizeMAP = False
 thin = 1
+makeCorners = False
 
 blue = (31.0/255, 119.0/255, 180.0/255)
 orange = (255.0/255, 127.0/255, 14.0/255)
@@ -252,7 +253,44 @@ def plotRange(flatchain, flatlp, jetType, X0, fitVars, data, label, cut=0.95, nr
     imin = np.argmin(FnuR[:,-1])
 
     print("max", cutchain[arri[imax]], cutlp[arri[imax]])
-    print("min", cutchain[arri[imin]], cutlp[arri[imax]])
+    print("min", cutchain[arri[imin]], cutlp[arri[imin]])
+
+    xEarly = cutchain[arri[imin]]
+    X[fitVars] = xEarly[:]
+    Y = fit.getEvalForm(jetType, X)
+    f = open("{0:s}_lc_early_radio.txt".format(label), "w")
+    f.write("Parameters: " + " ".join(["{0:.8g}".format(y) for y in Y]) + "\n")
+    f.write("Frequency: {0:.8e}\n".format(nuR))
+    f.write("t(s) Fnu(mJy)\n")
+    for i in range(npoints):
+        f.write("{0:.8e} {1:.8e}\n".format(t[i], FnuR[imin,i]))
+    f.close()
+    f = open("{0:s}_lc_early_xray.txt".format(label), "w")
+    f.write("Parameters: " + " ".join(["{0:.8g}".format(y) for y in Y]) + "\n")
+    f.write("Frequency: {0:.8e}\n".format(nuX))
+    f.write("t(s) Fnu(mJy)\n")
+    for i in range(npoints):
+        f.write("{0:.8e} {1:.8e}\n".format(t[i], FnuX[imin,i]))
+    f.close()
+
+    xLate = cutchain[arri[imax]]
+    X[fitVars] = xLate[:]
+    Y = fit.getEvalForm(jetType, X)
+    f = open("{0:s}_lc_late_radio.txt".format(label), "w")
+    f.write("Parameters: " + " ".join(["{0:.8g}".format(y) for y in Y]) + "\n")
+    f.write("Frequency: {0:.8e}\n".format(nuR))
+    f.write("t(s) Fnu(mJy)\n")
+    for i in range(npoints):
+        f.write("{0:.8e} {1:.8e}\n".format(t[i], FnuR[imax,i]))
+    f.close()
+    f = open("{0:s}_lc_late_xray.txt".format(label), "w")
+    f.write("Parameters: " + " ".join(["{0:.8g}".format(y) for y in Y]) + "\n")
+    f.write("Frequency: {0:.8e}\n".format(nuX))
+    f.write("t(s) Fnu(mJy)\n")
+    for i in range(npoints):
+        f.write("{0:.8e} {1:.8e}\n".format(t[i], FnuX[imax,i]))
+    f.close()
+
 
     fig, ax = plt.subplots(1,1, figsize=fit.figsize)
     ax.fill_between(t/fit.day, FnuR.min(axis=0), FnuR.max(axis=0), color='grey')
@@ -418,17 +456,18 @@ def analyze(flatchain, flatlp, weights, jetType, X0, fitVars, labels, data,
         print("Value Error in MAP calculation??")
     
     print("Plotting Range")
-    plotRange(flatchain, lpw, jetType, X0, fitVars, data, label, cut=0.95, nrand=200,
+    plotRange(flatchain, lpw, jetType, X0, fitVars, data, label, cut=0.32, nrand=300,
                 npoints=32)
 
-    print("Making Corner Plot")
-    fig = corner.corner(flatchain, labels=labels[fitVars],
+    if makeCorners:
+        print("Making Corner Plot")
+        fig = corner.corner(flatchain, labels=labels[fitVars],
                         quantiles=[0.16,0.50,0.84], truths=xMAP,
                         weights=weights, show_titles=True,
                         label_kwargs={'fontsize': cornerLabelsize},
                         title_kwargs={'fontsize': cornerTitlesize})
-    fig.savefig("{0:s}_corner.png".format(label))
-    plt.close(fig)
+        fig.savefig("{0:s}_corner.png".format(label))
+        plt.close(fig)
 
     if derivedVals is not None:
         print("Calculating Derived Vals")
@@ -455,14 +494,15 @@ def analyze(flatchain, flatlp, weights, jetType, X0, fitVars, labels, data,
                 q[3]-q[2], q[1]-q[2], q[4]-q[2], q[0]-q[2]))
 
         print("Full xMAP", truthFull)
-        print("Making Full Corner Plot")
-        fig = corner.corner(flatchainFull, labels=labelsFull,
+        if makeCorners:
+            print("Making Full Corner Plot")
+            fig = corner.corner(flatchainFull, labels=labelsFull,
                             quantiles=[0.16,0.50,0.84], truths=truthFull,
                             weights=weights, show_titles=True,
                             label_kwargs={'fontsize': cornerLabelsize},
                             title_kwargs={'fontsize': cornerTitlesize})
-        fig.savefig("{0:s}_corner_full.png".format(label))
-        plt.close(fig)
+            fig.savefig("{0:s}_corner_full.png".format(label))
+            plt.close(fig)
 
 
 
