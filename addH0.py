@@ -12,7 +12,8 @@ import fit
 
 optimizeMAP = False
 thin = 1
-makeCorners = False
+makeCorners = True
+makeRange = True
 
 blue = (31.0/255, 119.0/255, 180.0/255)
 orange = (255.0/255, 127.0/255, 14.0/255)
@@ -255,15 +256,26 @@ def plotRange(flatchain, flatlp, jetType, X0, fitVars, data, label, cut=0.95, nr
     print("max", cutchain[arri[imax]], cutlp[arri[imax]])
     print("min", cutchain[arri[imin]], cutlp[arri[imin]])
 
+    nuO = 5.08e14 #F606W, la = 5900 Angstroms
+    nu[:] = nuO
+
     xEarly = cutchain[arri[imin]]
     X[fitVars] = xEarly[:]
     Y = fit.getEvalForm(jetType, X)
+    FnuO = fluxFunc(t, nu, jetType, *Y)
     f = open("{0:s}_lc_early_radio.txt".format(label), "w")
     f.write("Parameters: " + " ".join(["{0:.8g}".format(y) for y in Y]) + "\n")
     f.write("Frequency: {0:.8e}\n".format(nuR))
     f.write("t(s) Fnu(mJy)\n")
     for i in range(npoints):
         f.write("{0:.8e} {1:.8e}\n".format(t[i], FnuR[imin,i]))
+    f.close()
+    f = open("{0:s}_lc_early_optical.txt".format(label), "w")
+    f.write("Parameters: " + " ".join(["{0:.8g}".format(y) for y in Y]) + "\n")
+    f.write("Frequency: {0:.8e}\n".format(nuO))
+    f.write("t(s) Fnu(mJy)\n")
+    for i in range(npoints):
+        f.write("{0:.8e} {1:.8e}\n".format(t[i], FnuO[i]))
     f.close()
     f = open("{0:s}_lc_early_xray.txt".format(label), "w")
     f.write("Parameters: " + " ".join(["{0:.8g}".format(y) for y in Y]) + "\n")
@@ -276,12 +288,20 @@ def plotRange(flatchain, flatlp, jetType, X0, fitVars, data, label, cut=0.95, nr
     xLate = cutchain[arri[imax]]
     X[fitVars] = xLate[:]
     Y = fit.getEvalForm(jetType, X)
+    FnuO = fluxFunc(t, nu, jetType, *Y)
     f = open("{0:s}_lc_late_radio.txt".format(label), "w")
     f.write("Parameters: " + " ".join(["{0:.8g}".format(y) for y in Y]) + "\n")
     f.write("Frequency: {0:.8e}\n".format(nuR))
     f.write("t(s) Fnu(mJy)\n")
     for i in range(npoints):
         f.write("{0:.8e} {1:.8e}\n".format(t[i], FnuR[imax,i]))
+    f.close()
+    f = open("{0:s}_lc_late_optical.txt".format(label), "w")
+    f.write("Parameters: " + " ".join(["{0:.8g}".format(y) for y in Y]) + "\n")
+    f.write("Frequency: {0:.8e}\n".format(nuO))
+    f.write("t(s) Fnu(mJy)\n")
+    for i in range(npoints):
+        f.write("{0:.8e} {1:.8e}\n".format(t[i], FnuO[i]))
     f.close()
     f = open("{0:s}_lc_late_xray.txt".format(label), "w")
     f.write("Parameters: " + " ".join(["{0:.8g}".format(y) for y in Y]) + "\n")
@@ -454,10 +474,11 @@ def analyze(flatchain, flatlp, weights, jetType, X0, fitVars, labels, data,
 
     except ValueError:
         print("Value Error in MAP calculation??")
-    
-    print("Plotting Range")
-    plotRange(flatchain, lpw, jetType, X0, fitVars, data, label, cut=0.32, nrand=300,
-                npoints=32)
+   
+    if makeRange:
+        print("Plotting Range")
+        plotRange(flatchain, lpw, jetType, X0, fitVars, data, label, cut=0.32,
+                nrand=400, npoints=32)
 
     if makeCorners:
         print("Making Corner Plot")
