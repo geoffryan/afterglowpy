@@ -206,11 +206,11 @@ def plot_data(ax, t, nu, Fnu, Ferr, ul, inst, spec=False, legend=True):
             lim = myul > 0.0
             if lim.any():
                 if not spec:
-                    ax.plot(myt[lim]/day, (myul*myFerr)[lim],
+                    ax.plot(myt[lim]/day, 3*myFerr[lim], #(myul*myFerr)[lim],
                             marker='v', color=mycolor, mew=0.0, ls='',
                             ms=10, label=label)
                 else:
-                    ax.plot(mynu[lim], (myul*myFerr)[lim],
+                    ax.plot(mynu[lim], 3*myFerr[lim], #(myul*myFerr)[lim],
                             marker='v', color=mycolor, mew=0.0, ls='',
                             ms=10, label=label)
             if real.any():
@@ -252,8 +252,8 @@ def dumpLCTxt(t, nu, Fnu, jetType, specType, Y, name):
 
     f = open(name, "w")
     f.write("# nu={0:.6g} Hz\n".format(nu))
-    f.write("# " + str(jetType) + " " + str(specType) + " "
-                + " ".join([str(y) for y in Y]) + "\n")
+    f.write("# jetType: " + str(jetType) + " specType: " + str(specType) + "\n")
+    f.write("# Parameters: " + " ".join([str(y) for y in Y]) + "\n")
     f.write("# t(d) Fnu(mJy)\n")
     for i in range(t.shape[0]):
         f.write("{0:.8g} {1:.8g}\n".format(t[i]/day, Fnu[i]))

@@ -27,7 +27,7 @@ def calcSpec(nu, g, te, n0, p, epse, epsB, ksiN, IC=True):
     if IC:
         gr = gcs/gm
         y = beta*epse/epsB
-        if gr <= 1.0 or gr*gr-gr-a <= 0.0:
+        if gr <= 1.0 or gr*gr-gr-y <= 0.0:
             #Fast Cooling (with I.C.)
             X = 0.5*(1 + math.sqrt(1+4*y))
         else:
