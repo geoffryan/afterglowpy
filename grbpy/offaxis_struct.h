@@ -85,6 +85,8 @@ struct fluxParams
     double *mu_table;
     double *alpha_table;
     int table_entries;
+
+    int spec_type;
 };
 
 
@@ -123,7 +125,8 @@ void lc_GaussianCore(double *t, double *nu, double *F, int Nt,
                         double theta_h_core, double theta_h_wing,
                         double *theta_c_arr, double *E_iso_arr,
                         int res_cones, struct fluxParams *pars);
-void calc_flux_density(int jet_type, double *t, double *nu, double *Fnu, int N,
+void calc_flux_density(int jet_type, int spec_type, 
+                            double *t, double *nu, double *Fnu, int N,
                             double theta_obs, double E_iso_core,
                             double theta_h_core, double theta_h_wing, 
                             double n_0, double p, double epsilon_E,
@@ -138,7 +141,7 @@ void setup_fluxParams(struct fluxParams *pars,
                     double epsilon_B, 
                     double ksi_N,
                     double Rt0, double Rt1,
-        int table_entries);
+                    int table_entries, int spec_type);
 void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h);
 void set_obs_params(struct fluxParams *pars, double t_obs, double nu_obs,
                         double theta_obs_cur, double current_theta_cone_hi, 

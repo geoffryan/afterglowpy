@@ -63,17 +63,17 @@ colors = [blue, orange, green, red, purple, brown, pink, grey, yellow, teal]
 lightcolors = [lightblue, lightorange, lightgreen, lightred, lightpurple,
                     lightbrown, lightpink, lightgrey, lightyellow, lightteal]
 
-def logpost(x, logprior, loglike, jetType, fluxArg, fitVars, bounds,
+def logpost(x, logprior, loglike, jetType, specType, fluxArg, fitVars, bounds,
                 tDat, nuDat, FnuDat, dFnuDat, opt=False):
 
     X = fluxArg.copy()
     X[fitVars] = x[:]
 
-    lp = logprior(x, jetType, X, fitVars, bounds)
+    lp = logprior(x, jetType, specType, X, fitVars, bounds)
 
     if lp > -np.inf:
         #print(str(os.getpid()) + " - " + str(x))
-        lp += loglike(jetType, X, tDat, nuDat, FnuDat, dFnuDat)
+        lp += loglike(jetType, specType, X, tDat, nuDat, FnuDat, dFnuDat)
 
     if printLP:
         print(str(x) + ": " + str(lp))
@@ -83,19 +83,19 @@ def logpost(x, logprior, loglike, jetType, fluxArg, fitVars, bounds,
 
     return lp
 
-def chi2(jetType, X, tDat, nuDat, FnuDat, dFnuDat):
+def chi2(jetType, specType, X, tDat, nuDat, FnuDat, dFnuDat):
 
     Y = getEvalForm(jetType, X)
     if jetType == 3:
-        Fnu = grb.fluxDensityCocoon(tDat, nuDat, jetType, *Y)
+        Fnu = grb.fluxDensityCocoon(tDat, nuDat, jetType, specType, *Y)
     else:
-        Fnu = grb.fluxDensity(tDat, nuDat, jetType, *Y)
+        Fnu = grb.fluxDensity(tDat, nuDat, jetType, specType, *Y)
     chi = (Fnu-FnuDat) / dFnuDat
     chi2 = (chi*chi).sum()
 
     return chi2 
 
-def logPriorFlat(x, jetType, X, fitVars, bounds):
+def logPriorFlat(x, jetType, specType, X, fitVars, bounds):
 
     lp = 0.0
 
@@ -114,9 +114,9 @@ def logPriorFlat(x, jetType, X, fitVars, bounds):
     return lp
 
 
-def logLikeChi2(jetType, X, tDat, nuDat, FnuDat, dFnuDat):
+def logLikeChi2(jetType, specType, X, tDat, nuDat, FnuDat, dFnuDat):
 
-    ch2 = chi2(jetType, X, tDat, nuDat, FnuDat, dFnuDat)
+    ch2 = chi2(jetType, specType, X, tDat, nuDat, FnuDat, dFnuDat)
 
     return -0.5*ch2
 
@@ -248,11 +248,12 @@ def formatAxes(ax, legend=True, spec=False, loc='upper left'):
     ax.set_ylim(1.0e-9, 1.0e0)
     ax.get_figure().tight_layout()
 
-def dumpLCTxt(t, nu, Fnu, jetType, Y, name):
+def dumpLCTxt(t, nu, Fnu, jetType, specType, Y, name):
 
     f = open(name, "w")
     f.write("# nu={0:.6g} Hz\n".format(nu))
-    f.write("# " + str(jetType) + " " + " ".join([str(y) for y in Y]) + "\n")
+    f.write("# " + str(jetType) + " " + str(specType) + " "
+                + " ".join([str(y) for y in Y]) + "\n")
     f.write("# t(d) Fnu(mJy)\n")
     for i in range(t.shape[0]):
         f.write("{0:.8g} {1:.8g}\n".format(t[i]/day, Fnu[i]))
@@ -275,13 +276,13 @@ def getFitForm(jetType, Y):
         X[logVarsJet] = np.log10(X[logVarsJet])
     return X
 
-def sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps, nburn, label,
+def sample(X0, fitVars, jetType, specType, bounds, data, nwalkers, nsteps, nburn, label,
             threads, restart=False):
 
     filename = label+".h5"
     ndim = len(fitVars)
 
-    lpargs=(logPriorFlat, logLikeChi2, jetType, 
+    lpargs=(logPriorFlat, logLikeChi2, jetType, specType, 
                 X0, fitVars, bounds[fitVars],
                 data[0], data[1], data[2], data[3], False)
 
@@ -306,6 +307,7 @@ def sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps, nburn, label,
         f.create_dataset("X0", data=X0)
         f.create_dataset("nburn", data=np.array([nburn]))
         f.create_dataset("jetType", data=np.array([jetType]))
+        f.create_dataset("specType", data=np.array([specType]))
         f.create_dataset("labels", data=varLabels.astype("S32"))
         f.create_dataset("chain", (nwalkers, nsteps, ndim), dtype=np.float)
         f.create_dataset("lnprobability", (nwalkers, nsteps), dtype=np.float)
@@ -458,6 +460,10 @@ def parseParfile(parfile):
     threads = int(getPar(words, "threads"))
     fitVars = [int(x) for x in getPars(words, "fitVars")]
     jetType = int(getPar(words, "jetType"))
+    try:
+        specType = int(getPar(words, "specType"))
+    except:
+        specType = 0
     if jetType == 3:
         umax = float(getPar(words, "u_max"))
         umin = float(getPar(words, "u_min"))
@@ -487,7 +493,7 @@ def parseParfile(parfile):
         Y0 = np.array([thetaObs, Eiso, thetaJ, thetaW, n0, p, epsE, epsB, xiN, dL])
     X0 = getFitForm(jetType, Y0)
 
-    return label, nwalkers, nburn, nsteps, fitVars, jetType, X0, threads, datafile
+    return label, nwalkers, nburn, nsteps, fitVars, jetType, specType, X0, threads, datafile
 
 
 def runFit(parfile):
@@ -508,6 +514,10 @@ def runFit(parfile):
         ndim = f['chain'].shape[2]
         X0 = f['X0'][...]
         jetType = f['jetType'][0]
+        try:
+            specType = f['specType'][0]
+        except:
+            specType = 0
         fitVars = f['fitVars'][...]
         nburn = f['nburn'][0]
         threads = f['threads'][0]
@@ -515,7 +525,7 @@ def runFit(parfile):
 
     else:
         restart = False
-        label, nwalkers, nburn, nsteps, fitVars, jetType, X0, threads, datafile = parseParfile(parfile)
+        label, nwalkers, nburn, nsteps, fitVars, jetType, specType, X0, threads, datafile = parseParfile(parfile)
         ndim = len(fitVars)
 
         dataExt = datafile.split(".")[-1]
@@ -534,7 +544,7 @@ def runFit(parfile):
         bounds = boundsJet
         varLabels = labelsJetAll
     
-    sampler = sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps,
+    sampler = sample(X0, fitVars, jetType, specType, bounds, data, nwalkers, nsteps,
                         nburn, label, threads, restart=restart)
 
     print("Plotting chain")
@@ -569,7 +579,7 @@ def runFit(parfile):
         Y = getEvalForm(jetType, X)
         for v in nus:
             nu[:] = v
-            Fnu = flux(t, nu, jetType, *Y)
+            Fnu = flux(t, nu, jetType, specType, *Y)
             plot_curve(ax, t, Fnu, alpha=0.2)
     plot_data(ax, T, NU, FNU, FERR, UL, INST)
     fig.savefig("lc_dist.png")
@@ -590,7 +600,7 @@ def runFit(parfile):
 
     for v in nus:
         nu[:] = v
-        Fnu = flux(t, nu, jetType, *Y1)
+        Fnu = flux(t, nu, jetType, specType, *Y1)
         plot_curve(ax, t, Fnu)
     plot_data(ax, T, NU, FNU, FERR, UL, INST)
 

@@ -187,6 +187,7 @@ double theta_integrand(double a_theta, void* params) // inner integral
     double act = cos(a_theta);
 
     double mu = ast * (pars->cp) * (pars->sto) + act * (pars->cto);
+    int spec_type = pars->spec_type;
 
   double t_e = get_t_e(mu, pars->t_obs, pars->mu_table, pars->t_table, 
                         pars->table_entries);
@@ -219,6 +220,43 @@ double theta_integrand(double a_theta, void* params) // inner integral
   double lfac_m = (2.0 - p) / (1.0 - p) * (pars->epsilon_E * e_th / (
                     pars->ksi_N * nprime * m_e * v_light * v_light));
   double lfac_c = 6 * PI * m_e * lfac * v_light / (sigma_T * B * B * t_e);
+
+  //Inverse Compton adjustment of lfac_c
+  if(spec_type == 1)
+  {
+      double gr = lfac_c / lfac_m;
+      double y = beta * pars->epsilon_E/pars->epsilon_B;
+      double X = 1.0;
+
+      if(gr <= 1.0 || gr*gr-gr-y <= 0.0)
+      {
+          //Fast Cooling
+          X = 0.5*(1 + sqrt(1+4*y));
+      }
+      else
+      {
+          //Slow Cooling
+          double b = y * pow(gr, 2-p);
+          double Xa = 1 + b;
+          double Xb = pow(b, 1.0/(4-p)) + 1.0/(4-p);
+          double s = b*b / (b*b + 1);
+          X = Xa * pow(Xb/Xa, s);
+          int i;
+          for(i=0; i<5; i++)
+          {
+              double po = pow(X, p-2);
+              double f = X*X - X - b*po;
+              double df = 2*X - 1 - (p-2)*b*po/X;
+              double dX = -f/df;
+              X += dX;
+              if(fabs(dX) < 1.0e-4*X)
+                  break;
+          }
+      }
+
+      lfac_c /= X;
+  }
+
   double nu_m = 3.0 * lfac_m * lfac_m * e_e * B / (4.0 * PI * m_e * v_light);
   double nu_c = 3.0 * lfac_c * lfac_c * e_e * B / (4.0 * PI * m_e * v_light);
   double em = pars->ksi_N * nprime * B;
@@ -342,7 +380,7 @@ void lc_tophat(double *t, double *nu, double *F, int Nt,
         F[i] = flux_cone(t[i], nu[i], -1, -1, 0.0, theta_h, pars);
 }
 
-void lc_powerlaw(double *t, double *nu, double *F, int Nt,
+void lc_powerlaw(double *t, double *nu, double *F, int Nt, 
                     double E_iso_core, double theta_h_core, 
                     double theta_h_wing, double beta,
                     double *theta_c_arr, double *E_iso_arr,
@@ -497,7 +535,7 @@ double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
     return Fboth;
 }
 
-void calc_flux_density(int jet_type, double *t, double *nu, double *Fnu, int N,
+void calc_flux_density(int jet_type, int spec_type, double *t, double *nu, double *Fnu, int N,
                             double theta_obs, double E_iso_core,
                             double theta_h_core, double theta_h_wing, 
                             double n_0, double p, double epsilon_E,
@@ -510,7 +548,7 @@ void calc_flux_density(int jet_type, double *t, double *nu, double *Fnu, int N,
 
     struct fluxParams fp;
     setup_fluxParams(&fp, d_L, theta_obs, n_0, p, epsilon_E, epsilon_B,
-                        ksi_N, Rt0, Rt1, table_entries);
+                        ksi_N, Rt0, Rt1, table_entries, spec_type);
 
     if(jet_type == _tophat)
     {
@@ -538,13 +576,14 @@ void calc_flux_density(int jet_type, double *t, double *nu, double *Fnu, int N,
 void setup_fluxParams(struct fluxParams *pars, double d_L, double theta_obs,
                         double n_0, double p, double epsilon_E,
                         double epsilon_B, double ksi_N, double Rt0, double Rt1,
-                        int table_entries)
+                        int table_entries, int spec_type)
 {
     pars->t_table = (double *)malloc(sizeof(double) * table_entries);
     pars->R_table = (double *)malloc(sizeof(double) * table_entries);
     pars->mu_table = (double *)malloc(sizeof(double) * table_entries);
     pars->alpha_table = (double *)malloc(sizeof(double) * table_entries);
     pars->table_entries = table_entries;
+    pars->spec_type = spec_type;
 
     pars->d_L = d_L;
     pars->theta_obs = theta_obs;

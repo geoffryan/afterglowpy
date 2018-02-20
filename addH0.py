@@ -202,7 +202,7 @@ def calcEjet_quick(jetType, x, X0, fitVars):
 
     return Ejet
 
-def plotRange(flatchain, flatlp, jetType, X0, fitVars, data, label, cut=0.95, nrand=100,
+def plotRange(flatchain, flatlp, jetType, specType, X0, fitVars, data, label, cut=0.95, nrand=100,
                 npoints=100):
 
     lpcut = np.percentile(flatlp, cut*100.0)
@@ -243,10 +243,10 @@ def plotRange(flatchain, flatlp, jetType, X0, fitVars, data, label, cut=0.95, nr
         X[fitVars] = cutchain[arri[i],:]
         Y = fit.getEvalForm(jetType, X)
         nu[:] = nuR
-        FnuR[i,:] = fluxFunc(t, nu, jetType, *Y)
+        FnuR[i,:] = fluxFunc(t, nu, jetType, specType, *Y)
         nu[:] = nuX
-        FnuX[i,:] = fluxFunc(t, nu, jetType, *Y)
-        FnuSpec[i,:] = fluxFunc(tSpec, nuSpec, jetType, *Y)
+        FnuX[i,:] = fluxFunc(t, nu, jetType, specType, *Y)
+        FnuSpec[i,:] = fluxFunc(tSpec, nuSpec, jetType, specType, *Y)
     sys.stdout.write("\n")
     sys.stdout.flush()
 
@@ -262,7 +262,7 @@ def plotRange(flatchain, flatlp, jetType, X0, fitVars, data, label, cut=0.95, nr
     xEarly = cutchain[arri[imin]]
     X[fitVars] = xEarly[:]
     Y = fit.getEvalForm(jetType, X)
-    FnuO = fluxFunc(t, nu, jetType, *Y)
+    FnuO = fluxFunc(t, nu, jetType, specType, *Y)
     f = open("{0:s}_lc_early_radio.txt".format(label), "w")
     f.write("Parameters: " + " ".join(["{0:.8g}".format(y) for y in Y]) + "\n")
     f.write("Frequency: {0:.8e}\n".format(nuR))
@@ -288,7 +288,7 @@ def plotRange(flatchain, flatlp, jetType, X0, fitVars, data, label, cut=0.95, nr
     xLate = cutchain[arri[imax]]
     X[fitVars] = xLate[:]
     Y = fit.getEvalForm(jetType, X)
-    FnuO = fluxFunc(t, nu, jetType, *Y)
+    FnuO = fluxFunc(t, nu, jetType, specType, *Y)
     f = open("{0:s}_lc_late_radio.txt".format(label), "w")
     f.write("Parameters: " + " ".join(["{0:.8g}".format(y) for y in Y]) + "\n")
     f.write("Frequency: {0:.8e}\n".format(nuR))
@@ -338,7 +338,7 @@ def plotRange(flatchain, flatlp, jetType, X0, fitVars, data, label, cut=0.95, nr
     plt.close(fig)
 
 
-def analyze(flatchain, flatlp, weights, jetType, X0, fitVars, labels, data, 
+def analyze(flatchain, flatlp, weights, jetType, specType, X0, fitVars, labels, data, 
                 label, optimizeMAP=False, derivedVals=None):
     
     ndim = flatchain.shape[1]
@@ -370,7 +370,7 @@ def analyze(flatchain, flatlp, weights, jetType, X0, fitVars, labels, data,
 
     if optimizeMAP:
         print("Optimizing MAP")
-        lpargs=(fit.logPriorFlat, fit.logLikeChi2, jetType, X0, fitVars,
+        lpargs=(fit.logPriorFlat, fit.logLikeChi2, jetType, specType, X0, fitVars,
                 None, data[0], data[1], data[2], data[3], True)
         if jetType == 3:
             bounds = fit.boundsCocoon[fitVars]
@@ -409,7 +409,7 @@ def analyze(flatchain, flatlp, weights, jetType, X0, fitVars, labels, data,
     Y = fit.getEvalForm(jetType, XMAP)
     print(XMAP)
     print(Y)
-    fnu = fluxFunc(T, NU, jetType, *Y)
+    fnu = fluxFunc(T, NU, jetType, specType, *Y)
 
     f = open("best_data.txt", "w")
     for i in range(len(T)):
@@ -418,9 +418,9 @@ def analyze(flatchain, flatlp, weights, jetType, X0, fitVars, labels, data,
     f.close()
     
     try:
-        chi2MAP = fit.chi2(jetType, XMAP, T, NU, FNU, FERR) 
+        chi2MAP = fit.chi2(jetType, specType, XMAP, T, NU, FNU, FERR) 
         redchi2MAP = chi2MAP / (N - ndim)
-        chi2MAPo = fit.chi2(jetType, XMAP, To, NUo, FNUo, FERRo) 
+        chi2MAPo = fit.chi2(jetType, specType, XMAP, To, NUo, FNUo, FERRo) 
         redchi2MAPo = chi2MAPo / (No - ndim)
 
         print("MAP(obs+ul) chi2={0:.3g} chi2/dof={1:.3g}".format(
@@ -440,9 +440,9 @@ def analyze(flatchain, flatlp, weights, jetType, X0, fitVars, labels, data,
 
         Y = fit.getEvalForm(jetType, XMAP)
         nu[:] = nuR
-        FnuRMAP = fluxFunc(t, nu, jetType, *Y)
+        FnuRMAP = fluxFunc(t, nu, jetType, specType, *Y)
         nu[:] = nuX
-        FnuXMAP = fluxFunc(t, nu, jetType, *Y)
+        FnuXMAP = fluxFunc(t, nu, jetType, specType, *Y)
 
         print("Plotting MAP LC")
         fig, ax = plt.subplots(1,1, figsize=fit.figsize)
@@ -452,17 +452,17 @@ def analyze(flatchain, flatlp, weights, jetType, X0, fitVars, labels, data,
         fig.savefig("{0:s}_lc_MAP.png".format(label))
         plt.close(fig)
 
-        fit.dumpLCTxt(t, nuR, FnuRMAP, jetType, Y, 
+        fit.dumpLCTxt(t, nuR, FnuRMAP, jetType, specType, Y, 
                         "{0:s}_lc_MAP_radio.txt".format(label))
-        fit.dumpLCTxt(t, nuX, FnuXMAP, jetType, Y, 
+        fit.dumpLCTxt(t, nuX, FnuXMAP, jetType, specType, Y, 
                         "{0:s}_lc_MAP_xray.txt".format(label))
 
         print("Calculating MAP Spectrum")
         nu = np.logspace(3, 20, num=t.shape[0], base=10.0)
         t[:] = 17*fit.day
-        Fnu17dMAP = fluxFunc(t, nu, jetType, *Y)
+        Fnu17dMAP = fluxFunc(t, nu, jetType, specType, *Y)
         t[:] = 110*fit.day
-        Fnu110dMAP = fluxFunc(t, nu, jetType, *Y)
+        Fnu110dMAP = fluxFunc(t, nu, jetType, specType, *Y)
 
         print("Plotting MAP Spectrum")
         fig, ax = plt.subplots(1,1, figsize=fit.figsize)
@@ -477,7 +477,7 @@ def analyze(flatchain, flatlp, weights, jetType, X0, fitVars, labels, data,
    
     if makeRange:
         print("Plotting Range")
-        plotRange(flatchain, lpw, jetType, X0, fitVars, data, label, cut=0.32,
+        plotRange(flatchain, lpw, jetType, specType, X0, fitVars, data, label, cut=0.32,
                 nrand=400, npoints=32)
 
     if makeCorners:
@@ -540,6 +540,10 @@ if __name__ == "__main__":
     lnprobability = f['lnprobability'][...][:,:steps_taken:thin]
     X0 = f['X0'][...]
     jetType = f['jetType'][0]
+    try:
+        specType = f['specType'][0]
+    except:
+        specType = 0
     fitVars = f['fitVars'][...]
     labels = f['labels'][...]
     T = f['t'][...]
@@ -579,30 +583,30 @@ if __name__ == "__main__":
         wP = weightPlanck(flatchainBurned)
         wS = weightSHoES(flatchainBurned)
         wL = weightLIGO(flatchainBurned)
-        analyze(flatchainBurned, flatlnprobabilityBurned, w1, jetType, X0,
+        analyze(flatchainBurned, flatlnprobabilityBurned, w1, jetType, specType, X0,
                 fitVars, labels, data, "em", optimizeMAP,
                 derivedVals)
-        analyze(flatchainBurned, flatlnprobabilityBurned, wP, jetType, X0,
+        analyze(flatchainBurned, flatlnprobabilityBurned, wP, jetType, specType, X0,
                 fitVars, labels, data, "em+LIGO+Planck", optimizeMAP,
                 derivedVals)
-        analyze(flatchainBurned, flatlnprobabilityBurned, wS, jetType, X0,
+        analyze(flatchainBurned, flatlnprobabilityBurned, wS, jetType, specType, X0,
                 fitVars, labels, data, "em+LIGO+SHoES", optimizeMAP,
                 derivedVals)
-        analyze(flatchainBurned, flatlnprobabilityBurned, wL, jetType, X0,
+        analyze(flatchainBurned, flatlnprobabilityBurned, wL, jetType, specType, X0,
                 fitVars, labels, data, "em+LIGO", optimizeMAP,
                 derivedVals)
     else:
         derivedVals = [{'label': r"$E_{tot}$", 'f':f_Etot}]
         wE = weightEtot(flatchainBurned, jetType, X0, fitVars)
 
-        analyze(flatchainBurned, flatlnprobabilityBurned, w1, jetType, X0,
+        analyze(flatchainBurned, flatlnprobabilityBurned, w1, jetType, specType, X0,
                 fitVars, labels, data, "em", optimizeMAP,
                 derivedVals)
-        analyze(flatchainBurned, flatlnprobabilityBurned, wE, jetType, X0,
+        analyze(flatchainBurned, flatlnprobabilityBurned, wE, jetType, specType, X0,
                 fitVars, labels, data, "em+Ecut", optimizeMAP,
                 derivedVals)
         analyze(flatchainBurned[wE==1.0], flatlnprobabilityBurned[wE==1.0],
-                None, jetType, X0, fitVars, labels, data, "em+Ecut2", 
+                None, jetType, specType, X0, fitVars, labels, data, "em+Ecut2", 
                 optimizeMAP, derivedVals)
 
 

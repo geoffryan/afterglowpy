@@ -16,6 +16,9 @@ epsB = 1.0e-2
 ksiN = 1.0
 dL = 1.23e26
 
+jetType = 3
+specType = 0
+
 Y = np.array([umax, Ei, ts, q, Mej, n0, p, epsE, epsB, ksiN, dL])
 t = np.logspace(3, 7, num=100, base=10.0)
 nu = np.empty(t.shape)
@@ -23,31 +26,31 @@ nu[:] = 6.0e9
 
 Y[3] = -0.3
 Y[2] = 1.0e6
-Fnu1 = grb.fluxDensityCocoon(t, nu, *Y)
+Fnu1 = grb.fluxDensityCocoon(t, nu, jetType, specType, *Y)
 Y[2] = 1.0e7
-Fnu2 = grb.fluxDensityCocoon(t, nu, *Y)
+Fnu2 = grb.fluxDensityCocoon(t, nu, jetType, specType, *Y)
 Y[2] = 1.0e8
-Fnu3 = grb.fluxDensityCocoon(t, nu, *Y)
+Fnu3 = grb.fluxDensityCocoon(t, nu, jetType, specType, *Y)
 Y[2] = 1.0e9
-Fnu4 = grb.fluxDensityCocoon(t, nu, *Y)
+Fnu4 = grb.fluxDensityCocoon(t, nu, jetType, specType, *Y)
 Y[3] = 0.0
 Y[2] = 1.0e6
-Fnu5 = grb.fluxDensityCocoon(t, nu, *Y)
+Fnu5 = grb.fluxDensityCocoon(t, nu, jetType, specType, *Y)
 Y[2] = 1.0e7
-Fnu6 = grb.fluxDensityCocoon(t, nu, *Y)
+Fnu6 = grb.fluxDensityCocoon(t, nu, jetType, specType, *Y)
 Y[2] = 1.0e8
-Fnu7 = grb.fluxDensityCocoon(t, nu, *Y)
+Fnu7 = grb.fluxDensityCocoon(t, nu, jetType, specType, *Y)
 Y[2] = 1.0e9
-Fnu8 = grb.fluxDensityCocoon(t, nu, *Y)
+Fnu8 = grb.fluxDensityCocoon(t, nu, jetType, specType, *Y)
 Y[3] = 0.3
 Y[2] = 1.0e6
-Fnu9 = grb.fluxDensityCocoon(t, nu, *Y)
+Fnu9 = grb.fluxDensityCocoon(t, nu, jetType, specType, *Y)
 Y[2] = 1.0e7
-Fnu10 = grb.fluxDensityCocoon(t, nu, *Y)
+Fnu10 = grb.fluxDensityCocoon(t, nu, jetType, specType, *Y)
 Y[2] = 1.0e8
-Fnu11 = grb.fluxDensityCocoon(t, nu, *Y)
+Fnu11 = grb.fluxDensityCocoon(t, nu, jetType, specType, *Y)
 Y[2] = 1.0e9
-Fnu12 = grb.fluxDensityCocoon(t, nu, *Y)
+Fnu12 = grb.fluxDensityCocoon(t, nu, jetType, specType, *Y)
 
 fig, ax = plt.subplots(1,1)
 ax.plot(t, Fnu1, 'b-')
