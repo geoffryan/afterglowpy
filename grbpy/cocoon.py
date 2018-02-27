@@ -59,7 +59,7 @@ def dfdt(f, t, umax, umin, Ei, q, Mej_solar, Vej0, rho0):
 
     return np.array([dRdt,dudt])
 
-def dP(theta, amu, ate, au, ar, nu, n0, p, epsE, epsB, ksiN):
+def dP(theta, amu, ate, au, ar, nu, n0, p, epsE, epsB, ksiN, specType):
 
     mu = math.cos(theta)
     ib = np.searchsorted(amu, mu)
@@ -96,7 +96,36 @@ def dP(theta, amu, ate, au, ar, nu, n0, p, epsE, epsB, ksiN):
 
     nuprime = g*a * nu
     gm = (2.0-p)/(1.0-p) * epsE * eth / (ksiN * nprime * me*c*c)
-    gc = 6*np.pi * g * me*c / (sigmaT * B*B * te)
+    gcs = 6*np.pi * g * me*c / (sigmaT * B*B * te)
+
+    gr = gcs/gm
+    y = beta*epsE/epsB
+
+    if specType == 1:
+        if gr <= 1.0 or gr*gr-gr-y <= 0.0:
+            #Fast cooling (with I.C.)
+            X = 0.5 * (1 + math.sqrt(1+4*y))
+        else:
+            #Slow cooling (with I.C.)
+            b = y*math.pow(gr, 2-p)
+            Xa = 1+b
+            Xb = math.pow(b, 1.0/(4.0-p)) + 1.0/(4.0-p)
+            s = b*b/(b*b+1.0)
+            X0 = Xa * math.pow(Xb/Xa, s)
+            X = X0
+            imax = 5
+            for i in range(imax):
+                po = math.pow(X, p-2)
+                f = X*X - X - b*po
+                df = 2*X - 1 - p*(p-2)*po/X
+                dX = -f/df
+                X += dX
+                if math.fabs(dX) < 1e-4 * X:
+                    break
+        gc = gcs / X 
+    else:
+        gc = gcs
+
     num = 3*gm*gm * ee * B / (4*np.pi * me*c)
     nuc = 3*gc*gc * ee * B / (4*np.pi * me*c)
     em = ksiN * nprime * B
@@ -119,7 +148,7 @@ def dP(theta, amu, ate, au, ar, nu, n0, p, epsE, epsB, ksiN):
 
     return 2*np.pi * r*r*math.sin(theta) * DR * em * freq / (g*g*a*a)
 
-def fluxDensityCocoon(t, nu, jetType, umax, umin, Ei, q, Mej, n0, p, 
+def fluxDensityCocoon(t, nu, jetType, specType, umax, umin, Ei, q, Mej, n0, p, 
                         epsE, epsB, ksiN, dL):
 
     r0 = 1.0e9
@@ -149,7 +178,7 @@ def fluxDensityCocoon(t, nu, jetType, umax, umin, Ei, q, Mej, n0, p,
     for i in range(len(t)):
         amu = c * (ate - t[i]) / ar
 
-        args = (amu, ate, au, ar, nu[i], n0, p, epsE, epsB, ksiN)
+        args = (amu, ate, au, ar, nu[i], n0, p, epsE, epsB, ksiN, specType)
 
         res = integrate.quad(dP, 0.0, np.pi, args, full_output=1, wopts=wopts,
                                 epsrel=intrtol)
@@ -176,13 +205,14 @@ if __name__ == "__main__":
     epsB = 1.0e-2
     ksiN = 1.0
     dL = 1.23e26
+    specType = 1
 
     Y = np.array([umax, umin, Ei, q, Mej, n0, p, epsE, epsB, ksiN, dL])
     t = np.logspace(3, 9, num=100, base=10.0)
     nu = np.empty(t.shape)
     nu[:] = 6.0e9
 
-    Fnu = fluxDensityCocoon(t, nu, 3, *Y)
+    Fnu = fluxDensityCocoon(t, nu, 3, specType, *Y)
 
     import sys
     import matplotlib.pyplot as plt
@@ -229,19 +259,19 @@ if __name__ == "__main__":
     ax[1].set_ylabel(r"$u$")
 
     intrtol = 1.0e-16
-    Fnu0 = fluxDensityCocoon(t, nu, 3, *Y)
+    Fnu0 = fluxDensityCocoon(t, nu, 3, specType, *Y)
     intrtol = 1.0e-14
-    Fnu1 = fluxDensityCocoon(t, nu, 3, *Y)
+    Fnu1 = fluxDensityCocoon(t, nu, 3, specType, *Y)
     intrtol = 1.0e-12
-    Fnu2 = fluxDensityCocoon(t, nu, 3, *Y)
+    Fnu2 = fluxDensityCocoon(t, nu, 3, specType, *Y)
     intrtol = 1.0e-8
-    Fnu3 = fluxDensityCocoon(t, nu, 3, *Y)
+    Fnu3 = fluxDensityCocoon(t, nu, 3, specType, *Y)
     intrtol = 1.0e-6
-    Fnu4 = fluxDensityCocoon(t, nu, 3, *Y)
+    Fnu4 = fluxDensityCocoon(t, nu, 3, specType, *Y)
     intrtol = 1.0e-4
-    Fnu5 = fluxDensityCocoon(t, nu, 3, *Y)
+    Fnu5 = fluxDensityCocoon(t, nu, 3, specType, *Y)
     intrtol = 1.0e-2
-    Fnu6 = fluxDensityCocoon(t, nu, 3, *Y)
+    Fnu6 = fluxDensityCocoon(t, nu, 3, specType, *Y)
 
     print(np.fabs((Fnu6-Fnu0)/Fnu0).max())
     print(np.fabs((Fnu5-Fnu0)/Fnu0).max())

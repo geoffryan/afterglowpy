@@ -39,6 +39,7 @@
 #define _Gaussian 0
 #define _powerlaw 1
 #define _Gaussian_core 2 // has a core as well
+#define _powerlaw_smooth 4 // has a core as well
 
 //Integration accuracy targets (for non GSL functions)
 #define R_ACC 1.0e-6
@@ -85,6 +86,8 @@ struct fluxParams
     double *mu_table;
     double *alpha_table;
     int table_entries;
+
+    int spec_type;
 };
 
 
@@ -113,6 +116,11 @@ void lc_powerlaw(double *t, double *nu, double *F, int Nt,
                     double theta_h_wing, double beta,
                     double *theta_c_arr, double *E_iso_arr,
                     int res_cones, struct fluxParams *pars);
+void lc_powerlawSmooth(double *t, double *nu, double *F, int Nt,
+                    double E_iso_core, double theta_h_core, 
+                    double theta_h_wing,
+                    double *theta_c_arr, double *E_iso_arr,
+                    int res_cones, struct fluxParams *pars);
 void lc_Gaussian(double *t, double *nu, double *F, int Nt,
                         double E_iso_core, 
                         double theta_h_core, double theta_h_wing,
@@ -123,7 +131,8 @@ void lc_GaussianCore(double *t, double *nu, double *F, int Nt,
                         double theta_h_core, double theta_h_wing,
                         double *theta_c_arr, double *E_iso_arr,
                         int res_cones, struct fluxParams *pars);
-void calc_flux_density(int jet_type, double *t, double *nu, double *Fnu, int N,
+void calc_flux_density(int jet_type, int spec_type, 
+                            double *t, double *nu, double *Fnu, int N,
                             double theta_obs, double E_iso_core,
                             double theta_h_core, double theta_h_wing, 
                             double n_0, double p, double epsilon_E,
@@ -138,7 +147,7 @@ void setup_fluxParams(struct fluxParams *pars,
                     double epsilon_B, 
                     double ksi_N,
                     double Rt0, double Rt1,
-        int table_entries);
+                    int table_entries, int spec_type);
 void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h);
 void set_obs_params(struct fluxParams *pars, double t_obs, double nu_obs,
                         double theta_obs_cur, double current_theta_cone_hi, 

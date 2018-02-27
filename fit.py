@@ -1,6 +1,7 @@
 from __future__ import print_function
 import os
 import sys
+import math
 import numpy as np
 import scipy.optimize as opt
 import matplotlib as mpl
@@ -29,6 +30,10 @@ boundsJet = np.array([[0.0, 0.8], [45.0, 57.0], [theta_min, 0.5*np.pi],
 boundsCocoon = np.array([[-5, 3], [-5, 3], [45.0, 65.0], [0,8],
                     [-10, 0], [-10.0, 10.0], [2.0, 5.0], [-4.0, 0.0],
                     [-5.0, 0.0], [-4.0,0.0], [20.0, 40.0]])
+
+nuR = 3.0e9
+nuO = 5.08e14 #F606W, la = 5900 Angstroms
+nuX = 1.21e18
 
 printLP = False
 
@@ -63,17 +68,17 @@ colors = [blue, orange, green, red, purple, brown, pink, grey, yellow, teal]
 lightcolors = [lightblue, lightorange, lightgreen, lightred, lightpurple,
                     lightbrown, lightpink, lightgrey, lightyellow, lightteal]
 
-def logpost(x, logprior, loglike, jetType, fluxArg, fitVars, bounds,
+def logpost(x, logprior, loglike, jetType, specType, fluxArg, fitVars, bounds,
                 tDat, nuDat, FnuDat, dFnuDat, opt=False):
 
     X = fluxArg.copy()
     X[fitVars] = x[:]
 
-    lp = logprior(x, jetType, X, fitVars, bounds)
+    lp = logprior(x, jetType, specType, X, fitVars, bounds)
 
     if lp > -np.inf:
         #print(str(os.getpid()) + " - " + str(x))
-        lp += loglike(jetType, X, tDat, nuDat, FnuDat, dFnuDat)
+        lp += loglike(jetType, specType, X, tDat, nuDat, FnuDat, dFnuDat)
 
     if printLP:
         print(str(x) + ": " + str(lp))
@@ -83,19 +88,19 @@ def logpost(x, logprior, loglike, jetType, fluxArg, fitVars, bounds,
 
     return lp
 
-def chi2(jetType, X, tDat, nuDat, FnuDat, dFnuDat):
+def chi2(jetType, specType, X, tDat, nuDat, FnuDat, dFnuDat):
 
     Y = getEvalForm(jetType, X)
     if jetType == 3:
-        Fnu = grb.fluxDensityCocoon(tDat, nuDat, jetType, *Y)
+        Fnu = grb.fluxDensityCocoon(tDat, nuDat, jetType, specType, *Y)
     else:
-        Fnu = grb.fluxDensity(tDat, nuDat, jetType, *Y)
+        Fnu = grb.fluxDensity(tDat, nuDat, jetType, specType, *Y)
     chi = (Fnu-FnuDat) / dFnuDat
     chi2 = (chi*chi).sum()
 
     return chi2 
 
-def logPriorFlat(x, jetType, X, fitVars, bounds):
+def logPriorFlat(x, jetType, specType, X, fitVars, bounds):
 
     lp = 0.0
 
@@ -103,8 +108,8 @@ def logPriorFlat(x, jetType, X, fitVars, bounds):
         if (x<bounds[:,0]).any() or (x>bounds[:,1]).any():
             lp = -np.inf
 
-    # Gaussian+Core, Wings must be larger than core.
-    if jetType == 2 and X[3] < X[2]:
+    # Powerlaw or Gaussian+Core, Wings must be larger than core.
+    if (jetType == 1 or jetType == 2) and X[3] < X[2]:
         lp = -np.inf
 
     #Physics
@@ -114,9 +119,9 @@ def logPriorFlat(x, jetType, X, fitVars, bounds):
     return lp
 
 
-def logLikeChi2(jetType, X, tDat, nuDat, FnuDat, dFnuDat):
+def logLikeChi2(jetType, specType, X, tDat, nuDat, FnuDat, dFnuDat):
 
-    ch2 = chi2(jetType, X, tDat, nuDat, FnuDat, dFnuDat)
+    ch2 = chi2(jetType, specType, X, tDat, nuDat, FnuDat, dFnuDat)
 
     return -0.5*ch2
 
@@ -158,11 +163,13 @@ def plot_curve(ax, t, Fnu, color=None, alpha=1.0):
     ax.plot(t/day, Fnu, color=color, ls='-', marker='', alpha=alpha)
 
 
-def plot_data(ax, t, nu, Fnu, Ferr, ul, inst, spec=False, legend=True):
+def plot_data(ax, t, nu, Fnu, Ferr, ul, inst, spec=False, legend=True, rescale=True):
 
     cmapR = mpl.cm.get_cmap('Greens')
     cmapO = mpl.cm.get_cmap('Blues')
     cmapX = mpl.cm.get_cmap('Purples')
+
+    beta = -0.575 #slow cooling, p=2.15
 
     insts = np.unique(inst)
     for instrument in insts:
@@ -175,42 +182,68 @@ def plot_data(ax, t, nu, Fnu, Ferr, ul, inst, spec=False, legend=True):
             myFnu = Fnu[ind][ind2]
             myFerr = Ferr[ind][ind2]
             myul = ul[ind][ind2]
-
-            if v < 1.0e11:
-                nuRhi = 1.0e11
-                nuRlo = 1.0e9
-                mycolor=cmapR(np.log(v/nuRhi)/np.log(nuRlo/nuRhi))
-                label = "{0:.1f} GHz".format(v/1.0e9)
-            elif v < 1.0e15:
-                nuOhi = 1.0e14
-                nuOlo = 1.0e15
-                mycolor=cmapO(np.log(v/nuOhi)/np.log(nuOlo/nuOhi))
-                label = "i"
-            elif v < 1.0e20:
-                if instrument == 'NuSTAR':
-                    mycolor=cmapX(0.2)
-                    label = instrument
-                elif instrument == 'Swift':
-                    mycolor=cmapX(0.5)
-                    label = instrument
-                elif instrument == 'Chandra':
-                    mycolor=cmapX(0.8)
-                    label = instrument
+    
+            if not spec and rescale is not False:
+                if v < 1.0e11:
+                    mycolor = cmapR(0.8)
+                    fac = math.pow(nuR/v, beta)
+                    mynu = mynu * nuR/v
+                    myFnu = myFnu*fac
+                    myFerr = myFerr*fac
+                    label = "{0:.1f} GHz".format(nuR/1.0e9)
+                elif v < 1.0e15:
+                    mycolor = cmapO(0.8)
+                    fac = math.pow(nuO/v, beta)
+                    mynu = mynu * nuO/v
+                    myFnu = myFnu*fac
+                    myFerr = myFerr*fac
+                    label = "{0:.1e} Hz".format(nuO)
+                elif v < 1.0e20:
+                    mycolor = cmapX(0.8)
+                    fac = math.pow(nuX/v, beta)
+                    mynu = mynu * nuX/v
+                    myFnu = myFnu*fac
+                    myFerr = myFerr*fac
+                    label = "{0:.1f} keV".format(nuX*grb.Hz2eV/1.0e3)
                 else:
-                    mycolor=cmapX(1.0)
+                    mycolor='k'
                     label = ''
             else:
-                mycolor='k'
-                label = ''
+                if v < 1.0e11:
+                    nuRhi = 1.0e11
+                    nuRlo = 1.0e9
+                    mycolor=cmapR(np.log(v/nuRhi)/np.log(nuRlo/nuRhi))
+                    label = "{0:.1f} GHz".format(v/1.0e9)
+                elif v < 1.0e15:
+                    nuOhi = 1.0e14
+                    nuOlo = 1.0e15
+                    mycolor=cmapO(np.log(v/nuOhi)/np.log(nuOlo/nuOhi))
+                    label = "i"
+                elif v < 1.0e20:
+                    if instrument == 'NuSTAR':
+                        mycolor=cmapX(0.2)
+                        label = instrument
+                    elif instrument == 'Swift':
+                        mycolor=cmapX(0.5)
+                        label = instrument
+                    elif instrument == 'Chandra':
+                        mycolor=cmapX(0.8)
+                        label = instrument
+                    else:
+                        mycolor=cmapX(1.0)
+                        label = ''
+                else:
+                    mycolor='k'
+                    label = ''
             real = myul <= 0.0
             lim = myul > 0.0
             if lim.any():
                 if not spec:
-                    ax.plot(myt[lim]/day, (myul*myFerr)[lim],
+                    ax.plot(myt[lim]/day, 3*myFerr[lim], #(myul*myFerr)[lim],
                             marker='v', color=mycolor, mew=0.0, ls='',
                             ms=10, label=label)
                 else:
-                    ax.plot(mynu[lim], (myul*myFerr)[lim],
+                    ax.plot(mynu[lim], 3*myFerr[lim], #(myul*myFerr)[lim],
                             marker='v', color=mycolor, mew=0.0, ls='',
                             ms=10, label=label)
             if real.any():
@@ -248,11 +281,12 @@ def formatAxes(ax, legend=True, spec=False, loc='upper left'):
     ax.set_ylim(1.0e-9, 1.0e0)
     ax.get_figure().tight_layout()
 
-def dumpLCTxt(t, nu, Fnu, jetType, Y, name):
+def dumpLCTxt(t, nu, Fnu, jetType, specType, Y, name):
 
     f = open(name, "w")
     f.write("# nu={0:.6g} Hz\n".format(nu))
-    f.write("# " + str(jetType) + " " + " ".join([str(y) for y in Y]) + "\n")
+    f.write("# jetType: " + str(jetType) + " specType: " + str(specType) + "\n")
+    f.write("# Parameters: " + " ".join([str(y) for y in Y]) + "\n")
     f.write("# t(d) Fnu(mJy)\n")
     for i in range(t.shape[0]):
         f.write("{0:.8g} {1:.8g}\n".format(t[i]/day, Fnu[i]))
@@ -275,13 +309,13 @@ def getFitForm(jetType, Y):
         X[logVarsJet] = np.log10(X[logVarsJet])
     return X
 
-def sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps, nburn, label,
+def sample(X0, fitVars, jetType, specType, bounds, data, nwalkers, nsteps, nburn, label,
             threads, restart=False):
 
     filename = label+".h5"
     ndim = len(fitVars)
 
-    lpargs=(logPriorFlat, logLikeChi2, jetType, 
+    lpargs=(logPriorFlat, logLikeChi2, jetType, specType, 
                 X0, fitVars, bounds[fitVars],
                 data[0], data[1], data[2], data[3], False)
 
@@ -306,6 +340,7 @@ def sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps, nburn, label,
         f.create_dataset("X0", data=X0)
         f.create_dataset("nburn", data=np.array([nburn]))
         f.create_dataset("jetType", data=np.array([jetType]))
+        f.create_dataset("specType", data=np.array([specType]))
         f.create_dataset("labels", data=varLabels.astype("S32"))
         f.create_dataset("chain", (nwalkers, nsteps, ndim), dtype=np.float)
         f.create_dataset("lnprobability", (nwalkers, nsteps), dtype=np.float)
@@ -458,6 +493,10 @@ def parseParfile(parfile):
     threads = int(getPar(words, "threads"))
     fitVars = [int(x) for x in getPars(words, "fitVars")]
     jetType = int(getPar(words, "jetType"))
+    try:
+        specType = int(getPar(words, "specType"))
+    except:
+        specType = 0
     if jetType == 3:
         umax = float(getPar(words, "u_max"))
         umin = float(getPar(words, "u_min"))
@@ -487,7 +526,7 @@ def parseParfile(parfile):
         Y0 = np.array([thetaObs, Eiso, thetaJ, thetaW, n0, p, epsE, epsB, xiN, dL])
     X0 = getFitForm(jetType, Y0)
 
-    return label, nwalkers, nburn, nsteps, fitVars, jetType, X0, threads, datafile
+    return label, nwalkers, nburn, nsteps, fitVars, jetType, specType, X0, threads, datafile
 
 
 def runFit(parfile):
@@ -508,6 +547,10 @@ def runFit(parfile):
         ndim = f['chain'].shape[2]
         X0 = f['X0'][...]
         jetType = f['jetType'][0]
+        try:
+            specType = f['specType'][0]
+        except:
+            specType = 0
         fitVars = f['fitVars'][...]
         nburn = f['nburn'][0]
         threads = f['threads'][0]
@@ -515,7 +558,7 @@ def runFit(parfile):
 
     else:
         restart = False
-        label, nwalkers, nburn, nsteps, fitVars, jetType, X0, threads, datafile = parseParfile(parfile)
+        label, nwalkers, nburn, nsteps, fitVars, jetType, specType, X0, threads, datafile = parseParfile(parfile)
         ndim = len(fitVars)
 
         dataExt = datafile.split(".")[-1]
@@ -534,7 +577,7 @@ def runFit(parfile):
         bounds = boundsJet
         varLabels = labelsJetAll
     
-    sampler = sample(X0, fitVars, jetType, bounds, data, nwalkers, nsteps,
+    sampler = sample(X0, fitVars, jetType, specType, bounds, data, nwalkers, nsteps,
                         nburn, label, threads, restart=restart)
 
     print("Plotting chain")
@@ -569,7 +612,7 @@ def runFit(parfile):
         Y = getEvalForm(jetType, X)
         for v in nus:
             nu[:] = v
-            Fnu = flux(t, nu, jetType, *Y)
+            Fnu = flux(t, nu, jetType, specType, *Y)
             plot_curve(ax, t, Fnu, alpha=0.2)
     plot_data(ax, T, NU, FNU, FERR, UL, INST)
     fig.savefig("lc_dist.png")
@@ -590,7 +633,7 @@ def runFit(parfile):
 
     for v in nus:
         nu[:] = v
-        Fnu = flux(t, nu, jetType, *Y1)
+        Fnu = flux(t, nu, jetType, specType, *Y1)
         plot_curve(ax, t, Fnu)
     plot_data(ax, T, NU, FNU, FERR, UL, INST)
 

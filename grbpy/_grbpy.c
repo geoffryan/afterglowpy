@@ -95,13 +95,13 @@ static PyObject *grbpy_fluxDensity(PyObject *self, PyObject *args)
     PyObject *t_obj = NULL;
     PyObject *nu_obj = NULL;
 
-    int jet_type;
+    int jet_type, spec_type;
     double theta_obs, E_iso_core, theta_h_core, theta_h_wing, n_0,
            p, epsilon_E, epsilon_B, ksi_N, d_L;
 
     //Parse Arguments
-    if(!PyArg_ParseTuple(args, "OOidddddddddd", &t_obj, &nu_obj, &jet_type,
-                &theta_obs, &E_iso_core, &theta_h_core, &theta_h_wing,
+    if(!PyArg_ParseTuple(args, "OOiidddddddddd", &t_obj, &nu_obj, &jet_type,
+                &spec_type, &theta_obs, &E_iso_core, &theta_h_core, &theta_h_wing,
                 &n_0, &p, &epsilon_E, &epsilon_B, &ksi_N, &d_L))
     {
         PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
@@ -165,9 +165,9 @@ static PyObject *grbpy_fluxDensity(PyObject *self, PyObject *args)
     double *Fnu = PyArray_DATA((PyArrayObject *) Fnu_obj);
 
     // Calculate the flux!
-    calc_flux_density(jet_type, t, nu, Fnu, N, theta_obs, E_iso_core, 
-                        theta_h_core, theta_h_wing, n_0, p, epsilon_E, 
-                        epsilon_B, ksi_N, d_L);
+    calc_flux_density(jet_type, spec_type, t, nu, Fnu, N, theta_obs, 
+                        E_iso_core, theta_h_core, theta_h_wing, n_0, p, 
+                        epsilon_E, epsilon_B, ksi_N, d_L);
 
     // Clean up!
     Py_DECREF(t_arr);

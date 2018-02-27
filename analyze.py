@@ -80,7 +80,7 @@ def plotTraces(chain, steps_taken, fitVars, labels, name):
         plt.close(fig)
 
 
-def calcFluxStats(samples, fitVars, jetType, X0, t, nu):
+def calcFluxStats(samples, fitVars, jetType, specType, X0, t, nu):
 
     N = samples.shape[0]
     Fnu = np.empty((N,))
@@ -94,7 +94,7 @@ def calcFluxStats(samples, fitVars, jetType, X0, t, nu):
         sys.stdout.flush()
         X[fitVars] = samples[i]
         Y = fit.getEvalForm(jetType, X)
-        Fnu[i] = fluxFunc(T, NU, jetType, *Y)
+        Fnu[i] = fluxFunc(T, NU, jetType, specType, *Y)
     sys.stdout.write("\n")
 
     mean = Fnu.mean()
@@ -181,6 +181,10 @@ if __name__ == "__main__":
     lnprobability = f['lnprobability'][...][:,:steps_taken]
     X0 = f['X0'][...]
     jetType = f['jetType'][0]
+    try:
+        specType = f['specType'][0]
+    except:
+        xpecType = 0
     fitVars = f['fitVars'][...]
     labels = f['labels'][...]
     T = f['t'][...]
@@ -281,10 +285,10 @@ if __name__ == "__main__":
     X1 = X0.copy()
     X1[fitVars] = x1[:]
 
-    lpargs=(fit.logPriorFlat, fit.logLikeChi2, jetType, 
+    lpargs=(fit.logPriorFlat, fit.logLikeChi2, jetType, specType, 
                 X1, fitVars, None, T, NU, FNU, FERR, 
                 False)
-    lpargsOpt=(fit.logPriorFlat, fit.logLikeChi2, jetType, 
+    lpargsOpt=(fit.logPriorFlat, fit.logLikeChi2, jetType, specType, 
                 X1, fitVars, None, T, NU, FNU, FERR, 
                 True)
 
@@ -327,22 +331,22 @@ if __name__ == "__main__":
         X[fitVars] = chain[i,-1,:]
         Y = fit.getEvalForm(jetType, X)
         nu[:] = nuR
-        FnuR[i,:] = fluxFunc(t, nu, jetType, *Y)
+        FnuR[i,:] = fluxFunc(t, nu, jetType, specType, *Y)
         nu[:] = nuX
-        FnuX[i,:] = fluxFunc(t, nu, jetType, *Y)
+        FnuX[i,:] = fluxFunc(t, nu, jetType, specType, *Y)
     sys.stdout.write("\n")
     
     Y1 = fit.getEvalForm(jetType, X1)
     nu[:] = 6.0e9
-    FnuR1 = fluxFunc(t, nu, jetType, *Y1)
+    FnuR1 = fluxFunc(t, nu, jetType, specType, *Y1)
     nu[:] = nuX.mean()
-    FnuX1 = fluxFunc(t, nu, jetType, *Y1)
+    FnuX1 = fluxFunc(t, nu, jetType, specType, *Y1)
 
     #Y2 = fit.getEvalForm(X2)
     #nu[:] = 6.0e9
-    #FnuR2 = grb.fluxDensity(t, nu, jetType, *Y2)
+    #FnuR2 = grb.fluxDensity(t, nu, jetType, specType, *Y2)
     #nu[:] = nuX.mean()
-    #FnuX2 = grb.fluxDensity(t, nu, jetType, *Y2)
+    #FnuX2 = grb.fluxDensity(t, nu, jetType, specType, *Y2)
     
     fig, ax = plt.subplots(1,1, figsize=fit.figsize)
 
@@ -368,9 +372,9 @@ if __name__ == "__main__":
     #samples = chainBurned[:,nsteps/2::step,:].reshape((-1,ndim))
     #nsamps = samples.shape[0]
 
-    #mean110X, sig110X = calcFluxStats(samples, fitVars, jetType, X0,
+    #mean110X, sig110X = calcFluxStats(samples, fitVars, jetType, specType, X0,
     #                                    t_obs, nuX)
-    #mean110R, sig110R = calcFluxStats(samples, fitVars, jetType, X0,
+    #mean110R, sig110R = calcFluxStats(samples, fitVars, jetType, specType, X0,
     #                                    t_obs, nuR)
 
     #print("110 day Radio Flux = {0:.3g} +/- {1:.3g} mJy (MCMC {2:.1g})".format(
