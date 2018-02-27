@@ -64,7 +64,7 @@ void init_grbpy(void)
 #if PY_MAJOR_VERSION >= 3
     PyObject *module = PyModule_Create(&grbpy);
 #else
-    PyObject *module = Py_InitModule("_grbpy", grbpy_methods);
+    PyObject *module = Py_InitModule3("_grbpy", grbpy_methods, grbpy_docstring);
 #endif
     if(module == NULL)
         INITERROR;

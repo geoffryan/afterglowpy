@@ -552,12 +552,10 @@ double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
                     double theta_cone_low, double theta_cone_hi,
                     struct fluxParams *pars)
 {
-    double theta_obs, theta_obs_cur, theta_hi, theta_low;
+    double theta_obs, theta_obs_cur;
     double F1, F2, Fboth;
     
     theta_obs = pars->theta_obs;
-    theta_hi = theta_h;
-    theta_low = 0.0;
 
     if(E_iso > 0.0 && theta_h > 0.0)
         set_jet_params(pars, E_iso, theta_h);
