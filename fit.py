@@ -1,6 +1,7 @@
 from __future__ import print_function
 import os
 import sys
+import math
 import numpy as np
 import scipy.optimize as opt
 import matplotlib as mpl
@@ -29,6 +30,10 @@ boundsJet = np.array([[0.0, 0.8], [45.0, 57.0], [theta_min, 0.5*np.pi],
 boundsCocoon = np.array([[-5, 3], [-5, 3], [45.0, 57.0], [0,8],
                     [-10, 0], [-10.0, 10.0], [2.0, 5.0], [-4.0, 0.0],
                     [-4.0, 0.0], [-4.0,0.0], [20.0, 40.0]])
+
+nuR = 3.0e9
+nuO = 5.08e14 #F606W, la = 5900 Angstroms
+nuX = 1.21e18
 
 printLP = False
 
@@ -103,8 +108,8 @@ def logPriorFlat(x, jetType, specType, X, fitVars, bounds):
         if (x<bounds[:,0]).any() or (x>bounds[:,1]).any():
             lp = -np.inf
 
-    # Gaussian+Core, Wings must be larger than core.
-    if jetType == 2 and X[3] < X[2]:
+    # Powerlaw or Gaussian+Core, Wings must be larger than core.
+    if (jetType == 1 or jetType == 2) and X[3] < X[2]:
         lp = -np.inf
 
     #Physics
@@ -158,11 +163,13 @@ def plot_curve(ax, t, Fnu, color=None, alpha=1.0):
     ax.plot(t/day, Fnu, color=color, ls='-', marker='', alpha=alpha)
 
 
-def plot_data(ax, t, nu, Fnu, Ferr, ul, inst, spec=False, legend=True):
+def plot_data(ax, t, nu, Fnu, Ferr, ul, inst, spec=False, legend=True, rescale=True):
 
     cmapR = mpl.cm.get_cmap('Greens')
     cmapO = mpl.cm.get_cmap('Blues')
     cmapX = mpl.cm.get_cmap('Purples')
+
+    beta = -0.575 #slow cooling, p=2.15
 
     insts = np.unique(inst)
     for instrument in insts:
@@ -175,33 +182,59 @@ def plot_data(ax, t, nu, Fnu, Ferr, ul, inst, spec=False, legend=True):
             myFnu = Fnu[ind][ind2]
             myFerr = Ferr[ind][ind2]
             myul = ul[ind][ind2]
-
-            if v < 1.0e11:
-                nuRhi = 1.0e11
-                nuRlo = 1.0e9
-                mycolor=cmapR(np.log(v/nuRhi)/np.log(nuRlo/nuRhi))
-                label = "{0:.1f} GHz".format(v/1.0e9)
-            elif v < 1.0e15:
-                nuOhi = 1.0e14
-                nuOlo = 1.0e15
-                mycolor=cmapO(np.log(v/nuOhi)/np.log(nuOlo/nuOhi))
-                label = "i"
-            elif v < 1.0e20:
-                if instrument == 'NuSTAR':
-                    mycolor=cmapX(0.2)
-                    label = instrument
-                elif instrument == 'Swift':
-                    mycolor=cmapX(0.5)
-                    label = instrument
-                elif instrument == 'Chandra':
-                    mycolor=cmapX(0.8)
-                    label = instrument
+    
+            if not spec and rescale is not False:
+                if v < 1.0e11:
+                    mycolor = cmapR(0.8)
+                    fac = math.pow(nuR/v, beta)
+                    mynu = mynu * nuR/v
+                    myFnu = myFnu*fac
+                    myFerr = myFerr*fac
+                    label = "{0:.1f} GHz".format(nuR/1.0e9)
+                elif v < 1.0e15:
+                    mycolor = cmapO(0.8)
+                    fac = math.pow(nuO/v, beta)
+                    mynu = mynu * nuO/v
+                    myFnu = myFnu*fac
+                    myFerr = myFerr*fac
+                    label = "{0:.1e} Hz".format(nuO)
+                elif v < 1.0e20:
+                    mycolor = cmapX(0.8)
+                    fac = math.pow(nuX/v, beta)
+                    mynu = mynu * nuX/v
+                    myFnu = myFnu*fac
+                    myFerr = myFerr*fac
+                    label = "{0:.1f} keV".format(nuX*grb.Hz2eV/1.0e3)
                 else:
-                    mycolor=cmapX(1.0)
+                    mycolor='k'
                     label = ''
             else:
-                mycolor='k'
-                label = ''
+                if v < 1.0e11:
+                    nuRhi = 1.0e11
+                    nuRlo = 1.0e9
+                    mycolor=cmapR(np.log(v/nuRhi)/np.log(nuRlo/nuRhi))
+                    label = "{0:.1f} GHz".format(v/1.0e9)
+                elif v < 1.0e15:
+                    nuOhi = 1.0e14
+                    nuOlo = 1.0e15
+                    mycolor=cmapO(np.log(v/nuOhi)/np.log(nuOlo/nuOhi))
+                    label = "i"
+                elif v < 1.0e20:
+                    if instrument == 'NuSTAR':
+                        mycolor=cmapX(0.2)
+                        label = instrument
+                    elif instrument == 'Swift':
+                        mycolor=cmapX(0.5)
+                        label = instrument
+                    elif instrument == 'Chandra':
+                        mycolor=cmapX(0.8)
+                        label = instrument
+                    else:
+                        mycolor=cmapX(1.0)
+                        label = ''
+                else:
+                    mycolor='k'
+                    label = ''
             real = myul <= 0.0
             lim = myul > 0.0
             if lim.any():

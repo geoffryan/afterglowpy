@@ -39,6 +39,7 @@
 #define _Gaussian 0
 #define _powerlaw 1
 #define _Gaussian_core 2 // has a core as well
+#define _powerlaw_smooth 4 // has a core as well
 
 //Integration accuracy targets (for non GSL functions)
 #define R_ACC 1.0e-6
@@ -113,6 +114,11 @@ void lc_tophat(double *t, double *nu, double *F, int Nt,
 void lc_powerlaw(double *t, double *nu, double *F, int Nt,
                     double E_iso_core, double theta_h_core, 
                     double theta_h_wing, double beta,
+                    double *theta_c_arr, double *E_iso_arr,
+                    int res_cones, struct fluxParams *pars);
+void lc_powerlawSmooth(double *t, double *nu, double *F, int Nt,
+                    double E_iso_core, double theta_h_core, 
+                    double theta_h_wing,
                     double *theta_c_arr, double *E_iso_arr,
                     int res_cones, struct fluxParams *pars);
 void lc_Gaussian(double *t, double *nu, double *F, int Nt,

@@ -24,10 +24,6 @@ purple = (148.0/255, 103.0/255, 189.0/255)
 cornerLabelsize = 24
 cornerTitlesize = 18
 
-nuR = 3.0e9
-nuO = 5.08e14 #F606W, la = 5900 Angstroms
-nuX = 1.21e18
-
 fluxFunc = None
 
 def weightPlanck(flatchain):
@@ -245,11 +241,11 @@ def plotRange(flatchain, flatlp, jetType, specType, X0, fitVars, data, label, cu
         arri[i] = j
         X[fitVars] = cutchain[arri[i],:]
         Y = fit.getEvalForm(jetType, X)
-        nu[:] = nuR
+        nu[:] = fit.nuR
         FnuR[i,:] = fluxFunc(t, nu, jetType, specType, *Y)
-        nu[:] = nuO
+        nu[:] = fit.nuO
         FnuO[i,:] = fluxFunc(t, nu, jetType, specType, *Y)
-        nu[:] = nuX
+        nu[:] = fit.nuX
         FnuX[i,:] = fluxFunc(t, nu, jetType, specType, *Y)
         FnuSpec[i,:] = fluxFunc(tSpec, nuSpec, jetType, specType, *Y)
     sys.stdout.write("\n")
@@ -271,18 +267,18 @@ def plotRange(flatchain, flatlp, jetType, specType, X0, fitVars, data, label, cu
     XLate[fitVars] = xLate[:]
     YLate = fit.getEvalForm(jetType, XLate)
 
-    fit.dumpLCTxt(t, nuR, FnuR[imin], jetType, specType, YEarly, 
+    fit.dumpLCTxt(t, fit.nuR, FnuR[imin], jetType, specType, YEarly, 
                     "{0:s}_lc_early_radio.txt".format(label))
-    fit.dumpLCTxt(t, nuO, FnuO[imin], jetType, specType, YEarly, 
+    fit.dumpLCTxt(t, fit.nuO, FnuO[imin], jetType, specType, YEarly, 
                     "{0:s}_lc_early_optical.txt".format(label))
-    fit.dumpLCTxt(t, nuX, FnuX[imin], jetType, specType, YEarly, 
+    fit.dumpLCTxt(t, fit.nuX, FnuX[imin], jetType, specType, YEarly, 
                     "{0:s}_lc_early_xray.txt".format(label))
 
-    fit.dumpLCTxt(t, nuR, FnuR[imax], jetType, specType, YLate, 
+    fit.dumpLCTxt(t, fit.nuR, FnuR[imax], jetType, specType, YLate, 
                     "{0:s}_lc_late_radio.txt".format(label))
-    fit.dumpLCTxt(t, nuO, FnuO[imax], jetType, specType, YLate, 
+    fit.dumpLCTxt(t, fit.nuO, FnuO[imax], jetType, specType, YLate, 
                     "{0:s}_lc_late_optical.txt".format(label))
-    fit.dumpLCTxt(t, nuX, FnuX[imax], jetType, specType, YLate, 
+    fit.dumpLCTxt(t, fit.nuX, FnuX[imax], jetType, specType, YLate, 
                     "{0:s}_lc_late_xray.txt".format(label))
 
 
@@ -413,11 +409,11 @@ def analyze(flatchain, flatlp, weights, jetType, specType, X0, fitVars, labels, 
         print("Calculating MAP LC")
 
         Y = fit.getEvalForm(jetType, XMAP)
-        nu[:] = nuR
+        nu[:] = fit.nuR
         FnuRMAP = fluxFunc(t, nu, jetType, specType, *Y)
-        nu[:] = nuO
+        nu[:] = fit.nuO
         FnuOMAP = fluxFunc(t, nu, jetType, specType, *Y)
-        nu[:] = nuX
+        nu[:] = fit.nuX
         FnuXMAP = fluxFunc(t, nu, jetType, specType, *Y)
 
         print("Plotting MAP LC")
@@ -429,11 +425,11 @@ def analyze(flatchain, flatlp, weights, jetType, specType, X0, fitVars, labels, 
         fig.savefig("{0:s}_lc_MAP.png".format(label))
         plt.close(fig)
 
-        fit.dumpLCTxt(t, nuR, FnuRMAP, jetType, specType, Y, 
+        fit.dumpLCTxt(t, fit.nuR, FnuRMAP, jetType, specType, Y, 
                         "{0:s}_lc_MAP_radio.txt".format(label))
-        fit.dumpLCTxt(t, nuO, FnuOMAP, jetType, specType, Y, 
+        fit.dumpLCTxt(t, fit.nuO, FnuOMAP, jetType, specType, Y, 
                         "{0:s}_lc_MAP_optical.txt".format(label))
-        fit.dumpLCTxt(t, nuX, FnuXMAP, jetType, specType, Y, 
+        fit.dumpLCTxt(t, fit.nuX, FnuXMAP, jetType, specType, Y, 
                         "{0:s}_lc_MAP_xray.txt".format(label))
 
         print("Calculating MAP Spectrum")

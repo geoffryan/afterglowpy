@@ -418,6 +418,50 @@ void lc_powerlaw(double *t, double *nu, double *F, int Nt,
     }
 }
 
+void lc_powerlawSmooth(double *t, double *nu, double *F, int Nt,
+                        double E_iso_core, 
+                        double theta_h_core, double theta_h_wing,
+                        double *theta_c_arr, double *E_iso_arr,
+                        int res_cones, struct fluxParams *pars)
+{
+    //Flux from a smooth powerlaw
+    
+    int i,j;
+    //No Core
+    for(j=0; j<Nt; j++)
+        F[j] = 0.0;
+
+    double Dtheta, theta_cone_hi, theta_cone_low, theta_h, theta_c, E_iso;
+
+    if(theta_h_wing > 10*theta_h_core)
+        theta_h_wing = 10*theta_h_core;
+
+    Dtheta = theta_h_wing / res_cones;
+
+    for(i=0; i<res_cones; i++)
+    {
+        theta_c = (i+0.5) * Dtheta;
+        E_iso = E_iso_core
+                    / (1.0 + theta_c*theta_c/(theta_h_core*theta_h_core));
+
+        theta_cone_hi = (i+1) * Dtheta;
+        theta_cone_low = i * Dtheta;
+        theta_h = theta_cone_hi;
+
+        if(theta_c_arr != NULL)
+            theta_c_arr[i] = theta_c;
+        if(E_iso_arr != NULL)
+            E_iso_arr[i] = E_iso;
+
+
+        set_jet_params(pars, E_iso, theta_h);
+
+        for(j=0; j<Nt; j++)
+            F[j] += flux_cone(t[j], nu[j], -1, -1, theta_cone_low,
+                                theta_cone_hi, pars);
+    }
+}
+
 void lc_Gaussian(double *t, double *nu, double *F, int Nt,
                         double E_iso_core, 
                         double theta_h_core, double theta_h_wing,
@@ -558,6 +602,11 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu, doubl
     {
         lc_powerlaw(t, nu, Fnu, N, E_iso_core, theta_h_core, 
                 theta_h_wing, -2, NULL, NULL, res_cones, &fp);
+    }
+    else if(jet_type == _powerlaw_smooth)
+    {
+        lc_powerlawSmooth(t, nu, Fnu, N, E_iso_core, theta_h_core, 
+                theta_h_wing, NULL, NULL, res_cones, &fp);
     }
     else if(jet_type == _Gaussian)
     {
