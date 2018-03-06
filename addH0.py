@@ -129,6 +129,28 @@ def f_Etot(flatchain, jetType, X0, fitVars):
 
         # Etot = (gmax-1) * Mej + Einj
         lEtot = np.log10((gmax-1) * Mej + Einj)
+    elif jetType == 4:
+        if 1 in fitVars:
+            lE0 = flatchain[:,1]
+        else:
+            lE0 = np.atleast_1d(X0[1])
+        if 2 in fitVars:
+            thC = flatchain[:,2]
+        else:
+            thC = np.atleast_1d(X0[2])
+        if 3 in fitVars:
+            thW = flatchain[:,3]
+        else:
+            thW = np.atleast_1d(X0[3])
+        
+        x = thW/thC
+        # thInt = int dphi dtheta sin(th) 1.0/(1+th^2/thC^2) / 4*pi
+        thInt = thC*thC * (thW*thW*(thW*thW-2*thC*thC-40)
+                    + 2*(120 + 20*thC*thC + thC*thC*thC*thC)
+                        *np.log(1+x*x) ) / 960.0
+
+        #Etot = 2 * Etot * thInt
+        lEtot = lE0 + np.log10(2 * thInt)
 
     return lEtot
 
