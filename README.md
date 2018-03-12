@@ -7,7 +7,7 @@ A Python module to interface with Hendrik van Eerten's semi-analytic afterglow m
 To build:
 
 ```bash
-$ python setup.py build_ext -i
+$ python setup.py develop
 ```
 
 To install
@@ -16,8 +16,3 @@ To install
 $ python setup.py install
 ```
 
-To grab data from the Open Kilonova Catalog (OKC), ensure `json` and the security setup of `requests` are installed in your local Python environment
-
-```bash
-$ pip install requests[security] json
-```
