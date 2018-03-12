@@ -484,6 +484,7 @@ void lc_Gaussian(double *t, double *nu, double *F, int Nt,
 
     for(i=0; i<res_cones; i++)
     {
+        //printf("Gaussian: thetaC = %.6f\n", theta_c);
         theta_c = (i+0.5) * Dtheta;
         E_iso = E_iso_core
                     * exp(-0.5 * theta_c*theta_c/(theta_h_core*theta_h_core));

@@ -22,6 +22,11 @@ Hz2eV = 4.13566553853599e-15
 eV2Hz = 1.0/Hz2eV
 
 intrtol = 1.0e-3
+solver = integrate.odeint
+
+tglob = None
+Rglob = None
+uglob = None
 
 
 def dfdt(f, t, umax, umin, Ei, q, Mej_solar, Vej0, rho0):
@@ -69,6 +74,7 @@ def dP(theta, amu, ate, au, ar, nu, n0, p, epsE, epsB, ksiN, specType):
     elif ib >= N:
         ib = N-1
     ia = ib-1
+
     te = ((mu-amu[ia])*ate[ib] + (amu[ib]-mu)*ate[ia]) / (amu[ib]-amu[ia])
     #u = ((mu-amu[ia])*au[ib] + (amu[ib]-mu)*au[ia]) / (amu[ib]-amu[ia])
     #r = ((mu-amu[ia])*ar[ib] + (amu[ib]-mu)*ar[ia]) / (amu[ib]-amu[ia])
@@ -148,28 +154,74 @@ def dP(theta, amu, ate, au, ar, nu, n0, p, epsE, epsB, ksiN, specType):
 
     return 2*np.pi * r*r*math.sin(theta) * DR * em * freq / (g*g*a*a)
 
-def fluxDensityCocoon(t, nu, jetType, specType, umax, umin, Ei, q, Mej, n0, p, 
-                        epsE, epsB, ksiN, dL):
+def rk4(dfdt, x0, at, args):
+
+    #print("In RK4")
+
+    n = x0.shape[0]
+    N = at.shape[0]
+    ax = np.empty((N,n))
+
+    ax[0,:] = x0
+
+    for i in range(N-1):
+        x = ax[i,:]
+        dt = at[i+1] - at[i]
+        k1 = dfdt(x, at[i], *args)
+        k2 = dfdt(x + 0.5*k1*dt, at[i], *args)
+        k3 = dfdt(x + 0.5*k2*dt, at[i], *args)
+        k4 = dfdt(x + k3*dt, at[i], *args)
+        ax[i+1,:] = x + dt*(k1+2*k2+2*k3+k4)/6.0
+
+    return ax
+
+
+
+def fluxDensityCocoon(t, nu, jetType, specType, umax, umin, Ei, q, Mej_solar,
+                        n0, p, epsE, epsB, ksiN, dL):
+
+    global solver
+    solver = rk4
 
     r0 = 1.0e9
     rho0 = mp * n0
+    Mej = Mej_solar * Msun
+    u0 = umax
+    g0 = math.sqrt(1+u0*u0)
+    bes0 = 4*u0*g0 / (4*u0*u0+3)
+    Rd = math.pow(9*g0*g0*Mej / (4*np.pi*(g0+1)*(4*u0*u0+3)*rho0), 1./3.)
+    td = Rd / (bes0 * c)
+
+    t0 = min(1.0e-2*td, 5.0e-1 * g0*g0*t.min(), 5.0e-1 * t.min()/(1+bes0))
+    t1 = 2. * g0*g0*t.max()
+
+    NT = int(1000 * math.log10(t1/t0))
+    #print("{0:.3e} {1:.3e} {2:.3e} {3:d}".format(t0, t1, t1/t0, NT))
+
+    r0 = bes0*c*t0
 
     Vej0 = 4.0/3.0*np.pi*r0*r0*r0
 
-    #t0 = 1.0e-2 * day2sec
-    t0 = r0 / c
-    #t1 = 1.0e7 * day2sec
-    t1 = 1.0e12 * t0
-    NT = 15000
+    #r0 = 1.0e9
+    #t0 = r0 / c
+    #t1 = 1.0e12 * t0
+    #NT = 15000
     ate = np.logspace(math.log10(t0), math.log10(t1), num=NT, base=10.0)
 
     f0 = np.array([r0, umax])
-    args = (umax, umin, Ei, q, Mej, Vej0, rho0)
+    args = (umax, umin, Ei, q, Mej_solar, Vej0, rho0)
 
-    f = integrate.odeint(dfdt, f0, ate, args)
+    f = solver(dfdt, f0, ate, args)
 
     ar = f[:,0]
     au = f[:,1]
+
+    global tglob
+    global Rglob
+    global uglob
+    tglob = ate.copy()
+    Rglob = ar.copy()
+    uglob = au.copy()
 
     P = np.zeros(t.shape)
 

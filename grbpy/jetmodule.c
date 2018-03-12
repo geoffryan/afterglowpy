@@ -3,13 +3,13 @@
 #include <numpy/arrayobject.h>
 #include "offaxis_struct.h"
 
-static char grbpy_docstring[] = 
+static char jet_docstring[] = 
     "This module calculates emission from a semi-analytic GRB afterglow model.";
 static char fluxDensity_docstring[] = 
     "Calculate the flux density at several times and frequencies";
 
 static PyObject *error_out(PyObject *m);
-static PyObject *grbpy_fluxDensity(PyObject *self, PyObject *args);
+static PyObject *jet_fluxDensity(PyObject *self, PyObject *args);
 
 struct module_state
 {
@@ -22,54 +22,54 @@ struct module_state
 static struct module_state _state;
 #endif
 
-static PyMethodDef grbpy_methods[] = {
-    {"fluxDensity", grbpy_fluxDensity, METH_VARARGS, fluxDensity_docstring},
+static PyMethodDef jetMethods[] = {
+    {"fluxDensity", jet_fluxDensity, METH_VARARGS, fluxDensity_docstring},
     {"error_out", (PyCFunction)error_out, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}};
 
 #if PY_MAJOR_VERSION >= 3
 
-static int grbpy_traverse(PyObject *m, visitproc visit, void *arg)
+static int jet_traverse(PyObject *m, visitproc visit, void *arg)
 {
     Py_VISIT(GETSTATE(m)->error);
     return 0;
 }
 
-static int grbpy_clear(PyObject *m)
+static int jet_clear(PyObject *m)
 {
     Py_CLEAR(GETSTATE(m)->error);
     return 0;
 }
 
-static struct PyModuleDef grbpy = {
+static struct PyModuleDef jetModule = {
     PyModuleDef_HEAD_INIT,
-    "_grbpy", /* Module Name */
-    grbpy_docstring,
+    "jet", /* Module Name */
+    jet_docstring,
     sizeof(struct module_state),
-    grbpy_methods,
+    jetMethods,
     NULL,
-    grbpy_traverse,
-    grbpy_clear,
+    jet_traverse,
+    jet_clear,
     NULL
 };
 #define INITERROR return NULL
 
-PyMODINIT_FUNC PyInit__grbpy(void)
+PyMODINIT_FUNC PyInit_jet(void)
 #else
 #define INITERROR return
 
-void init_grbpy(void)
+void initjet(void)
 #endif
 {
 #if PY_MAJOR_VERSION >= 3
-    PyObject *module = PyModule_Create(&grbpy);
+    PyObject *module = PyModule_Create(&jetModule);
 #else
-    PyObject *module = Py_InitModule("_grbpy", grbpy_methods);
+    PyObject *module = Py_InitModule3("jet", jetMethods, jet_docstring);
 #endif
     if(module == NULL)
         INITERROR;
     struct module_state *st = GETSTATE(module);
-    st->error = PyErr_NewException("_grbpy.Error", NULL, NULL);
+    st->error = PyErr_NewException("jet.Error", NULL, NULL);
     if(st->error == NULL)
     {
         Py_DECREF(module);
@@ -90,7 +90,7 @@ static PyObject *error_out(PyObject *m)
     return NULL;
 }
 
-static PyObject *grbpy_fluxDensity(PyObject *self, PyObject *args)
+static PyObject *jet_fluxDensity(PyObject *self, PyObject *args)
 {
     PyObject *t_obj = NULL;
     PyObject *nu_obj = NULL;
