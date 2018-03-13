@@ -7,6 +7,12 @@ A Python module to interface with Hendrik van Eerten's semi-analytic afterglow m
 To build:
 
 ```bash
+$ python setup.py build
+```
+
+To install for development
+
+```bash
 $ python setup.py develop
 ```
 
@@ -15,4 +21,3 @@ To install
 ```bash
 $ python setup.py install
 ```
-
