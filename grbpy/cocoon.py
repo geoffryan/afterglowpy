@@ -181,7 +181,7 @@ def fluxDensityCocoon(t, nu, jetType, specType, umax, umin, Ei, q, Mej_solar,
                         n0, p, epsE, epsB, ksiN, dL):
 
     global solver
-    solver = rk4
+    #solver = rk4
 
     r0 = 1.0e9
     rho0 = mp * n0
