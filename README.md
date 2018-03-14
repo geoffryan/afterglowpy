@@ -21,3 +21,7 @@ To install
 ```bash
 $ python setup.py install
 ```
+
+## Using
+
+In your python code, import the library with `import grbpy as grb`.  This main functions are `grb.fluxDensity(t, nu, jetType, specType, *pars)` for emission from a jet and `grb.fluxDensityCocoon(t, nu, jetType, specType, *pars)` for quasi-spherical emission.  For an example, look at `tests/plotLC.py`.
