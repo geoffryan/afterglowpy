@@ -8,20 +8,24 @@ inc = [np.get_include()]
 libs = []
 libdirs = []
 
-sources = ["grbpy/jetmodule.c", "grbpy/offaxis_struct_funcs.c",
+jetsources = ["grbpy/jetmodule.c", "grbpy/offaxis_struct_funcs.c",
                 "grbpy/integrate.c"]
+jetdepends = ["grbpy/offaxis_struct_funcs.h"]
 
-depends = ["grbpy/offaxis_struct_funcs.h"]
+shocksources = ["grbpy/shockmodule.c", "grbpy/shockEvolution.c"]
+shockdepends = ["grbpy/shockEvolution.h", "grbpy/offaxis_struct_funcs.h"]
 
-module = Extension('grbpy.jet', sources=sources, include_dirs=inc)
-                        #libraries=libs, library_dirs=libdirs, depends=depends)
+jetmodule = Extension('grbpy.jet', sources=jetsources, include_dirs=inc,
+                                    depends=jetdepends)
+shockmodule = Extension('grbpy.shock', sources=shocksources, include_dirs=inc,
+                                    depends=shockdepends)
 
 setup(
     name='grbpy',
     version=version.version,
     description='GRBAfterglowModels',
     packages=['grbpy'],
-    ext_modules = [module],
+    ext_modules = [jetmodule, shockmodule],
     classifiers=[
         "Programming Language :: Python",
         "Programming Language :: C",

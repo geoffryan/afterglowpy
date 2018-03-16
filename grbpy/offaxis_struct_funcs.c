@@ -433,8 +433,8 @@ void lc_powerlawSmooth(double *t, double *nu, double *F, int Nt,
 
     double Dtheta, theta_cone_hi, theta_cone_low, theta_h, theta_c, E_iso;
 
-    if(theta_h_wing > 10*theta_h_core)
-        theta_h_wing = 10*theta_h_core;
+    //if(theta_h_wing > 10*theta_h_core)
+    //        theta_h_wing = 10*theta_h_core;
 
     Dtheta = theta_h_wing / res_cones;
 
@@ -477,8 +477,8 @@ void lc_Gaussian(double *t, double *nu, double *F, int Nt,
 
     double Dtheta, theta_cone_hi, theta_cone_low, theta_h, theta_c, E_iso;
 
-    if(theta_h_wing > 10*theta_h_core)
-        theta_h_wing = 10*theta_h_core;
+    //if(theta_h_wing > 10*theta_h_core)
+    //    theta_h_wing = 10*theta_h_core;
 
     Dtheta = theta_h_wing / res_cones;
 
@@ -520,8 +520,8 @@ void lc_GaussianCore(double *t, double *nu, double *F, int Nt,
 
     double Dtheta, theta_cone_hi, theta_cone_low, theta_h, theta_c, E_iso;
 
-    if(theta_h_wing > 10*theta_h_core)
-        theta_h_wing = 10*theta_h_core;
+    //if(theta_h_wing > 10*theta_h_core)
+    //    theta_h_wing = 10*theta_h_core;
 
     Dtheta = (theta_h_wing - theta_h_core) / res_cones;
 
@@ -587,7 +587,7 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu, doubl
     double Rt0 = 1.0e-2 * day2sec;
     double Rt1 = 1.0e7 * day2sec;
     int table_entries = 12000;
-    int res_cones = 20;
+    int res_cones = (int) (5*theta_h_wing / theta_h_core);
 
     struct fluxParams fp;
     setup_fluxParams(&fp, d_L, theta_obs, n_0, p, epsilon_E, epsilon_B,

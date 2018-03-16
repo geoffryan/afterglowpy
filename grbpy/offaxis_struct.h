@@ -1,3 +1,6 @@
+#ifndef GRBPY_STRUCT
+#define GRBPY_STRUCT
+
 // offaxis.h
 
 #include <stdlib.h>
@@ -153,3 +156,5 @@ void set_obs_params(struct fluxParams *pars, double t_obs, double nu_obs,
                         double theta_obs_cur, double current_theta_cone_hi, 
                         double current_theta_cone_low);
 void free_fluxParams(struct fluxParams *pars);
+
+#endif

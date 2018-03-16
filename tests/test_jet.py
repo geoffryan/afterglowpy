@@ -21,6 +21,8 @@ specType = 0
 day = 86400
 
 Y = np.array([thV, E0, thC, thW, n0, p, epse, epsB, ksiN, dL])
+Ypl = np.array([0.3, math.pow(10.0, 52.5), 0.01, 0.1, math.pow(10.0,-3.75), 
+                p, math.pow(10.0, -0.6), epsB, ksiN, dL])
 
 ta = 1.0 * day
 tb = 1.0e3 * day
@@ -37,21 +39,21 @@ nuX[:] = 1.0e18
 print("Calc Radio")
 FnuRTH = grb.fluxDensity(t, nuR, -1, specType, *Y)
 FnuRGA = grb.fluxDensity(t, nuR, 0, specType, *Y)
-FnuRPL = grb.fluxDensity(t, nuR, 1, specType, *Y)
+FnuRPL = grb.fluxDensity(t, nuR, 1, specType, *Ypl)
 FnuRGC = grb.fluxDensity(t, nuR, 2, specType, *Y)
-FnuRPS = grb.fluxDensity(t, nuR, 4, specType, *Y)
+FnuRPS = grb.fluxDensity(t, nuR, 4, specType, *Ypl)
 print("Calc Optical")
 FnuOTH = grb.fluxDensity(t, nuO, -1, specType, *Y)
 FnuOGA = grb.fluxDensity(t, nuO, 0, specType, *Y)
-FnuOPL = grb.fluxDensity(t, nuO, 1, specType, *Y)
+FnuOPL = grb.fluxDensity(t, nuO, 1, specType, *Ypl)
 FnuOGC = grb.fluxDensity(t, nuO, 2, specType, *Y)
-FnuOPS = grb.fluxDensity(t, nuO, 4, specType, *Y)
+FnuOPS = grb.fluxDensity(t, nuO, 4, specType, *Ypl)
 print("Calc X-ray")
 FnuXTH = grb.fluxDensity(t, nuX, -1, specType, *Y)
 FnuXGA = grb.fluxDensity(t, nuX, 0, specType, *Y)
-FnuXPL = grb.fluxDensity(t, nuX, 1, specType, *Y)
+FnuXPL = grb.fluxDensity(t, nuX, 1, specType, *Ypl)
 FnuXGC = grb.fluxDensity(t, nuX, 2, specType, *Y)
-FnuXPS = grb.fluxDensity(t, nuX, 4, specType, *Y)
+FnuXPS = grb.fluxDensity(t, nuX, 4, specType, *Ypl)
 
 c = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple"]
 ls = ["-", "--", ":"]

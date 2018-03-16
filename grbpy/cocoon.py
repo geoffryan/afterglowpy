@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import scipy.integrate as integrate
+from . import shock
 
 c = 2.99792458e10
 me = 9.1093897e-28
@@ -22,7 +23,7 @@ Hz2eV = 4.13566553853599e-15
 eV2Hz = 1.0/Hz2eV
 
 intrtol = 1.0e-3
-solver = integrate.odeint
+#solver = integrate.odeint
 
 tglob = None
 Rglob = None
@@ -177,7 +178,7 @@ def rk4(dfdt, x0, at, args):
 
 
 
-def fluxDensityCocoon(t, nu, jetType, specType, umax, umin, Ei, q, Mej_solar,
+def fluxDensityCocoon(t, nu, jetType, specType, umax, umin, Ei, k, Mej_solar,
                         n0, p, epsE, epsB, ksiN, dL):
 
     global solver
@@ -208,20 +209,23 @@ def fluxDensityCocoon(t, nu, jetType, specType, umax, umin, Ei, q, Mej_solar,
     #NT = 15000
     ate = np.logspace(math.log10(t0), math.log10(t1), num=NT, base=10.0)
 
+    """
     f0 = np.array([r0, umax])
-    args = (umax, umin, Ei, q, Mej_solar, Vej0, rho0)
+    args = (umax, umin, Ei, k, Mej_solar, Vej0, rho0)
 
     f = solver(dfdt, f0, ate, args)
 
     ar = f[:,0]
     au = f[:,1]
+    
+    
+    if not np.isfinite(f).all() or (ar<0).any() or (au<0).any() or (np.diff(ar)/ar[:-1]<-1.0e-10).any() or (np.diff(au)/au[:-1]>1.0e-10).any():
+        print("Bad integration")
+    """
 
-    global tglob
-    global Rglob
-    global uglob
-    tglob = ate.copy()
-    Rglob = ar.copy()
-    uglob = au.copy()
+    ar, au = shock.shockEvolRK4(ate, r0, umax, 
+                                Mej_solar*Msun, rho0, Ei, k, umin)
+
 
     P = np.zeros(t.shape)
 
