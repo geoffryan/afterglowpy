@@ -337,7 +337,7 @@ double flux(struct fluxParams *pars) // determine flux for a given t_obs
 {
   double result;
   double phi_0 = 0.0;
-  double phi_1 = 2.0 * PI;
+  double phi_1 = PI;
   
   // set up integration routines for integration over phi
 #ifdef USEGSL
@@ -358,7 +358,7 @@ double flux(struct fluxParams *pars) // determine flux for a given t_obs
   // free memory
   gsl_integration_workspace_free(w);
 #else
-  result = romb(&phi_integrand, phi_0, phi_1, 1000, 0, PHI_ACC, pars);
+  result = 2 * romb(&phi_integrand, phi_0, phi_1, 1000, 0, PHI_ACC, pars);
 #endif
 
   //return result
