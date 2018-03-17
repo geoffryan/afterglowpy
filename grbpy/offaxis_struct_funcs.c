@@ -194,25 +194,28 @@ double theta_integrand(double a_theta, void* params) // inner integral
   double R = get_R(t_e, pars->Rt0, pars->Rt1, pars->R_table, pars->t_table,
                         pars->alpha_table, pars->table_entries);
   //printf("%e, %e, %e # tobs, R, t_e\n", t_obs, t_e, R);
-  double lfacbetashocksqrd = get_lfacbetashocksqrd(t_e, pars->C_BMsqrd, 
+  double us2 = get_lfacbetashocksqrd(t_e, pars->C_BMsqrd, 
                                                     pars->C_STsqrd);
-  double lfacbetasqrd = get_lfacbetasqrd(t_e, pars->C_BMsqrd, pars->C_STsqrd);
-  
+  double u2 = get_lfacbetasqrd(t_e, pars->C_BMsqrd, pars->C_STsqrd);
+
+  if(us2 < 1.0e-10)
+  {
+      //shock is ~ at sound speed of warm ISM. Won't shock, approach invalid.
+      return 0.0;
+  }
+
   // set remaining fluid quantities
-  double lfacshocksqrd = 1.0 + lfacbetashocksqrd;
-  double betashocksqrd = 1.0 - 1.0 / lfacshocksqrd;
-  double betashock = sqrt(betashocksqrd);
-  double lfacsqrd = 1.0 + lfacbetasqrd;
-  double betasqrd = 1.0 - 1.0 / lfacsqrd;
-  double lfac = sqrt( lfacsqrd );
-  double beta = sqrt( betasqrd );
+  double lfac = sqrt(1+u2);
+  double beta = sqrt(u2)/lfac;
+  double betashock = sqrt(us2 / (1+us2));
   double nprime = 4.0 * pars->n_0 * lfac; // comoving number density
-  double e_th = (lfac - 1.0) * nprime * m_p * v_light * v_light;
+  double e_th = u2/(lfac+1) * nprime * m_p * v_light * v_light;
   double B = sqrt(pars->epsilon_B * 8.0 * PI * e_th);
   double a = (1.0 - mu * beta); // beaming factor
   double ashock = (1.0 - mu * betashock); // shock velocity beaming factor
-  double DR = R / (12.0 * lfacsqrd * ashock);
+  double DR = R / (12.0 * lfac*lfac * ashock);
   if (DR < 0.0) DR *= -1.0; // DR is function of the absolute value of mu
+
 
   // set local emissivity 
   double p = pars->p;
@@ -262,6 +265,7 @@ double theta_integrand(double a_theta, void* params) // inner integral
   double em = pars->ksi_N * nprime * B;
   double freq = 0.0; // frequency dependent part of emissivity
 
+
   // set frequency dependence
   if (nu_c > nu_m)
   {
@@ -283,7 +287,15 @@ double theta_integrand(double a_theta, void* params) // inner integral
       freq = sqrt(nu_c/nu_m) * pow(nuprime / nu_m, -0.5 * p);
   }
 
-  return R * R * ast * DR * em * freq / (lfacsqrd * a * a);
+
+  if(em != em || em < 0.0)
+      printf("bad em at:%.3le t_obs=%.3le theta=%.3lf phi=%.3lf\n",
+              em, pars->t_obs, a_theta, pars->phi);
+  if(freq != freq || freq < 0.0)
+      printf("bad freq at:%.3le t_obs=%.3le theta=%.3lf phi=%.3lf\n",
+              freq, pars->t_obs, a_theta, pars->phi);
+
+  return R * R * ast * DR * em * freq / (lfac*lfac * a * a);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -323,9 +335,12 @@ double phi_integrand(double a_phi, void* params) // outer integral
   // free integration routine memory
   gsl_integration_workspace_free(w);
 #else
-  result = romb(&theta_integrand, theta_1-Dtheta, theta_1, 1000, 0, THETA_ACC,
-                    params);
+  result = romb(&theta_integrand, theta_1-Dtheta, theta_1, 1000, 
+                    pars->theta_atol, THETA_ACC, params);
 #endif
+  if(result != result || result < 0.0)
+      printf("bad result at:%.3le t_obs=%.3le theta_lo=%.3lf theta_hi=%.3lf phi=%.3lf\n",
+              result, pars->t_obs, theta_0, theta_1, pars->phi);
   
   //return result
   return result;
@@ -333,7 +348,7 @@ double phi_integrand(double a_phi, void* params) // outer integral
 
 ///////////////////////////////////////////////////////////////////////////////
 
-double flux(struct fluxParams *pars) // determine flux for a given t_obs
+double flux(struct fluxParams *pars, double atol) // determine flux for a given t_obs
 {
   double result;
   double phi_0 = 0.0;
@@ -350,6 +365,12 @@ double flux(struct fluxParams *pars) // determine flux for a given t_obs
 
   // at this stage t_obs is known, so mu_table can be made
   make_mu_table(pars); 
+
+  double d_L = pars->d_L;
+  double p = pars->p;
+
+  double Fcoeff = 0.5*(p - 1.0) * sqrt(3.0) * e_e*e_e*e_e / (4*PI * d_L*d_L
+                        * m_e * v_light * v_light) * cgs2mJy;
   
   //printf("about to integrate phi between %e and %e\n", phi_0, phi_1); fflush(stdout);
 #ifdef USEGSL
@@ -358,15 +379,16 @@ double flux(struct fluxParams *pars) // determine flux for a given t_obs
   // free memory
   gsl_integration_workspace_free(w);
 #else
-  result = 2 * romb(&phi_integrand, phi_0, phi_1, 1000, 0, PHI_ACC, pars);
+  //pars->theta_atol = 0.0;
+  //double I0 = phi_integrand(0.0, pars);
+  //pars->theta_atol = 1.0e-6 * I0;
+  result = 2 * Fcoeff * romb(&phi_integrand, phi_0, phi_1, 1000, 
+                                            atol/(2*Fcoeff), PHI_ACC, pars);
 #endif
 
   //return result
-  double d_L = pars->d_L;
-  double p = pars->p;
 
-  return result / (4.0 * PI * d_L * d_L) * (p - 1.0) / 2.0 * sqrt(3.0) *
-    e_e * e_e * e_e / (m_e * v_light * v_light) * cgs2mJy;
+  return result;
 }
 
 void lc_tophat(double *t, double *nu, double *F, int Nt,
@@ -377,7 +399,7 @@ void lc_tophat(double *t, double *nu, double *F, int Nt,
     set_jet_params(pars, E_iso, theta_h);
 
     for(i=0; i<Nt; i++)
-        F[i] = flux_cone(t[i], nu[i], -1, -1, 0.0, theta_h, pars);
+        F[i] = flux_cone(t[i], nu[i], -1, -1, 0.0, theta_h, 0.0, pars);
 }
 
 void lc_powerlaw(double *t, double *nu, double *F, int Nt, 
@@ -414,7 +436,8 @@ void lc_powerlaw(double *t, double *nu, double *F, int Nt,
 
         for(j=0; j<Nt; j++)
             F[j] += flux_cone(t[j], nu[j], -1, -1, theta_cone_low, 
-                                theta_cone_hi, pars);
+                                theta_cone_hi, F[j]*pars->flux_rtol/res_cones,
+                                pars);
     }
 }
 
@@ -458,7 +481,8 @@ void lc_powerlawSmooth(double *t, double *nu, double *F, int Nt,
 
         for(j=0; j<Nt; j++)
             F[j] += flux_cone(t[j], nu[j], -1, -1, theta_cone_low,
-                                theta_cone_hi, pars);
+                                theta_cone_hi, F[j]*pars->flux_rtol/res_cones,
+                                pars);
     }
 }
 
@@ -503,7 +527,8 @@ void lc_Gaussian(double *t, double *nu, double *F, int Nt,
 
         for(j=0; j<Nt; j++)
             F[j] += flux_cone(t[j], nu[j], -1, -1, theta_cone_low,
-                                theta_cone_hi, pars);
+                                theta_cone_hi, F[j]*pars->flux_rtol/res_cones,
+                                pars);
     }
 }
 
@@ -545,14 +570,18 @@ void lc_GaussianCore(double *t, double *nu, double *F, int Nt,
 
         for(j=0; j<Nt; j++)
             F[j] += flux_cone(t[j], nu[j], -1, -1, theta_cone_low,
-                                theta_cone_hi, pars);
+                                theta_cone_hi, F[j]*pars->flux_rtol/res_cones,
+                                pars);
     }
 }
 
 double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
-                    double theta_cone_low, double theta_cone_hi,
+                    double theta_cone_low, double theta_cone_hi, double atol,
                     struct fluxParams *pars)
 {
+    //printf("t: %.3le th1: %.3f th2 %.3f\n", t_obs, theta_cone_low,
+    //        theta_cone_hi);
+
     double theta_obs, theta_obs_cur;
     double F1, F2, Fboth;
     
@@ -565,33 +594,42 @@ double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
     theta_obs_cur = theta_obs;
     set_obs_params(pars, t_obs, nu_obs, theta_obs_cur, 
                     theta_cone_hi, theta_cone_low);
-    F1 = flux(pars);
+    F1 = flux(pars, atol);
     
     //Counter-jet
     theta_obs_cur = 180*deg2rad - theta_obs;
     set_obs_params(pars, t_obs, nu_obs, theta_obs_cur, 
                     theta_cone_hi, theta_cone_low);
-    F2 = flux(pars);
+    F2 = flux(pars, atol);
 
     Fboth = F1 + F2;
+
+    if(F1 != F1 || F1 < 0.0)
+        printf("bad F1:%.3lg t_obs=%.3le theta_lo=%.3lf theta_hi=%.3lf\n",
+                F1, t_obs, theta_cone_low, theta_cone_hi);
+    if(F2 != F2 || F2 < 0.0)
+        printf("bad F2:%.3lg t_obs=%.3le theta_lo=%.3lf theta_hi=%.3lf\n",
+                F2, t_obs, theta_cone_low, theta_cone_hi);
 
     return Fboth;
 }
 
-void calc_flux_density(int jet_type, int spec_type, double *t, double *nu, double *Fnu, int N,
+void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
+                            double *Fnu, int N,
                             double theta_obs, double E_iso_core,
                             double theta_h_core, double theta_h_wing, 
                             double n_0, double p, double epsilon_E,
-                            double epsilon_B, double ksi_N, double d_L)
+                            double epsilon_B, double ksi_N, double d_L,
+                            int latRes, double rtol)
 {
     double Rt0 = 1.0e-2 * day2sec;
     double Rt1 = 1.0e7 * day2sec;
     int table_entries = 12000;
-    int res_cones = (int) (5*theta_h_wing / theta_h_core);
+    int res_cones = (int) (latRes*theta_h_wing / theta_h_core);
 
     struct fluxParams fp;
     setup_fluxParams(&fp, d_L, theta_obs, n_0, p, epsilon_E, epsilon_B,
-                        ksi_N, Rt0, Rt1, table_entries, spec_type);
+                        ksi_N, Rt0, Rt1, table_entries, spec_type, rtol);
 
     if(jet_type == _tophat)
     {
@@ -624,7 +662,7 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu, doubl
 void setup_fluxParams(struct fluxParams *pars, double d_L, double theta_obs,
                         double n_0, double p, double epsilon_E,
                         double epsilon_B, double ksi_N, double Rt0, double Rt1,
-                        int table_entries, int spec_type)
+                        int table_entries, int spec_type, double flux_rtol)
 {
     pars->t_table = (double *)malloc(sizeof(double) * table_entries);
     pars->R_table = (double *)malloc(sizeof(double) * table_entries);
@@ -643,6 +681,7 @@ void setup_fluxParams(struct fluxParams *pars, double d_L, double theta_obs,
 
     pars->Rt0 = Rt0;
     pars->Rt1 = Rt1;
+    pars->flux_rtol = flux_rtol;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

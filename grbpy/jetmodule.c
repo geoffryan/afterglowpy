@@ -9,7 +9,8 @@ static char fluxDensity_docstring[] =
     "Calculate the flux density at several times and frequencies";
 
 static PyObject *error_out(PyObject *m);
-static PyObject *jet_fluxDensity(PyObject *self, PyObject *args);
+static PyObject *jet_fluxDensity(PyObject *self, PyObject *args, 
+                                    PyObject *kwargs);
 
 struct module_state
 {
@@ -23,7 +24,8 @@ static struct module_state _state;
 #endif
 
 static PyMethodDef jetMethods[] = {
-    {"fluxDensity", jet_fluxDensity, METH_VARARGS, fluxDensity_docstring},
+    {"fluxDensity", (PyCFunction)jet_fluxDensity, METH_VARARGS|METH_KEYWORDS,
+        fluxDensity_docstring},
     {"error_out", (PyCFunction)error_out, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}};
 
@@ -90,7 +92,8 @@ static PyObject *error_out(PyObject *m)
     return NULL;
 }
 
-static PyObject *jet_fluxDensity(PyObject *self, PyObject *args)
+static PyObject *jet_fluxDensity(PyObject *self, PyObject *args, 
+                                    PyObject *kwargs)
 {
     PyObject *t_obj = NULL;
     PyObject *nu_obj = NULL;
@@ -99,12 +102,20 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args)
     double theta_obs, E_iso_core, theta_h_core, theta_h_wing, n_0,
            p, epsilon_E, epsilon_B, ksi_N, d_L;
 
+    int latRes = 5;
+    double rtol = 1.0e-4;
+    static char *kwlist[] = {"t", "nu", "jetType", "specType", "thetaObs", 
+                                "E0", "thetaCore", "thetaWing", "n0", "p",
+                                "epsilon_e", "epsilon_B", "ksiN", "dL", 
+                                "latRes", "rtol", NULL};
+
     //Parse Arguments
-    if(!PyArg_ParseTuple(args, "OOiidddddddddd", &t_obj, &nu_obj, &jet_type,
-                &spec_type, &theta_obs, &E_iso_core, &theta_h_core, &theta_h_wing,
-                &n_0, &p, &epsilon_E, &epsilon_B, &ksi_N, &d_L))
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "OOiidddddddddd|id", kwlist,
+                &t_obj, &nu_obj, &jet_type, &spec_type, &theta_obs, &E_iso_core,
+                &theta_h_core, &theta_h_wing, &n_0, &p, &epsilon_E, &epsilon_B, 
+                &ksi_N, &d_L, &latRes, &rtol))
     {
-        PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
+        //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
         return NULL;
     }
 
@@ -167,7 +178,7 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args)
     // Calculate the flux!
     calc_flux_density(jet_type, spec_type, t, nu, Fnu, N, theta_obs, 
                         E_iso_core, theta_h_core, theta_h_wing, n_0, p, 
-                        epsilon_E, epsilon_B, ksi_N, d_L);
+                        epsilon_E, epsilon_B, ksi_N, d_L, latRes, rtol);
 
     // Clean up!
     Py_DECREF(t_arr);

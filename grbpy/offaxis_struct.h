@@ -75,6 +75,8 @@ struct fluxParams
     double current_theta_cone_hi;
     double current_theta_cone_low;
     double theta_obs_cur;
+    double theta_atol;
+    double flux_rtol;
 
     double Rt0;
     double Rt1;
@@ -107,11 +109,11 @@ double get_t_e(double a_mu, double t_obs, double *mu_table, double *t_table,
                 int table_entries);
 double theta_integrand(double a_theta, void* params); // inner integral
 double phi_integrand(double a_phi, void* params); // outer integral
-double flux(struct fluxParams *pars); // determine flux for a given t_obs
+double flux(struct fluxParams *pars, double atol); // determine flux for a given t_obs
 
 double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
                     double theta_cone_low, double theta_cone_hi,
-                    struct fluxParams *pars);
+                    double atol, struct fluxParams *pars);
 void lc_tophat(double *t, double *nu, double *F, int Nt,
                 double E_iso, double theta_h, struct fluxParams *pars);
 void lc_powerlaw(double *t, double *nu, double *F, int Nt,
@@ -139,7 +141,8 @@ void calc_flux_density(int jet_type, int spec_type,
                             double theta_obs, double E_iso_core,
                             double theta_h_core, double theta_h_wing, 
                             double n_0, double p, double epsilon_E,
-                            double epsilon_B, double ksi_N, double d_L);
+                            double epsilon_B, double ksi_N, double d_L,
+                            int latRes, double rtol);
 
 void setup_fluxParams(struct fluxParams *pars,
                     double d_L,
@@ -150,7 +153,7 @@ void setup_fluxParams(struct fluxParams *pars,
                     double epsilon_B, 
                     double ksi_N,
                     double Rt0, double Rt1,
-                    int table_entries, int spec_type);
+                    int table_entries, int spec_type, double flux_rtol);
 void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h);
 void set_obs_params(struct fluxParams *pars, double t_obs, double nu_obs,
                         double theta_obs_cur, double current_theta_cone_hi, 

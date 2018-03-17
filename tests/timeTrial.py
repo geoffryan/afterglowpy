@@ -8,7 +8,7 @@ NNU = 10
 Ntrials = 10
 jetTypes = [-1,0,1,2,3,4]
 
-Yj = np.array([0.5, 1.0e52, 0.1, 0.3, 1.0e-3, 2.2, 0.1, 0.01, 1.0, 1.0e26])
+Yj = np.array([0.5, 1.0e52, 0.05, 0.5, 1.0e-3, 2.2, 0.1, 0.01, 1.0, 1.0e26])
 Yc = np.array([10.0, 1.0, 1.0e55, 5, 1.0e-7, 1.0e-3, 2.2, 0.1, 0.01, 1.0, 1.0e26])
 
 Ts = np.logspace(0, 3, num=NT, base=10.0) * 86400.0
@@ -30,13 +30,11 @@ for i in range(Ntrials):
     for j, jt in enumerate(jetTypes):
         if jt == 3:
             Y = Yc
-            flux = grb.fluxDensityCocoon
         else:
             Y = Yj
-            flux = grb.fluxDensity
     
         ta = time.clock()
-        Fnu[j] = flux(t, nu, jt, 0, *Y)
+        Fnu[j] = grb.fluxDensity(t, nu, jt, 0, *Y)
         tb = time.clock()
         times[j,i] = tb-ta
 

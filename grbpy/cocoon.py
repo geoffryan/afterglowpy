@@ -23,11 +23,6 @@ Hz2eV = 4.13566553853599e-15
 eV2Hz = 1.0/Hz2eV
 
 intrtol = 1.0e-3
-#solver = integrate.odeint
-
-tglob = None
-Rglob = None
-uglob = None
 
 
 def dfdt(f, t, umax, umin, Ei, q, Mej_solar, Vej0, rho0):
@@ -178,11 +173,8 @@ def rk4(dfdt, x0, at, args):
 
 
 
-def fluxDensityCocoon(t, nu, jetType, specType, umax, umin, Ei, k, Mej_solar,
+def fluxDensity(t, nu, jetType, specType, umax, umin, Ei, k, Mej_solar,
                         n0, p, epsE, epsB, ksiN, dL):
-
-    global solver
-    #solver = rk4
 
     r0 = 1.0e9
     rho0 = mp * n0
@@ -213,7 +205,9 @@ def fluxDensityCocoon(t, nu, jetType, specType, umax, umin, Ei, k, Mej_solar,
     f0 = np.array([r0, umax])
     args = (umax, umin, Ei, k, Mej_solar, Vej0, rho0)
 
-    f = solver(dfdt, f0, ate, args)
+
+    f = integrate.odeint(dfdt, f0, ate, args)
+    #f = rk4(dfdt, f0, ate, args)
 
     ar = f[:,0]
     au = f[:,1]
