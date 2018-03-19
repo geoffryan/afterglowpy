@@ -38,7 +38,10 @@ double get_t_e(double a_mu, double t_obs, double *mu_table, double *t_table,
   }
 
   if (mu_table[0] >= a_mu) // happens only if t_e very small
+  {
+      printf("very small mu: mu=%.3lg, mu[0]=%.3lg\n", a_mu, mu_table[0]);
     return t_obs / (1.0 - a_mu); // so return small t_e limit
+  }
  
   // otherwise return linear interpolation between table entries
   unsigned int i = ((unsigned int) table_entries) >> 1;
@@ -64,8 +67,10 @@ double Rintegrand(double a_t_e, void* params)
 {
     double C_BMsqrd = ((double *) params)[0];
     double C_STsqrd = ((double *) params)[1];
-    double lfbsqrd = get_lfacbetashocksqrd(a_t_e, C_BMsqrd, C_STsqrd);
-    return v_light * sqrt(1.0 - 1.0 / (1.0 + lfbsqrd));
+    double us2 = get_lfacbetashocksqrd(a_t_e, C_BMsqrd, C_STsqrd);
+    if(!isfinite(us2))
+        return v_light;
+    return v_light * sqrt(us2 / (1.0 + us2));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -84,6 +89,15 @@ double get_R(double a_t_e, double Rt0, double Rt1, double *R_table,
 
   // find nearest entry and return value assuming power law behaviour
   i = (int) ((table_entries - 1.0) * log(a_t_e / Rt0) / log(Rt1 / Rt0));
+  if(i < 0 || i >= table_entries)
+  {
+      printf("get_R out of bounds i=%d, table_entries=%d t_e=%.3e\n",
+              i, table_entries, a_t_e);
+      printf("        t01:(%.2le %.2le) R01:(%.2le %.2le) Rt01:(%.2le %.2le)\n",
+              t_table[0], t_table[table_entries-1],
+              R_table[0], R_table[table_entries-1],
+              Rt0, Rt1);
+  }
   return R_table[i] * pow(a_t_e / t_table[i], alpha_table[i]);
 }
 
@@ -129,7 +143,7 @@ void make_R_table(struct fluxParams *pars)
     else // at early times t_obs ~ t*(gamma_sh^-2)/8 ~ CBM^-2 * t^4 / 8
         Rt1 = 10*pow(8*tb*C_BMsqrd, 0.25);
     
-    //printf("Rt0: %.1le Rt1: %.1le\n", Rt0, Rt1);
+    //printf("        Rt0: %.1le Rt1: %.1le\n", Rt0, Rt1);
 
     int tRes = pars->tRes;
     int table_entries = (int)(tRes * log10(Rt1/Rt0));
@@ -193,6 +207,15 @@ void make_R_table(struct fluxParams *pars)
     t_table[table_entries-1] = t;
     R_table[table_entries-1] = R;
     Rp = R; tp = t;
+
+    if(R_table[0] != R_table[0])
+    {
+        printf("Rintegration Error: R[0]=%.3e  (fac0=%.3e)\n", 
+                                    R_table[0], fac0);
+        printf("    t=%.3e Rdot=%.3e t=%.3e Rdot=%.3e\n",
+                    0.0,Rintegrand(0.0,Rpar), t_table[0], 
+                    Rintegrand(t_table[0],Rpar));
+    }
 
     // set power law slopes at table times
     for (i=1; i < table_entries - 1; i++)
@@ -614,7 +637,7 @@ double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
                     double theta_cone_low, double theta_cone_hi, double atol,
                     struct fluxParams *pars)
 {
-    //printf("t: %.3le th1: %.3f th2 %.3f\n", t_obs, theta_cone_low,
+    //printf("      t: %.3le th1: %.3f th2 %.3f\n", t_obs, theta_cone_low,
     //        theta_cone_hi);
 
     double theta_obs, theta_obs_cur;
@@ -622,8 +645,8 @@ double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
     
     theta_obs = pars->theta_obs;
 
-    if(E_iso > 0.0 && theta_h > 0.0)
-        set_jet_params(pars, E_iso, theta_h);
+    //if(E_iso > 0.0 && theta_h > 0.0)
+    //    set_jet_params(pars, E_iso, theta_h);
 
     //Jet 
     theta_obs_cur = theta_obs;
