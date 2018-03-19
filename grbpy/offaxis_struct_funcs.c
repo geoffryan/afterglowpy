@@ -106,14 +106,49 @@ void make_mu_table(struct fluxParams *pars)
 
 void make_R_table(struct fluxParams *pars)
 {
-    double Rt0 = pars->Rt0;
-    double Rt1 = pars->Rt1;
+    // min/max observer times
+    double ta = pars->ta;
+    double tb = pars->tb;
+
     double C_BMsqrd = pars->C_BMsqrd;
     double C_STsqrd = pars->C_STsqrd;
+    double t_NR = pars->t_NR;
+
+    double Rt0, Rt1;
+    //Rt0 = 1.0e-2 * day2sec;
+    //Rt1 = 1.0e7 * day2sec; 
+
+    //at fixed t_obs, earliest emission is *always* from mu=-1
+    // so t_obs ~ t_e
+    Rt0 = 0.1*ta;
+
+    //at fixed t_obs, latest emission is *always* from mu=+1
+    // so t_obs ~ t-R/c
+    if(tb > 0.1*t_NR)  // at late times R<<c so t_obs ~ t_e
+        Rt1 = 10*tb;
+    else // at early times t_obs ~ t*(gamma_sh^-2)/8 ~ CBM^-2 * t^4 / 8
+        Rt1 = 10*pow(8*tb*C_BMsqrd, 0.25);
+    
+    //printf("Rt0: %.1le Rt1: %.1le\n", Rt0, Rt1);
+
+    int tRes = pars->tRes;
+    int table_entries = (int)(tRes * log10(Rt1/Rt0));
+    
+    pars->table_entries = table_entries;
+    pars->Rt0 = Rt0;
+    pars->Rt1 = Rt1;
+
+    pars->t_table = (double *)realloc(pars->t_table, 
+                                        sizeof(double) * table_entries);
+    pars->R_table = (double *)realloc(pars->R_table, 
+                                        sizeof(double) * table_entries);
+    pars->mu_table = (double *)realloc(pars->mu_table, 
+                                        sizeof(double) * table_entries);
+    pars->alpha_table = (double *)realloc(pars->alpha_table, 
+                                        sizeof(double) * table_entries);
     double *t_table = pars->t_table;
     double *R_table = pars->R_table;
     double *alpha_table = pars->alpha_table;
-    int table_entries = pars->table_entries;
 
     double DR, R;
     double t;
@@ -620,16 +655,24 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
                             double theta_h_core, double theta_h_wing, 
                             double n_0, double p, double epsilon_E,
                             double epsilon_B, double ksi_N, double d_L,
-                            int latRes, double rtol)
+                            int tRes, int latRes, double rtol)
 {
-    double Rt0 = 1.0e-2 * day2sec;
-    double Rt1 = 1.0e7 * day2sec;
-    int table_entries = 12000;
+    double ta = t[0];
+    double tb = t[0];
+    int i;
+    for(i=0; i<N; i++)
+    {
+        if(t[i] < ta)
+            ta = t[i];
+        else if(t[i] > tb)
+            tb = t[i];
+    }
+
     int res_cones = (int) (latRes*theta_h_wing / theta_h_core);
 
     struct fluxParams fp;
     setup_fluxParams(&fp, d_L, theta_obs, n_0, p, epsilon_E, epsilon_B,
-                        ksi_N, Rt0, Rt1, table_entries, spec_type, rtol);
+                        ksi_N, ta, tb, tRes, spec_type, rtol);
 
     if(jet_type == _tophat)
     {
@@ -661,14 +704,13 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
 
 void setup_fluxParams(struct fluxParams *pars, double d_L, double theta_obs,
                         double n_0, double p, double epsilon_E,
-                        double epsilon_B, double ksi_N, double Rt0, double Rt1,
-                        int table_entries, int spec_type, double flux_rtol)
+                        double epsilon_B, double ksi_N, double ta, double tb,
+                        double tRes, int spec_type, double flux_rtol)
 {
-    pars->t_table = (double *)malloc(sizeof(double) * table_entries);
-    pars->R_table = (double *)malloc(sizeof(double) * table_entries);
-    pars->mu_table = (double *)malloc(sizeof(double) * table_entries);
-    pars->alpha_table = (double *)malloc(sizeof(double) * table_entries);
-    pars->table_entries = table_entries;
+    pars->t_table = NULL;
+    pars->R_table = NULL;
+    pars->mu_table = NULL;
+    pars->alpha_table = NULL;
     pars->spec_type = spec_type;
 
     pars->d_L = d_L;
@@ -679,8 +721,9 @@ void setup_fluxParams(struct fluxParams *pars, double d_L, double theta_obs,
     pars->epsilon_B = epsilon_B;
     pars->ksi_N = ksi_N;
 
-    pars->Rt0 = Rt0;
-    pars->Rt1 = Rt1;
+    pars->ta = ta;
+    pars->tb = tb;
+    pars->tRes = tRes;
     pars->flux_rtol = flux_rtol;
 }
 
@@ -688,7 +731,7 @@ void setup_fluxParams(struct fluxParams *pars, double d_L, double theta_obs,
 
 void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h)
 {
-    double E_jet = theta_h * theta_h * E_iso / 2.0;
+    double E_jet = (1.0 - cos(theta_h)) * E_iso;
     double n_0 = pars->n_0;
     double C_BM = sqrt(17.0 * E_iso / (8.0 * PI * m_p * n_0
                                         * pow( v_light, 5.0)));
