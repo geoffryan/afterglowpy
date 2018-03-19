@@ -261,7 +261,7 @@ if __name__ == "__main__":
     nu = np.empty(t.shape)
     nu[:] = 6.0e9
 
-    Fnu = fluxDensityCocoon(t, nu, 3, specType, *Y)
+    Fnu = fluxDensity(t, nu, 3, specType, *Y)
 
     import sys
     import matplotlib.pyplot as plt
@@ -308,19 +308,19 @@ if __name__ == "__main__":
     ax[1].set_ylabel(r"$u$")
 
     intrtol = 1.0e-16
-    Fnu0 = fluxDensityCocoon(t, nu, 3, specType, *Y)
+    Fnu0 = fluxDensity(t, nu, 3, specType, *Y)
     intrtol = 1.0e-14
-    Fnu1 = fluxDensityCocoon(t, nu, 3, specType, *Y)
+    Fnu1 = fluxDensity(t, nu, 3, specType, *Y)
     intrtol = 1.0e-12
-    Fnu2 = fluxDensityCocoon(t, nu, 3, specType, *Y)
+    Fnu2 = fluxDensity(t, nu, 3, specType, *Y)
     intrtol = 1.0e-8
-    Fnu3 = fluxDensityCocoon(t, nu, 3, specType, *Y)
+    Fnu3 = fluxDensity(t, nu, 3, specType, *Y)
     intrtol = 1.0e-6
-    Fnu4 = fluxDensityCocoon(t, nu, 3, specType, *Y)
+    Fnu4 = fluxDensity(t, nu, 3, specType, *Y)
     intrtol = 1.0e-4
-    Fnu5 = fluxDensityCocoon(t, nu, 3, specType, *Y)
+    Fnu5 = fluxDensity(t, nu, 3, specType, *Y)
     intrtol = 1.0e-2
-    Fnu6 = fluxDensityCocoon(t, nu, 3, specType, *Y)
+    Fnu6 = fluxDensity(t, nu, 3, specType, *Y)
 
     print(np.fabs((Fnu6-Fnu0)/Fnu0).max())
     print(np.fabs((Fnu5-Fnu0)/Fnu0).max())
