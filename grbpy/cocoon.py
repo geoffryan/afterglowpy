@@ -22,8 +22,6 @@ parsec = 3.0857e18
 Hz2eV = 4.13566553853599e-15
 eV2Hz = 1.0/Hz2eV
 
-intrtol = 1.0e-3
-
 
 def dfdt(f, t, umax, umin, Ei, q, Mej_solar, Vej0, rho0):
 
@@ -174,9 +172,10 @@ def rk4(dfdt, x0, at, args):
 
 
 def fluxDensity(t, nu, jetType, specType, umax, umin, Ei, k, Mej_solar,
-                        n0, p, epsE, epsB, ksiN, dL):
+                        n0, p, epsE, epsB, ksiN, dL, tRes=1000, latRes=0,
+                        rtol=1.0e-3):
 
-    r0 = 1.0e9
+    #r0 = 1.0e9
     rho0 = mp * n0
     Mej = Mej_solar * Msun
     u0 = umax
@@ -188,7 +187,7 @@ def fluxDensity(t, nu, jetType, specType, umax, umin, Ei, k, Mej_solar,
     t0 = min(1.0e-2*td, 5.0e-1 * g0*g0*t.min(), 5.0e-1 * t.min()/(1+bes0))
     t1 = 2. * g0*g0*t.max()
 
-    NT = int(1000 * math.log10(t1/t0))
+    NT = int(tRes * math.log10(t1/t0))
     #print("{0:.3e} {1:.3e} {2:.3e} {3:d}".format(t0, t1, t1/t0, NT))
 
     r0 = bes0*c*t0
@@ -231,7 +230,7 @@ def fluxDensity(t, nu, jetType, specType, umax, umin, Ei, k, Mej_solar,
         args = (amu, ate, au, ar, nu[i], n0, p, epsE, epsB, ksiN, specType)
 
         res = integrate.quad(dP, 0.0, np.pi, args, full_output=1, wopts=wopts,
-                                epsrel=intrtol)
+                                epsrel=rtol)
         P[i] = res[0]
         #print(res)
         #wopts = (res[2]['momcom'], res[2]['chebmo'])
