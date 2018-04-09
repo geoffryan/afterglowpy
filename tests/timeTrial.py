@@ -6,7 +6,7 @@ import grbpy as grb
 NT = 10
 NNU = 10
 Ntrials = 10
-jetTypes = [-1,0,1,2,3,4]
+jetTypes = [-1,0,1,2,3,4, 9, 10, 14]
 
 Yj = np.array([0.5, 1.0e52, 0.05, 0.5, 1.0e-3, 2.2, 0.1, 0.01, 1.0, 1.0e26])
 Yc = np.array([10.0, 1.0, 1.0e55, 5, 1.0e-7, 1.0e-3, 2.2, 0.1, 0.01, 1.0, 1.0e26])
@@ -16,6 +16,8 @@ NUs = np.logspace(3, 20, num=NNU, base=10.0)
 
 t = np.empty(NT * NNU)
 nu = np.empty(NT * NNU)
+
+tRes = 100
 
 for i in range(NNU):
     t[i*NT:(i+1)*NT] = Ts
@@ -34,7 +36,7 @@ for i in range(Ntrials):
             Y = Yj
     
         ta = time.clock()
-        Fnu[j] = grb.fluxDensity(t, nu, jt, 0, *Y)
+        Fnu[j] = grb.fluxDensity(t, nu, jt, 0, *Y, tRes=tRes)
         tb = time.clock()
         times[j,i] = tb-ta
 

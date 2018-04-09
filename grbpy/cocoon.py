@@ -2,6 +2,7 @@ import math
 import numpy as np
 import scipy.integrate as integrate
 from . import shock
+from . import jet
 
 c = 2.99792458e10
 me = 9.1093897e-28
@@ -80,73 +81,13 @@ def dP(theta, amu, ate, au, ar, nu, n0, p, epsE, epsB, ksiN, specType):
                                         / math.log(ate[ib]/ate[ia]))
 
     g = math.sqrt(u*u+1)
-    beta = u/g
 
     us = 4*u*g / math.sqrt(8*u*u+9)
-    gs = math.sqrt(us*us + 1)
-    betashock = us / gs
 
-    nprime = 4.0 * n0 * g
-    eth = u*u/(g+1.0) * nprime * mp*c*c # (g-1)*nprime * mp*c*c
-    B = math.sqrt(8*np.pi*eth*epsB)
-    a = 1.0 - mu*beta  # beaming factor
-    ashock = 1.0 - mu*betashock # shock beaming factor
+    em = jet.emissivity(nu, r, math.sin(theta), mu, te, u, us, n0, p, epsE,
+                        epsB, ksiN, specType)
 
-    DR = math.fabs(r / (12.0*g*g*ashock))
-
-    nuprime = g*a * nu
-    gm = (2.0-p)/(1.0-p) * epsE * eth / (ksiN * nprime * me*c*c)
-    gcs = 6*np.pi * g * me*c / (sigmaT * B*B * te)
-
-    gr = gcs/gm
-    y = beta*epsE/epsB
-
-    if specType == 1:
-        if gr <= 1.0 or gr*gr-gr-y <= 0.0:
-            #Fast cooling (with I.C.)
-            X = 0.5 * (1 + math.sqrt(1+4*y))
-        else:
-            #Slow cooling (with I.C.)
-            b = y*math.pow(gr, 2-p)
-            Xa = 1+b
-            Xb = math.pow(b, 1.0/(4.0-p)) + 1.0/(4.0-p)
-            s = b*b/(b*b+1.0)
-            X0 = Xa * math.pow(Xb/Xa, s)
-            X = X0
-            imax = 5
-            for i in range(imax):
-                po = math.pow(X, p-2)
-                f = X*X - X - b*po
-                df = 2*X - 1 - p*(p-2)*po/X
-                dX = -f/df
-                X += dX
-                if math.fabs(dX) < 1e-4 * X:
-                    break
-        gc = gcs / X 
-    else:
-        gc = gcs
-
-    num = 3*gm*gm * ee * B / (4*np.pi * me*c)
-    nuc = 3*gc*gc * ee * B / (4*np.pi * me*c)
-    em = ksiN * nprime * B
-
-    if num < nuc:
-        if nuprime < num:
-            freq = math.pow(nuprime/num, 1.0/3.0)
-        elif nuprime < nuc:
-            freq = math.pow(nuprime/num, 0.5*(1.0-p))
-        else:
-            freq = math.pow(nuc/num, 0.5*(1.0-p)) * math.pow(nuprime/nuc,
-                                                                    -0.5*p)
-    else:
-        if nuprime < nuc:
-            freq = math.pow(nuprime/nuc, 1.0/3.0)
-        elif nuprime < num:
-            freq = math.sqrt(nuc/nuprime)
-        else:
-            freq = math.sqrt(nuc/num) * math.pow(nuprime/num, -0.5*p)
-
-    return 2*np.pi * r*r*math.sin(theta) * DR * em * freq / (g*g*a*a)
+    return 2*np.pi * em
 
 def rk4(dfdt, x0, at, args):
 
@@ -235,8 +176,7 @@ def fluxDensity(t, nu, jetType, specType, umax, umin, Ei, k, Mej_solar,
         #print(res)
         #wopts = (res[2]['momcom'], res[2]['chebmo'])
 
-    Fnu = cgs2mJy * math.sqrt(3.0)*ee*ee*ee*(p-1) * P / (
-                                                    8*np.pi*dL*dL * me *c*c)
+    Fnu = cgs2mJy * P / (4*np.pi*dL*dL)
 
     return Fnu
 

@@ -7,6 +7,79 @@ double dmin(const double a, const double b)
     else
         return b;
 }
+ 
+/////////////////////////////////////////////////////////////////////////
+
+double f_E_tophat(double theta, void *params)
+{
+    struct fluxParams *pars = (struct fluxParams *)params;
+    if(theta <= pars->theta_core)
+        return pars->E_iso_core;
+    return 0.0;
+}
+
+double f_E_Gaussian(double theta, void *params)
+{
+    struct fluxParams *pars = (struct fluxParams *)params;
+    if(theta <= pars->theta_wing)
+    {
+        double x = theta / pars->theta_core;
+        return pars->E_iso_core * exp(-0.5*x*x);
+    }
+    return 0.0;
+}
+
+double f_E_powerlaw(double theta, void *params)
+{
+    struct fluxParams *pars = (struct fluxParams *)params;
+    if(theta <= pars->theta_wing)
+    {
+        double x = theta / pars->theta_core;
+        return pars->E_iso_core / (1 + x*x);
+    }
+    return 0.0;
+}
+
+double f_Etot_tophat(void *params)
+{
+    struct fluxParams *pars = (struct fluxParams *)params;
+    double E0 = pars->E_iso_core;
+    double thetaC = pars->theta_core;
+    return E0*(1-cos(thetaC));
+}
+
+double f_Etot_Gaussian(void *params)
+{
+    struct fluxParams *pars = (struct fluxParams *)params;
+    double E0 = pars->E_iso_core;
+    double thC = pars->theta_core;
+    double thW = pars->theta_wing;
+    double a = 0.5*thW*thW/(thC*thC);
+    double expa = exp(-a);
+    double I0 = 1-expa;
+    double I1 = 1-(1 + a)*expa;
+    double I2 = 2-(2 + 2*a + a*a)*expa;
+    double I3 = 6-(6 + 6*a + 3*a*a + a*a*a)*expa;
+    return E0*thC*thC*(I0 - thC*thC*I1/3.0 + thC*thC*thC*thC*I2/30.0
+                        - thC*thC*thC*thC*thC*thC*I3/630);
+}
+
+double f_Etot_powerlaw(void *params)
+{
+    struct fluxParams *pars = (struct fluxParams *)params;
+    double E0 = pars->E_iso_core;
+    double thC = pars->theta_core;
+    double thW = pars->theta_wing;
+    double a = thW*thW/(thC*thC);
+    double atana = atan(a);
+    double la = log(a*a+1);
+    double I0 = atana;
+    double I1 = 0.5*la;
+    double I2 = a - atana;
+    double I3 = 0.5*a*a - 0.5*la;
+    return 0.5*E0*thC*thC*(I0 - thC*thC*I1/3.0 + thC*thC*thC*thC*I2/30.0
+                        - thC*thC*thC*thC*thC*thC*I3/630);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -25,42 +98,67 @@ double get_lfacbetasqrd(double a_t_e, double C_BMsqrd, double C_STsqrd)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-double get_t_e(double a_mu, double t_obs, double *mu_table, double *t_table,
-                int table_entries)
+double check_t_e(double t_e, double mu, double t_obs, double *mu_table, int N)
 {
-  if(a_mu > mu_table[table_entries-1])
-  {
-    printf("mu >> 1? this should not have happened\n");
-    printf("   t_obs=%.6lg mu=%.6lg mu_table[-1]=%.6lg, t_table[-1]=%.6lg\n",
-                t_obs, a_mu, mu_table[table_entries-1], 
-                t_table[table_entries-1]);
-    abort();
-  }
+    if(mu > mu_table[N-1])
+    {
+        printf("mu >> 1? this should not have happened\n");
+        printf("   t_obs=%.6lg mu=%.6lg mu_table[-1]=%.6lg\n",
+                t_obs, mu, mu_table[N-1]);
+        abort();
+    }
 
-  if (mu_table[0] >= a_mu) // happens only if t_e very small
-  {
-      printf("very small mu: mu=%.3lg, mu[0]=%.3lg\n", a_mu, mu_table[0]);
-    return t_obs / (1.0 - a_mu); // so return small t_e limit
-  }
- 
-  // otherwise return linear interpolation between table entries
-  unsigned int i = ((unsigned int) table_entries) >> 1;
+    if(mu_table[0] >= mu) // happens only if t_e very small
+    {
+        printf("very small mu: mu=%.3lg, mu[0]=%.3lg\n", mu, mu_table[0]);
+        return t_obs / (1.0 - mu); // so return small t_e limit
+    }
+
+    return t_e;
+}
+
+int searchSorted(double x, double *arr, int N)
+{
+    if(x <= arr[0])
+        return 0;
+    else if(x >= arr[N-1])
+        return N-2;
+
+  unsigned int i = ((unsigned int) N) >> 1;
   unsigned int a = 0;
-  unsigned int b = table_entries-1;
+  unsigned int b = N-1;
   
   while (b-a > 1u)
   {
     i = (b+a) >> 1;
-    if (mu_table[i] > a_mu)
+    if (arr[i] > x)
         b = i;
     else
         a = i;
   }
-  
-  return ((a_mu - mu_table[a]) * t_table[b] + (mu_table[b] - a_mu) *
-        t_table[a]) / (mu_table[b] - mu_table[a]);
+
+  return (int)a;
 }
 
+double interpolateLin(int a, int b, double x, double *X, double *Y, int N)
+{
+    double xa = X[a];
+    double xb = X[b];
+    double ya = Y[a];
+    double yb = Y[b];
+
+    return ya + (yb-ya) * (x-xa)/(xb-xa);
+}
+
+double interpolateLog(int a, int b, double x, double *X, double *Y, int N)
+{
+    double xa = X[a];
+    double xb = X[b];
+    double ya = Y[a];
+    double yb = Y[b];
+
+    return ya * pow(yb/ya, log(x/xa)/log(xb/xa));
+}
 ///////////////////////////////////////////////////////////////////////////////
 
 double Rintegrand(double a_t_e, void* params)
@@ -75,33 +173,6 @@ double Rintegrand(double a_t_e, void* params)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-double get_R(double a_t_e, double Rt0, double Rt1, double *R_table, 
-                double *t_table, double *alpha_table, int table_entries)
-{
-// get R from table
-  int i;
-
-  // approximate and extrapolate outside of tabulated domain  
-  if (a_t_e < t_table[2]) { return v_light * a_t_e; }
-  if (a_t_e > t_table[table_entries - 3]) 
-    return R_table[table_entries - 1] * pow(a_t_e / t_table[table_entries - 1], 
-      2.0/5.0);
-
-  // find nearest entry and return value assuming power law behaviour
-  i = (int) ((table_entries - 1.0) * log(a_t_e / Rt0) / log(Rt1 / Rt0));
-  if(i < 0 || i >= table_entries)
-  {
-      printf("get_R out of bounds i=%d, table_entries=%d t_e=%.3e\n",
-              i, table_entries, a_t_e);
-      printf("        t01:(%.2le %.2le) R01:(%.2le %.2le) Rt01:(%.2le %.2le)\n",
-              t_table[0], t_table[table_entries-1],
-              R_table[0], R_table[table_entries-1],
-              Rt0, Rt1);
-  }
-  return R_table[i] * pow(a_t_e / t_table[i], alpha_table[i]);
-}
-
-///////////////////////////////////////////////////////////////////////////////
 
 void make_mu_table(struct fluxParams *pars)
 {
@@ -158,11 +229,8 @@ void make_R_table(struct fluxParams *pars)
                                         sizeof(double) * table_entries);
     pars->mu_table = (double *)realloc(pars->mu_table, 
                                         sizeof(double) * table_entries);
-    pars->alpha_table = (double *)realloc(pars->alpha_table, 
-                                        sizeof(double) * table_entries);
     double *t_table = pars->t_table;
     double *R_table = pars->R_table;
-    double *alpha_table = pars->alpha_table;
 
     double DR, R;
     double t;
@@ -217,15 +285,6 @@ void make_R_table(struct fluxParams *pars)
                     Rintegrand(t_table[0],Rpar));
     }
 
-    // set power law slopes at table times
-    for (i=1; i < table_entries - 1; i++)
-    {
-        alpha_table[i] = 0.5 * (log(R_table[i] / R_table[i-1])
-                                    / log(t_table[i] / t_table[i-1])
-                                + log(R_table[i+1] / R_table[i])
-                                    / log(t_table[i+1] / t_table[i]));
-    }
-
     // free memory for integration routine
 #ifdef USEGSL
     gsl_integration_workspace_free(w);
@@ -233,6 +292,113 @@ void make_R_table(struct fluxParams *pars)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+double emissivity(double nu, double R, double sinTheta, double mu, double te,
+                    double u, double us, double n0, double p, double epse,
+                    double epsB, double ksiN, int specType)
+{
+    if(us < 1.0e-5)
+    {
+        //shock is ~ at sound speed of warm ISM. Won't shock, approach invalid.
+        return 0.0;
+    }
+    if(sinTheta == 0.0 || R == 0.0)
+        return 0.0;
+
+    // set remaining fluid quantities
+    double g = sqrt(1+u*u);
+    double beta = u/g;
+    double betas = us / sqrt(1+us*us);
+    double nprime = 4.0 * n0 * g; // comoving number density
+    double e_th = u*u/(g+1) * nprime * m_p * v_light * v_light;
+    double B = sqrt(epsB * 8.0 * PI * e_th);
+    double a = (1.0 - mu * beta); // beaming factor
+    double ashock = (1.0 - mu * betas); // shock velocity beaming factor
+    double DR = R / (12.0 * g*g * ashock);
+    if (DR < 0.0) DR *= -1.0; // DR is function of the absolute value of mu
+
+
+    // set local emissivity 
+    double nuprime = nu * g * a; // comoving observer frequency
+    double g_m = (2.0 - p) / (1.0 - p) * epse * e_th / (
+                            ksiN * nprime * m_e * v_light * v_light);
+    double g_c = 6 * PI * m_e * g * v_light / (sigma_T * B * B * te);
+
+    //Inverse Compton adjustment of lfac_c
+    if(specType == 1)
+    {
+        double gr = g_c / g_m;
+        double y = beta * epse/epsB;
+        double X = 1.0;
+
+        if(gr <= 1.0 || gr*gr-gr-y <= 0.0)
+        {
+            //Fast Cooling
+            X = 0.5*(1 + sqrt(1+4*y));
+        }
+        else
+        {
+            //Slow Cooling
+            double b = y * pow(gr, 2-p);
+            double Xa = 1 + b;
+            double Xb = pow(b, 1.0/(4-p)) + 1.0/(4-p);
+            double s = b*b / (b*b + 1);
+            X = Xa * pow(Xb/Xa, s);
+            int i;
+            for(i=0; i<5; i++)
+            {
+                double po = pow(X, p-2);
+                double f = X*X - X - b*po;
+                double df = 2*X - 1 - (p-2)*b*po/X;
+                double dX = -f/df;
+                X += dX;
+                if(fabs(dX) < 1.0e-4*X)
+                break;
+            }
+        }
+
+        g_c /= X;
+    }
+
+    double nu_m = 3.0 * g_m * g_m * e_e * B / (4.0 * PI * m_e * v_light);
+    double nu_c = 3.0 * g_c * g_c * e_e * B / (4.0 * PI * m_e * v_light);
+    double em = 0.5*(p - 1.0)*sqrt(3.0) * e_e*e_e*e_e * ksiN * nprime * B
+                    / (m_e*v_light*v_light);
+  
+    double freq = 0.0; // frequency dependent part of emissivity
+
+
+    // set frequency dependence
+    if (nu_c > nu_m)
+    {
+        if (nuprime < nu_m) 
+            freq = pow(nuprime / nu_m, 1.0 / 3.0 );
+        else if (nuprime < nu_c)
+            freq = pow(nuprime / nu_m, 0.5 * (1.0 - p));
+        else
+            freq = pow(nu_c / nu_m, 0.5 * (1.0 - p))
+                    * pow(nuprime / nu_c, -0.5*p);
+    }
+    else
+    {
+        if (nuprime < nu_c)
+            freq = pow(nuprime / nu_c, 1.0/3.0);
+        else if (nuprime < nu_m)
+            freq = sqrt(nu_c / nuprime);
+        else
+            freq = sqrt(nu_c/nu_m) * pow(nuprime / nu_m, -0.5 * p);
+    }
+
+
+    if(em != em || em < 0.0)
+        printf("bad em at:%.3le te=%.3le sinTheta=%.3lf mu=%.3lf\n",
+                em, te, sinTheta, mu);
+    if(freq != freq || freq < 0.0)
+        printf("bad freq at:%.3le te=%.3le sinTheta=%.3lf mu=%.3lf\n",
+                freq, te, sinTheta, mu);
+
+    return R * R * sinTheta * DR * em * freq / (g*g * a*a);
+}
 
 double theta_integrand(double a_theta, void* params) // inner integral
 {
@@ -243,117 +409,37 @@ double theta_integrand(double a_theta, void* params) // inner integral
     //double sto = sin(pars->theta_obs_cur);
     double ast = sin(a_theta);
     double act = cos(a_theta);
-
     double mu = ast * (pars->cp) * (pars->sto) + act * (pars->cto);
-    int spec_type = pars->spec_type;
 
-  double t_e = get_t_e(mu, pars->t_obs, pars->mu_table, pars->t_table, 
-                        pars->table_entries);
-  double R = get_R(t_e, pars->Rt0, pars->Rt1, pars->R_table, pars->t_table,
-                        pars->alpha_table, pars->table_entries);
-  //printf("%e, %e, %e # tobs, R, t_e\n", t_obs, t_e, R);
-  double us2 = get_lfacbetashocksqrd(t_e, pars->C_BMsqrd, 
+    int ia = searchSorted(mu, pars->mu_table, pars->table_entries);
+    int ib = ia+1;
+    double t_e = interpolateLin(ia, ib, mu, pars->mu_table, pars->t_table, 
+                            pars->table_entries);
+    t_e = check_t_e(t_e, mu, pars->t_obs, pars->mu_table, pars->table_entries);
+    
+    double R = interpolateLog(ia, ib, t_e, pars->t_table, pars->R_table, 
+                            pars->table_entries);
+
+    //printf("%e, %e, %e # tobs, R, t_e\n", t_obs, t_e, R);
+    double us2 = get_lfacbetashocksqrd(t_e, pars->C_BMsqrd, 
                                                     pars->C_STsqrd);
-  double u2 = get_lfacbetasqrd(t_e, pars->C_BMsqrd, pars->C_STsqrd);
+    double u2 = get_lfacbetasqrd(t_e, pars->C_BMsqrd, pars->C_STsqrd);
+    
+    double dFnu =  emissivity(pars->nu_obs, R, ast, mu, t_e, sqrt(u2), 
+                                sqrt(us2), pars->n_0, pars->p, pars->epsilon_E,
+                                pars->epsilon_B, pars->ksi_N, pars->spec_type);
 
-  if(us2 < 1.0e-10)
-  {
-      //shock is ~ at sound speed of warm ISM. Won't shock, approach invalid.
-      return 0.0;
-  }
+    int i;
+    double fac = 1.0;
+    for(i=0; i<pars->nmask; i++)
+    {
+        double *m = &((pars->mask)[9*i]);
+        if(m[0]<t_e && t_e<m[1] && m[2]<R && R<m[3] && m[4]<a_theta
+                && a_theta<m[5] && m[6]<pars->phi && pars->phi<m[7])
+            fac = m[8];
+    }
 
-  // set remaining fluid quantities
-  double lfac = sqrt(1+u2);
-  double beta = sqrt(u2)/lfac;
-  double betashock = sqrt(us2 / (1+us2));
-  double nprime = 4.0 * pars->n_0 * lfac; // comoving number density
-  double e_th = u2/(lfac+1) * nprime * m_p * v_light * v_light;
-  double B = sqrt(pars->epsilon_B * 8.0 * PI * e_th);
-  double a = (1.0 - mu * beta); // beaming factor
-  double ashock = (1.0 - mu * betashock); // shock velocity beaming factor
-  double DR = R / (12.0 * lfac*lfac * ashock);
-  if (DR < 0.0) DR *= -1.0; // DR is function of the absolute value of mu
-
-
-  // set local emissivity 
-  double p = pars->p;
-  double nuprime = pars->nu_obs * lfac * a; // comoving observer frequency
-  double lfac_m = (2.0 - p) / (1.0 - p) * (pars->epsilon_E * e_th / (
-                    pars->ksi_N * nprime * m_e * v_light * v_light));
-  double lfac_c = 6 * PI * m_e * lfac * v_light / (sigma_T * B * B * t_e);
-
-  //Inverse Compton adjustment of lfac_c
-  if(spec_type == 1)
-  {
-      double gr = lfac_c / lfac_m;
-      double y = beta * pars->epsilon_E/pars->epsilon_B;
-      double X = 1.0;
-
-      if(gr <= 1.0 || gr*gr-gr-y <= 0.0)
-      {
-          //Fast Cooling
-          X = 0.5*(1 + sqrt(1+4*y));
-      }
-      else
-      {
-          //Slow Cooling
-          double b = y * pow(gr, 2-p);
-          double Xa = 1 + b;
-          double Xb = pow(b, 1.0/(4-p)) + 1.0/(4-p);
-          double s = b*b / (b*b + 1);
-          X = Xa * pow(Xb/Xa, s);
-          int i;
-          for(i=0; i<5; i++)
-          {
-              double po = pow(X, p-2);
-              double f = X*X - X - b*po;
-              double df = 2*X - 1 - (p-2)*b*po/X;
-              double dX = -f/df;
-              X += dX;
-              if(fabs(dX) < 1.0e-4*X)
-                  break;
-          }
-      }
-
-      lfac_c /= X;
-  }
-
-  double nu_m = 3.0 * lfac_m * lfac_m * e_e * B / (4.0 * PI * m_e * v_light);
-  double nu_c = 3.0 * lfac_c * lfac_c * e_e * B / (4.0 * PI * m_e * v_light);
-  double em = pars->ksi_N * nprime * B;
-  double freq = 0.0; // frequency dependent part of emissivity
-
-
-  // set frequency dependence
-  if (nu_c > nu_m)
-  {
-    if (nuprime < nu_m) 
-      //freq = cbrt(nuprime / nu_m);
-      freq = pow(nuprime / nu_m, 1.0 / 3.0 );
-    else if (nuprime < nu_c)
-      freq = pow(nuprime / nu_m, 0.5 * (1.0 - p));
-    else
-      freq = pow(nu_c / nu_m, 0.5 * (1.0 - p)) * pow(nuprime / nu_c, -0.5*p);
-  }
-  else
-  {
-    if (nuprime < nu_c)
-      freq = pow(nuprime / nu_c, 1.0/3.0);
-    else if (nuprime < nu_m)
-      freq = sqrt(nu_c / nuprime);
-    else
-      freq = sqrt(nu_c/nu_m) * pow(nuprime / nu_m, -0.5 * p);
-  }
-
-
-  if(em != em || em < 0.0)
-      printf("bad em at:%.3le t_obs=%.3le theta=%.3lf phi=%.3lf\n",
-              em, pars->t_obs, a_theta, pars->phi);
-  if(freq != freq || freq < 0.0)
-      printf("bad freq at:%.3le t_obs=%.3le theta=%.3lf phi=%.3lf\n",
-              freq, pars->t_obs, a_theta, pars->phi);
-
-  return R * R * ast * DR * em * freq / (lfac*lfac * a * a);
+    return fac * dFnu;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -404,6 +490,64 @@ double phi_integrand(double a_phi, void* params) // outer integral
   return result;
 }
 
+double phi_integrand_vec(double phi, void *params)
+{
+    struct fluxParams *pars = (struct fluxParams *) params;
+    
+    double cp = cos(phi); 
+    double mu = cp * (pars->st) * (pars->sto) + (pars->ct) * (pars->cto);
+
+    int ia = searchSorted(mu, pars->mu_table, pars->table_entries);
+    int ib = ia+1;
+    double t_e = interpolateLin(ia, ib, mu, pars->mu_table, pars->t_table, 
+                                pars->table_entries);
+    t_e = check_t_e(t_e, mu, pars->t_obs, pars->mu_table, pars->table_entries);
+    
+    double R = interpolateLog(ia, ib, t_e, pars->t_table, pars->R_table, 
+                            pars->table_entries);
+
+    //printf("%e, %e, %e # tobs, R, t_e\n", t_obs, t_e, R);
+    double us2 = get_lfacbetashocksqrd(t_e, pars->C_BMsqrd, 
+                                                    pars->C_STsqrd);
+    double u2 = get_lfacbetasqrd(t_e, pars->C_BMsqrd, pars->C_STsqrd);
+    
+    double dFnu =  emissivity(pars->nu_obs, R, pars->st, mu, t_e, sqrt(u2), 
+                                sqrt(us2), pars->n_0, pars->p, pars->epsilon_E,
+                                pars->epsilon_B, pars->ksi_N, pars->spec_type);
+
+    return dFnu;
+}
+
+void theta_integrand_vec(double theta, double *Fnu, double *t, double *nu,
+                            int Nt, void *params)
+{
+    struct fluxParams *pars = (struct fluxParams *)params;
+
+    double E = pars->f_E(theta, params);
+    set_jet_params(pars, E, theta);
+
+    pars->theta = theta;
+    pars->ct = cos(theta);
+    pars->st = sin(theta);
+
+    int i;
+    for(i=0; i<Nt; i++)
+    {
+        double theta_obs = pars->theta_obs;
+        set_obs_params(pars, t[i], nu[i], theta_obs, theta, theta);
+        make_mu_table(pars);
+        double F1 = 2.0 * romb(&phi_integrand_vec, 0.0, PI, 1000, 0, PHI_ACC,
+                                                params);
+
+        //Counter-jet
+        theta_obs = PI - pars->theta_obs;
+        set_obs_params(pars, t[i], nu[i], theta_obs, theta, theta);
+        double F2 = 2.0 * romb(&phi_integrand_vec, 0.0, PI, 1000, 0, PHI_ACC,
+                                                params);
+        Fnu[i] = F1 + F2;
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 double flux(struct fluxParams *pars, double atol) // determine flux for a given t_obs
@@ -425,10 +569,8 @@ double flux(struct fluxParams *pars, double atol) // determine flux for a given 
   make_mu_table(pars); 
 
   double d_L = pars->d_L;
-  double p = pars->p;
 
-  double Fcoeff = 0.5*(p - 1.0) * sqrt(3.0) * e_e*e_e*e_e / (4*PI * d_L*d_L
-                        * m_e * v_light * v_light) * cgs2mJy;
+  double Fcoeff = cgs2mJy / (4*PI * d_L*d_L);
   
   //printf("about to integrate phi between %e and %e\n", phi_0, phi_1); fflush(stdout);
 #ifdef USEGSL
@@ -449,6 +591,18 @@ double flux(struct fluxParams *pars, double atol) // determine flux for a given 
   return result;
 }
 
+void lc_cone(double *t, double *nu, double *F, int Nt, double E_iso,
+                double theta_core, double theta_wing, struct fluxParams *pars)
+{
+    int i;
+
+    set_jet_params(pars, E_iso, 0.5*(theta_core+theta_wing));
+
+    for(i=0; i<Nt; i++)
+        F[i] = flux_cone(t[i], nu[i], -1, -1, theta_core, theta_wing, 0.0,
+                            pars);
+}
+
 void lc_tophat(double *t, double *nu, double *F, int Nt,
                 double E_iso, double theta_h, struct fluxParams *pars)
 {
@@ -460,7 +614,7 @@ void lc_tophat(double *t, double *nu, double *F, int Nt,
         F[i] = flux_cone(t[i], nu[i], -1, -1, 0.0, theta_h, 0.0, pars);
 }
 
-void lc_powerlaw(double *t, double *nu, double *F, int Nt, 
+void lc_powerlawCore(double *t, double *nu, double *F, int Nt, 
                     double E_iso_core, double theta_h_core, 
                     double theta_h_wing, double beta,
                     double *theta_c_arr, double *E_iso_arr,
@@ -499,7 +653,7 @@ void lc_powerlaw(double *t, double *nu, double *F, int Nt,
     }
 }
 
-void lc_powerlawSmooth(double *t, double *nu, double *F, int Nt,
+void lc_powerlaw(double *t, double *nu, double *F, int Nt,
                         double E_iso_core, 
                         double theta_h_core, double theta_h_wing,
                         double *theta_c_arr, double *E_iso_arr,
@@ -556,6 +710,8 @@ void lc_Gaussian(double *t, double *nu, double *F, int Nt,
     //No Core
     for(j=0; j<Nt; j++)
         F[j] = 0.0;
+
+    pars->E_tot = f_Etot_Gaussian(pars);
 
     double Dtheta, theta_cone_hi, theta_cone_low, theta_h, theta_c, E_iso;
 
@@ -633,6 +789,26 @@ void lc_GaussianCore(double *t, double *nu, double *F, int Nt,
     }
 }
 
+void lc_vec(double *t, double *nu, double *Fnu, int Nt, double E_iso_core,
+            double theta_core, double theta_wing, int Ntheta, 
+            double (*f_E)(double, void *), double (*f_Etot)(void *),
+            struct fluxParams *pars)
+{
+    pars->E_iso_core = E_iso_core;
+    pars->theta_core = theta_core;
+    pars->theta_wing = theta_wing;
+    pars->f_E = f_E;
+    pars->E_tot = f_Etot(pars);
+    simp_v2(&theta_integrand_vec, Fnu, t, nu, Nt, 0.0, theta_wing, Ntheta,
+                                    pars);
+    double d_L = pars->d_L;
+    double Fcoeff = cgs2mJy / (4*PI * d_L*d_L);
+    
+    int i;
+    for(i=0; i<Nt; i++)
+        Fnu[i] *= Fcoeff;
+}
+
 double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
                     double theta_cone_low, double theta_cone_hi, double atol,
                     struct fluxParams *pars)
@@ -645,8 +821,8 @@ double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
     
     theta_obs = pars->theta_obs;
 
-    //if(E_iso > 0.0 && theta_h > 0.0)
-    //    set_jet_params(pars, E_iso, theta_h);
+    if(E_iso > 0.0 && theta_h > 0.0)
+        set_jet_params(pars, E_iso, theta_h);
 
     //Jet 
     theta_obs_cur = theta_obs;
@@ -678,7 +854,8 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
                             double theta_h_core, double theta_h_wing, 
                             double n_0, double p, double epsilon_E,
                             double epsilon_B, double ksi_N, double d_L,
-                            int tRes, int latRes, double rtol)
+                            int tRes, int latRes, double rtol, double *mask,
+                            int nmask)
 {
     double ta = t[0];
     double tb = t[0];
@@ -694,21 +871,27 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
     int res_cones = (int) (latRes*theta_h_wing / theta_h_core);
 
     struct fluxParams fp;
-    setup_fluxParams(&fp, d_L, theta_obs, n_0, p, epsilon_E, epsilon_B,
-                        ksi_N, ta, tb, tRes, spec_type, rtol);
+    setup_fluxParams(&fp, d_L, theta_obs, E_iso_core, theta_h_core,
+                        theta_h_wing,
+                        n_0, p, epsilon_E, epsilon_B, ksi_N, ta, tb, tRes,
+                        spec_type, rtol, mask, nmask);
 
     if(jet_type == _tophat)
     {
         lc_tophat(t, nu, Fnu, N, E_iso_core, theta_h_core, &fp);
     }
+    else if(jet_type == _cone)
+    {
+        lc_cone(t, nu, Fnu, N, E_iso_core, theta_h_core, theta_h_wing, &fp);
+    }
+    else if(jet_type == _powerlaw_core)
+    {
+        lc_powerlawCore(t, nu, Fnu, N, E_iso_core, theta_h_core, 
+                theta_h_wing, -2, NULL, NULL, res_cones, &fp);
+    }
     else if(jet_type == _powerlaw)
     {
         lc_powerlaw(t, nu, Fnu, N, E_iso_core, theta_h_core, 
-                theta_h_wing, -2, NULL, NULL, res_cones, &fp);
-    }
-    else if(jet_type == _powerlaw_smooth)
-    {
-        lc_powerlawSmooth(t, nu, Fnu, N, E_iso_core, theta_h_core, 
                 theta_h_wing, NULL, NULL, res_cones, &fp);
     }
     else if(jet_type == _Gaussian)
@@ -721,23 +904,45 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
         lc_GaussianCore(t, nu, Fnu, N, E_iso_core, theta_h_core, 
                     theta_h_wing, NULL, NULL, res_cones, &fp);
     }
+    else if(jet_type == _tophat + 10)
+    {
+        lc_vec(t, nu, Fnu, N, E_iso_core, theta_h_core, theta_h_core, 
+                res_cones, &f_E_tophat, &f_Etot_tophat, &fp);
+    }
+    else if(jet_type == _Gaussian + 10)
+    {
+        lc_vec(t, nu, Fnu, N, E_iso_core, theta_h_core, theta_h_wing, 
+                res_cones, &f_E_Gaussian, &f_Etot_Gaussian, &fp);
+    }
+    else if(jet_type == _powerlaw + 10)
+    {
+        lc_vec(t, nu, Fnu, N, E_iso_core, theta_h_core, theta_h_wing, 
+                res_cones, &f_E_powerlaw, &f_Etot_powerlaw, &fp);
+    }
     free_fluxParams(&fp);
 }
 ///////////////////////////////////////////////////////////////////////////////
 
-void setup_fluxParams(struct fluxParams *pars, double d_L, double theta_obs,
+void setup_fluxParams(struct fluxParams *pars,
+                        double d_L, double theta_obs, double E_iso_core,
+                        double theta_core, double theta_wing, 
                         double n_0, double p, double epsilon_E,
                         double epsilon_B, double ksi_N, double ta, double tb,
-                        double tRes, int spec_type, double flux_rtol)
+                        double tRes, int spec_type, double flux_rtol,
+                        double *mask, int nmask)
 {
     pars->t_table = NULL;
     pars->R_table = NULL;
     pars->mu_table = NULL;
-    pars->alpha_table = NULL;
     pars->spec_type = spec_type;
 
     pars->d_L = d_L;
     pars->theta_obs = theta_obs;
+    pars->E_iso_core = E_iso_core;
+    pars->theta_core = theta_core;
+    pars->theta_wing = theta_wing;
+    pars->E_tot = -1;
+    
     pars->n_0 = n_0;
     pars->p = p;
     pars->epsilon_E = epsilon_E;
@@ -748,13 +953,20 @@ void setup_fluxParams(struct fluxParams *pars, double d_L, double theta_obs,
     pars->tb = tb;
     pars->tRes = tRes;
     pars->flux_rtol = flux_rtol;
+
+    pars->mask = mask;
+    pars->nmask = nmask;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h)
 {
-    double E_jet = (1.0 - cos(theta_h)) * E_iso;
+    double E_jet;
+    if(pars->E_tot > 0.0)
+        E_jet = pars->E_tot;
+    else
+        E_jet = (1.0 - cos(theta_h)) * E_iso;
     double n_0 = pars->n_0;
     double C_BM = sqrt(17.0 * E_iso / (8.0 * PI * m_p * n_0
                                         * pow( v_light, 5.0)));
@@ -789,9 +1001,20 @@ void set_obs_params(struct fluxParams *pars, double t_obs, double nu_obs,
 
 void free_fluxParams(struct fluxParams *pars)
 {
-    free(pars->t_table);
-    free(pars->R_table);
-    free(pars->mu_table);
-    free(pars->alpha_table);
+    if(pars->t_table != NULL)
+    {
+        free(pars->t_table);
+        pars->t_table = NULL;
+    }
+    if(pars->R_table != NULL)
+    {
+        free(pars->R_table);
+        pars->R_table = NULL;
+    }
+    if(pars->mu_table != NULL)
+    {
+        free(pars->mu_table);
+        pars->mu_table = NULL;
+    }
 }
 

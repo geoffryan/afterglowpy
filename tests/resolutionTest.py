@@ -118,7 +118,7 @@ if __name__ == "__main__":
     nu = np.empty(t.shape)
     nu[:] = 1.0e18
 
-    jetType = 0
+    jetType = 0+10
     specType = 0
     Y = np.array([0.5, 1.0e53, 0.05, 0.4, 1.0e-3, 2.2, 0.1, 0.01, 1.0, 1.0e26])
     
@@ -126,14 +126,14 @@ if __name__ == "__main__":
     latRes = 5
     tRes = 1000
 
-    Nres = 10
-    lRs = range(1, Nres+1)
+    Nres = 5
+    lRs = [int(x) for x in np.power(2.0, range(2, Nres+2))]
     testLatRes(t, nu, jetType, specType, Y, tRes, lRs, rtol)
 
     rtols = [1.0e-2, 1.0e-4, 1.0e-6, 1.0e-8] 
     testRTol(t, nu, jetType, specType, Y, tRes, latRes, rtols)
 
-    TRs = [int(x) for x in [1.0e1, 1.0e2, 1.0e3, 1.0e4, 1.0e5]]
+    TRs = [int(x) for x in [1.0e1, 1.0e2, 1.0e3, 1.0e4]]
     testTRes(t, nu, jetType, specType, Y, TRs, latRes, rtol)
 
     testSingle(t, nu, jetType, specType, Y, tRes, latRes, rtol)

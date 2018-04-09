@@ -6,7 +6,7 @@ import grbpy as grb
 
 day = 86400.0
 
-jetType = 0
+jetType = -1+10
 specType = 0
 thV = 0.5
 E0 = 1.0e53
@@ -32,7 +32,6 @@ nu[:] = 1.0e18
 print("Calculating")
 Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y)
 
-
 print("Writing lc.txt")
 f = open("lc.txt", 'w')
 f.write("# nu " + str(nu[0]) + '\n')
@@ -50,6 +49,7 @@ ax.set_xscale('log')
 ax.set_yscale('log')
 ax.set_xlabel(r'$t$ (d)')
 ax.set_ylabel(r'$F_\nu$ (mJy)')
+#ax.set_ylim(1.0e-8, 1.0e-4)
 print("Saving figure lc.png")
 fig.savefig("lc.png")
 plt.close(fig)
