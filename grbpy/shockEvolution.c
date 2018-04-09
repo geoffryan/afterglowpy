@@ -12,6 +12,8 @@ void Rudot2D(double t, double *x, void *argv, double *xdot)
     double Einj = args[3];
     double k = args[4];
     double umin = args[5];
+    double L0 = args[6];
+    double q = args[7];
 
     double R = x[0];
     double u = x[1];
@@ -25,7 +27,12 @@ void Rudot2D(double t, double *x, void *argv, double *xdot)
     if(Einj > 0.0 && u>umin)
         dEdu = -k*Einj*pow(u,-k-1);
 
-    double num = -16*M_PI/3.0 * rho0*R*R * be*u*u * v_light;
+    double dEdt = 0.0;
+    if(L0 > 0.0)
+        dEdt = L0*pow(t/1.0e3, -q);
+
+    double num = -16*M_PI/3.0 * rho0*R*R * be*u*u * v_light
+                    + dEdt/(v_light*v_light);
     double denom = be*Mej + 8*M_PI*rho0*R*R*R*u*(2*u*u+1)*(2*u*u+3)/(9*g*g*g*g)
                     - dEdu/(v_light*v_light);
     double dudt = num/denom;

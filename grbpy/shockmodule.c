@@ -95,11 +95,11 @@ static PyObject *shock_shockEvolRK4(PyObject *self, PyObject *args)
     PyObject *t_obj = NULL;
 
     double R0, u0;
-    double Mej, rho0, Einj, k, umin;
+    double Mej, rho0, Einj, k, umin, L0, q;
 
     //Parse Arguments
-    if(!PyArg_ParseTuple(args, "Oddddddd", &t_obj, &R0, &u0, &Mej, &rho0,
-                                            &Einj, &k, &umin))
+    if(!PyArg_ParseTuple(args, "Oddddddddd", &t_obj, &R0, &u0, &Mej, &rho0,
+                                            &Einj, &k, &umin, &L0, &q))
     {
         PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
         return NULL;
@@ -146,7 +146,7 @@ static PyObject *shock_shockEvolRK4(PyObject *self, PyObject *args)
     double *u = PyArray_DATA((PyArrayObject *) u_obj);
 
     // Evolve the shock!
-    double shockArgs[6] = {u0, Mej, rho0, Einj, k, umin};
+    double shockArgs[8] = {u0, Mej, rho0, Einj, k, umin, L0, q};
     shockEvolveRK4(t, R, u, N, R0, u0, shockArgs);
 
     // Clean up!
