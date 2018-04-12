@@ -210,9 +210,15 @@ void make_R_table(struct fluxParams *pars)
     //at fixed t_obs, latest emission is *always* from mu=+1
     // so t_obs ~ t-R/c
     if(tb > 0.1*t_NR)  // at late times R<<c so t_obs ~ t_e
+    {
         Rt1 = 10*tb;
+        printf("Option 1: tb=%.6e t_NR=%.6e Rt1=%.6e\n", tb, t_NR, Rt1);
+    }
     else // at early times t_obs ~ t*(gamma_sh^-2)/8 ~ CBM^-2 * t^4 / 8
+    {
         Rt1 = 10*pow(8*tb*C_BMsqrd, 0.25);
+        printf("Option 2: tb=%.6e C_BM2=%.6e Rt1=%.6e\n", tb, C_BMsqrd, Rt1);
+    }
     
     //printf("        Rt0: %.1le Rt1: %.1le\n", Rt0, Rt1);
 
