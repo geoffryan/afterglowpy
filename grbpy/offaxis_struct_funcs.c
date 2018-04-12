@@ -103,8 +103,8 @@ double check_t_e(double t_e, double mu, double t_obs, double *mu_table, int N)
     if(mu > mu_table[N-1])
     {
         printf("mu >> 1? this should not have happened\n");
-        printf("   t_obs=%.6lg mu=%.6lg mu_table[-1]=%.6lg\n",
-                t_obs, mu, mu_table[N-1]);
+        printf("   t_obs=%.6lg t_e=%.6lg mu=%.6lg mu_table[-1]=%.6lg\n",
+                t_obs, t_e, mu, mu_table[N-1]);
         abort();
     }
 
