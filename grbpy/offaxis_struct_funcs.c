@@ -211,7 +211,7 @@ void make_R_table(struct fluxParams *pars)
     // so t_obs ~ t-R/c
     if(tb > 0.1*t_NR)  // at late times R<<c so t_obs ~ t_e
     {
-        Rt1 = 10*tb;
+        Rt1 = 10*(tb+t_NR);
         printf("Option 1: tb=%.6e t_NR=%.6e Rt1=%.6e\n", tb, t_NR, Rt1);
     }
     else // at early times t_obs ~ t*(gamma_sh^-2)/8 ~ CBM^-2 * t^4 / 8
