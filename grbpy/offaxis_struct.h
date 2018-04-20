@@ -78,7 +78,7 @@ struct fluxParams
     double theta_core;
     double theta_wing;
     double E_tot;
-    
+
     double current_theta_cone_hi;
     double current_theta_cone_low;
     double theta_obs_cur;
@@ -98,6 +98,8 @@ struct fluxParams
 
     double *t_table;
     double *R_table;
+    double *u_table;
+    double *th_table;
     double *mu_table;
     int table_entries;
 

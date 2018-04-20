@@ -9,8 +9,8 @@ libs = []
 libdirs = []
 
 jetsources = ["grbpy/jetmodule.c", "grbpy/offaxis_struct_funcs.c",
-                "grbpy/integrate.c"]
-jetdepends = ["grbpy/offaxis_struct_funcs.h"]
+                "grbpy/integrate.c", "grbpy/shockEvolution.c"]
+jetdepends = ["grbpy/offaxis_struct_funcs.h", "grbpy/shockEvolution.h"]
 
 shocksources = ["grbpy/shockmodule.c", "grbpy/shockEvolution.c"]
 shockdepends = ["grbpy/shockEvolution.h", "grbpy/offaxis_struct_funcs.h"]

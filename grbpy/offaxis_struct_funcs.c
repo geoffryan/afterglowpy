@@ -1,4 +1,5 @@
 #include "offaxis_struct.h"
+#include "shockEvolution.h"
 
 double dmin(const double a, const double b)
 {
@@ -189,39 +190,14 @@ void make_mu_table(struct fluxParams *pars)
     }
 }
 
-void make_R_table(struct fluxParams *pars)
+void make_R_tableInterp(struct fluxParams *pars)
 {
-    // min/max observer times
-    double ta = pars->ta;
-    double tb = pars->tb;
-
-    double C_BMsqrd = pars->C_BMsqrd;
-    double C_STsqrd = pars->C_STsqrd;
-    double t_NR = pars->t_NR;
-
-    double Rt0, Rt1;
-    //Rt0 = 1.0e-2 * day2sec;
-    //Rt1 = 1.0e7 * day2sec; 
-
-    //at fixed t_obs, earliest emission is *always* from mu=-1
-    // so t_obs ~ t_e
-    Rt0 = 0.1*ta;
-
-    //at fixed t_obs, latest emission is *always* from mu=+1
-    // so t_obs ~ t-R/c
-    if(tb > 0.1*t_NR)  // at late times R ~ c t_NR << c t so t_obs ~ t_e
-        Rt1 = 10*(tb+t_NR);
-    else // at early times t_obs ~ t*(gamma_sh^-2)/8 ~ CBM^-2 * t^4 / 8
-        Rt1 = 10*pow(8*tb*C_BMsqrd, 0.25);
-    
-    //printf("        Rt0: %.1le Rt1: %.1le\n", Rt0, Rt1);
-
     int tRes = pars->tRes;
+    double Rt0 = pars->Rt0;
+    double Rt1 = pars->Rt1;
     int table_entries = (int)(tRes * log10(Rt1/Rt0));
     
     pars->table_entries = table_entries;
-    pars->Rt0 = Rt0;
-    pars->Rt1 = Rt1;
 
     pars->t_table = (double *)realloc(pars->t_table, 
                                         sizeof(double) * table_entries);
@@ -239,7 +215,7 @@ void make_R_table(struct fluxParams *pars)
     int i;
 
     // prepare integration function
-    double Rpar[2] = {C_BMsqrd, C_STsqrd};
+    double Rpar[2] = {pars->C_BMsqrd, pars->C_STsqrd};
 #ifdef USEGSL
     gsl_function F;
     F.function = &Rintegrand;
@@ -289,6 +265,57 @@ void make_R_table(struct fluxParams *pars)
 #ifdef USEGSL
     gsl_integration_workspace_free(w);
 #endif
+}
+
+void make_R_table(struct fluxParams *pars)
+{
+    int tRes = pars->tRes;
+    double Rt0 = pars->Rt0;
+    double Rt1 = pars->Rt1;
+    int table_entries = (int)(tRes * log10(Rt1/Rt0));
+    
+    pars->table_entries = table_entries;
+
+    pars->t_table = (double *)realloc(pars->t_table, 
+                                        sizeof(double) * table_entries);
+    pars->R_table = (double *)realloc(pars->R_table, 
+                                        sizeof(double) * table_entries);
+    pars->u_table = (double *)realloc(pars->u_table, 
+                                        sizeof(double) * table_entries);
+    pars->th_table = (double *)realloc(pars->th_table, 
+                                        sizeof(double) * table_entries);
+    pars->mu_table = (double *)realloc(pars->mu_table, 
+                                        sizeof(double) * table_entries);
+    double *t_table = pars->t_table;
+    double *R_table = pars->R_table;
+    double *u_table = pars->u_table;
+    double *th_table = pars->th_table;
+
+    double fac = pow(Rt1/Rt0, 1.0/(table_entries-1.0));
+    t_table[0] = Rt0;
+
+    int i;
+    for(i=1; i<table_entries; i++)
+        t_table[i] = t_table[i-1] * fac;
+
+    double Rpar[2] = {pars->C_BMsqrd, pars->C_STsqrd};
+    double R0 = romb(&Rintegrand, 0.0, Rt0, 1000, 0, R_ACC, Rpar);
+    double u0 = sqrt(get_lfacbetasqrd(Rt0, pars->C_BMsqrd, pars->C_STsqrd));
+    double th0 = pars->theta_h;
+    double args[9] = {u0, 0.0, m_p*pars->n_0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+
+    shockEvolveSpreadRK4(t_table, R_table, u_table, th_table, table_entries,
+                            R0, u0, th0, args);
+
+    if(R_table[0] != R_table[0])
+    {
+        printf("Rintegration Error: R[0]=%.3e  (fac=%.3e)\n", 
+                                    R_table[0], fac);
+        printf("    t=%.3e Rdot=%.3e t=%.3e Rdot=%.3e\n",
+                    0.0,Rintegrand(0.0,Rpar), t_table[0], 
+                    Rintegrand(t_table[0],Rpar));
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -420,14 +447,34 @@ double theta_integrand(double a_theta, void* params) // inner integral
     double R = interpolateLog(ia, ib, t_e, pars->t_table, pars->R_table, 
                             pars->table_entries);
 
-    //printf("%e, %e, %e # tobs, R, t_e\n", t_obs, t_e, R);
-    double us2 = get_lfacbetashocksqrd(t_e, pars->C_BMsqrd, 
-                                                    pars->C_STsqrd);
-    double u2 = get_lfacbetasqrd(t_e, pars->C_BMsqrd, pars->C_STsqrd);
+    double us2, u2;
+    if(pars->u_table != NULL)
+    {
+        double u = interpolateLog(ia, ib, t_e, pars->t_table, pars->u_table,
+                                        pars->table_entries);
+        double us = shockVel(u);
+        u2 = u*u;
+        us2 = us*us;
+    }
+    else
+    {
+        us2 = get_lfacbetashocksqrd(t_e, pars->C_BMsqrd, pars->C_STsqrd);
+        u2 = get_lfacbetasqrd(t_e, pars->C_BMsqrd, pars->C_STsqrd);
+    }
     
     double dFnu =  emissivity(pars->nu_obs, R, ast, mu, t_e, sqrt(u2), 
                                 sqrt(us2), pars->n_0, pars->p, pars->epsilon_E,
                                 pars->epsilon_B, pars->ksi_N, pars->spec_type);
+
+    if(dFnu != dFnu || dFnu < 0.0)
+    {
+        printf("bad dFnu:%.3le nu=%.3le R=%.3le th=%.3lf mu=%.3lf\n",
+                dFnu, pars->nu_obs, R, a_theta, mu);
+        printf("               t=%.3le u=%.3le us=%.3le n0=%.3le p=%.3lf\n",
+                t_e, sqrt(u2), sqrt(us2), pars->n_0, pars->p);
+        printf("               epse=%.3le epsB=%.3le ksiN=%.3le specType=%d\n",
+                pars->epsilon_E, pars->epsilon_B, pars->ksi_N, pars->spec_type);
+    }
 
     int i;
     double fac = 1.0;
@@ -439,6 +486,9 @@ double theta_integrand(double a_theta, void* params) // inner integral
             fac = m[8];
     }
 
+    if(fac != fac || fac < 0.0)
+        printf("bad mask fac: %.3le\n", fac);
+
     return fac * dFnu;
 }
 
@@ -446,48 +496,70 @@ double theta_integrand(double a_theta, void* params) // inner integral
 
 double phi_integrand(double a_phi, void* params) // outer integral
 {
-  double result;
+    double result;
 
-  struct fluxParams *pars = (struct fluxParams *) params;
+    struct fluxParams *pars = (struct fluxParams *) params;
   
-  // set up integration routine
+    // set up integration routine
 #ifdef USEGSL
-  gsl_integration_workspace * w = gsl_integration_workspace_alloc (1000);
-  gsl_function F; F.function = &theta_integrand; F.params = params;
-  double error;
+    gsl_integration_workspace * w = gsl_integration_workspace_alloc (1000);
+    gsl_function F; F.function = &theta_integrand; F.params = params;
+    double error;
 #endif
 
-  pars->phi = a_phi;
-  pars->cp = cos(a_phi);
+    pars->phi = a_phi;
+    pars->cp = cos(a_phi);
   
   // implement sideways spreading approximation until spherical symmetry reached
-  double theta_1 = pars->current_theta_cone_hi;
-  double theta_0 = pars->current_theta_cone_low;
-  double Dtheta = theta_1 - theta_0;
-  if (pars->t_obs > pars->t_NR)
-  {
-    theta_1 = dmin(0.5 * PI, 
-                    pars->theta_h + 0.1 * log( pars->t_obs / pars->t_NR));
-  }
+    double theta_1 = pars->current_theta_cone_hi;
+    double theta_0 = pars->current_theta_cone_low;
+    double Dtheta = theta_1 - theta_0;
+    int spread = 1;
+    if(pars->th_table != NULL && spread==1)
+    {
+        // approx mu
+        double ct = cos(0.5*(theta_0+theta_1));
+        double st = sin(0.5*(theta_0+theta_1));
+        double mu = pars->cp * st * (pars->sto) + ct * (pars->cto);
+
+        int ia = searchSorted(mu, pars->mu_table, pars->table_entries);
+        int ib = ia+1;
+        double th = interpolateLin(ia, ib, mu, pars->mu_table, pars->th_table, 
+                                    pars->table_entries);
+
+        theta_0 *= th/pars->theta_h;
+        theta_1 *= th/pars->theta_h;
+        if(theta_0 > 0.5*M_PI)
+            theta_0 = 0.5*M_PI;
+        if(theta_1 > 0.5*M_PI)
+            theta_1 = 0.5*M_PI;
+    }
+    else if (pars->t_obs > pars->t_NR && spread==2)
+    {
+        theta_1 = dmin(0.5 * PI, 
+                        pars->theta_h + 0.1 * log( pars->t_obs / pars->t_NR));
+        if(theta_0 != 0.0)
+            theta_0 = theta_1-Dtheta;
+    }
  
-  //printf("# theta integration domain: %e - %e\n", theta_1 - Dtheta, theta_1); fflush(stdout);
+    //printf("# theta integration domain: %e - %e\n", theta_1 - Dtheta, theta_1); fflush(stdout);
  
-  // For a given phi, integrate over theta
+    // For a given phi, integrate over theta
 #ifdef USEGSL
-  gsl_integration_qags(&F, theta_1 - Dtheta, theta_1, 0, 1.0e-4, 1000, w, 
-                        &result, &error);
+    gsl_integration_qags(&F, theta_0, theta_1, 0, 1.0e-4, 1000, w, 
+                            &result, &error);
   // free integration routine memory
-  gsl_integration_workspace_free(w);
+    gsl_integration_workspace_free(w);
 #else
-  result = romb(&theta_integrand, theta_1-Dtheta, theta_1, 1000, 
-                    pars->theta_atol, THETA_ACC, params);
+    result = romb(&theta_integrand, theta_0, theta_1, 1000, 
+                        pars->theta_atol, THETA_ACC, params);
 #endif
-  if(result != result || result < 0.0)
-      printf("bad result at:%.3le t_obs=%.3le theta_lo=%.3lf theta_hi=%.3lf phi=%.3lf\n",
-              result, pars->t_obs, theta_0, theta_1, pars->phi);
+    if(result != result || result < 0.0)
+        printf("bad result:%.3le t_obs=%.3le theta_lo=%.3lf theta_hi=%.3lf theta_log=%.3lf phi=%.3lf\n",
+              result, pars->t_obs, theta_0, theta_1, pars->theta_h + 0.1 * log( pars->t_obs / pars->t_NR), pars->phi);
   
-  //return result
-  return result;
+    //return result
+    return result;
 }
 
 double phi_integrand_vec(double phi, void *params)
@@ -596,7 +668,7 @@ void lc_cone(double *t, double *nu, double *F, int Nt, double E_iso,
 {
     int i;
 
-    set_jet_params(pars, E_iso, 0.5*(theta_core+theta_wing));
+    set_jet_params(pars, E_iso, theta_wing);
 
     for(i=0; i<Nt; i++)
         F[i] = flux_cone(t[i], nu[i], -1, -1, theta_core, theta_wing, 0.0,
@@ -711,7 +783,7 @@ void lc_Gaussian(double *t, double *nu, double *F, int Nt,
     for(j=0; j<Nt; j++)
         F[j] = 0.0;
 
-    pars->E_tot = f_Etot_Gaussian(pars);
+    //pars->E_tot = f_Etot_Gaussian(pars);
 
     double Dtheta, theta_cone_hi, theta_cone_low, theta_h, theta_c, E_iso;
 
@@ -933,6 +1005,8 @@ void setup_fluxParams(struct fluxParams *pars,
 {
     pars->t_table = NULL;
     pars->R_table = NULL;
+    pars->u_table = NULL;
+    pars->th_table = NULL;
     pars->mu_table = NULL;
     pars->spec_type = spec_type;
 
@@ -972,13 +1046,33 @@ void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h)
                                         * pow( v_light, 5.0)));
     double C_ST = 2.0 / 5.0 * 1.15 * pow(E_jet / (m_p * n_0), 1.0 / 5.0 )
                             * invv_light;
+    double t_NR = pow(2.0, 1.0 / 3.0) * pow(C_BM, 2.0 / 3.0);
+ 
 
     pars->E_iso = E_iso;
     pars->theta_h = theta_h;
     pars->C_BMsqrd = C_BM * C_BM;
     pars->C_STsqrd = C_ST * C_ST;
-    pars->t_NR = pow(2.0, 1.0 / 3.0) * pow(C_BM, 2.0 / 3.0);
+    pars->t_NR = t_NR;
+    // min/max observer times
+    double ta = pars->ta;
+    double tb = pars->tb;
 
+    double Rt0, Rt1;
+
+    //at fixed t_obs, earliest emission is *always* from mu=-1
+    // so t_obs ~ t_e
+    Rt0 = 0.1*ta;
+
+    //at fixed t_obs, latest emission is *always* from mu=+1
+    // so t_obs ~ t-R/c
+    if(tb > 0.1*t_NR)  // at late times R ~ c t_NR << c t so t_obs ~ t_e
+        Rt1 = 10*(tb+t_NR);
+    else // at early times t_obs ~ t*(gamma_sh^-2)/8 ~ CBM^-2 * t^4 / 8
+        Rt1 = 10*pow(8*tb*C_BM*C_BM, 0.25);
+    pars->Rt0 = Rt0;
+    pars->Rt1 = Rt1;
+    
     make_R_table(pars);
 }
 
@@ -1010,6 +1104,16 @@ void free_fluxParams(struct fluxParams *pars)
     {
         free(pars->R_table);
         pars->R_table = NULL;
+    }
+    if(pars->u_table != NULL)
+    {
+        free(pars->u_table);
+        pars->u_table = NULL;
+    }
+    if(pars->th_table != NULL)
+    {
+        free(pars->th_table);
+        pars->th_table = NULL;
     }
     if(pars->mu_table != NULL)
     {

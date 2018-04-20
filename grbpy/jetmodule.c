@@ -9,11 +9,17 @@ static char fluxDensity_docstring[] =
     "Calculate the flux density at several times and frequencies";
 static char emissivity_docstring[] = 
     "Calculate the instantaneous emissivity of a sector of a blastwave.";
+static char shock_docstring[] = 
+    "Calculate the evolution of a tophat shock.";
+static char shockObs_docstring[] = 
+    "Calculate the evolution of a tophat shock with reference to observer time.";
 
 static PyObject *error_out(PyObject *m);
 static PyObject *jet_fluxDensity(PyObject *self, PyObject *args, 
                                     PyObject *kwargs);
 static PyObject *jet_emissivity(PyObject *self, PyObject *args);
+static PyObject *jet_shock(PyObject *self, PyObject *args);
+static PyObject *jet_shockObs(PyObject *self, PyObject *args);
 
 struct module_state
 {
@@ -30,6 +36,8 @@ static PyMethodDef jetMethods[] = {
     {"fluxDensity", (PyCFunction)jet_fluxDensity, METH_VARARGS|METH_KEYWORDS,
         fluxDensity_docstring},
     {"emissivity", jet_emissivity, METH_VARARGS, emissivity_docstring},
+    {"shock", jet_shock, METH_VARARGS, shock_docstring},
+    {"shockObs", jet_shockObs, METH_VARARGS, shockObs_docstring},
     {"error_out", (PyCFunction)error_out, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}};
 
@@ -248,6 +256,171 @@ static PyObject *jet_emissivity(PyObject *self, PyObject *args)
 
     //Build output
     PyObject *ret = Py_BuildValue("d", em);
+    
+    return ret;
+}
+
+static PyObject *jet_shock(PyObject *self, PyObject *args)
+{
+    double Rt0, Rt1, E0, n0, thetah;
+    int tRes;
+
+    //Parse Arguments
+    if(!PyArg_ParseTuple(args, "ddiddd", &Rt0, &Rt1, &tRes, &E0, &n0, &thetah))
+    {
+        //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
+        return NULL;
+    }
+
+    double ta = Rt0;
+    double tb = Rt1;
+
+    struct fluxParams pars;
+    pars.ta = ta;
+    pars.tb = tb;
+    pars.n_0 = n0;
+    pars.tRes = tRes;
+    pars.E_tot = -1.0;
+    pars.t_table = NULL;
+    pars.R_table = NULL;
+    pars.u_table = NULL;
+    pars.th_table = NULL;
+    pars.mu_table = NULL;
+
+    set_jet_params(&pars, E0, thetah);
+    pars.Rt0 = Rt0;
+    pars.Rt1 = Rt1;
+    make_R_table(&pars);
+
+    //Allocate output arrays
+    int N = pars.table_entries;
+    npy_intp dims[1] = {N};
+    PyObject *t_obj = PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+    PyObject *R_obj = PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+    PyObject *u_obj = PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+    PyObject *th_obj = PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+
+    if(t_obj == NULL || R_obj == NULL || u_obj == NULL || th_obj == NULL)
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Could not make output arrays.");
+        Py_XDECREF(t_obj);
+        Py_XDECREF(R_obj);
+        Py_XDECREF(u_obj);
+        Py_XDECREF(th_obj);
+        return NULL;
+    }
+
+    double *t = PyArray_DATA((PyArrayObject *) t_obj);
+    double *R = PyArray_DATA((PyArrayObject *) R_obj);
+    double *u = PyArray_DATA((PyArrayObject *) u_obj);
+    double *th = PyArray_DATA((PyArrayObject *) th_obj);
+
+    int i;
+    for(i=0; i<N; i++)
+    {
+        t[i] = pars.t_table[i];
+        R[i] = pars.R_table[i];
+        if(pars.u_table != NULL)
+            u[i] = pars.u_table[i];
+        else
+            u[i] = sqrt(get_lfacbetasqrd(t[i], pars.C_BMsqrd, pars.C_STsqrd));
+        if(pars.th_table != NULL)
+            th[i] = pars.th_table[i];
+        else
+        {
+            if(t[i] < pars.t_NR)
+                th[i] = thetah;
+            else
+            {
+                th[i] = thetah + 1.0/sqrt(20)*log(t[i]/pars.t_NR);
+                if(th[i] > 0.5*M_PI)
+                    th[i] = 0.5*M_PI;
+            }
+        }
+    }
+
+    PyObject *ret = Py_BuildValue("NNNN", t_obj, R_obj, u_obj, th_obj);
+
+    free_fluxParams(&pars);
+    
+    return ret;
+}
+static PyObject *jet_shockObs(PyObject *self, PyObject *args)
+{
+    double ta, tb, E0, n0, thetah;
+    int tRes;
+
+    //Parse Arguments
+    if(!PyArg_ParseTuple(args, "ddiddd", &ta, &tb, &tRes, &E0, &n0, &thetah))
+    {
+        //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
+        return NULL;
+    }
+
+    struct fluxParams pars;
+    pars.ta = ta;
+    pars.tb = tb;
+    pars.n_0 = n0;
+    pars.tRes = tRes;
+    pars.E_tot = -1.0;
+    pars.t_table = NULL;
+    pars.R_table = NULL;
+    pars.u_table = NULL;
+    pars.th_table = NULL;
+    pars.mu_table = NULL;
+
+    set_jet_params(&pars, E0, thetah);
+
+    //Allocate output arrays
+    int N = pars.table_entries;
+    npy_intp dims[1] = {N};
+    PyObject *t_obj = PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+    PyObject *R_obj = PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+    PyObject *u_obj = PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+    PyObject *th_obj = PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+
+    if(t_obj == NULL || R_obj == NULL || u_obj == NULL || th_obj == NULL)
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Could not make output arrays.");
+        Py_XDECREF(t_obj);
+        Py_XDECREF(R_obj);
+        Py_XDECREF(u_obj);
+        Py_XDECREF(th_obj);
+        return NULL;
+    }
+
+    double *t = PyArray_DATA((PyArrayObject *) t_obj);
+    double *R = PyArray_DATA((PyArrayObject *) R_obj);
+    double *u = PyArray_DATA((PyArrayObject *) u_obj);
+    double *th = PyArray_DATA((PyArrayObject *) th_obj);
+
+    int i;
+    for(i=0; i<N; i++)
+    {
+        t[i] = pars.t_table[i];
+        R[i] = pars.R_table[i];
+        if(pars.u_table != NULL)
+            u[i] = pars.u_table[i];
+        else
+            u[i] = sqrt(get_lfacbetasqrd(t[i], pars.C_BMsqrd, pars.C_STsqrd));
+        if(pars.th_table != NULL)
+            th[i] = pars.th_table[i];
+        else
+        {
+            if(t[i] < pars.t_NR)
+                th[i] = thetah;
+            else
+            {
+                th[i] = thetah + 1.0/sqrt(20)*log(t[i]/pars.t_NR);
+                if(th[i] > 0.5*M_PI)
+                    th[i] = 0.5*M_PI;
+            }
+        }
+    }
+
+    PyObject *ret = Py_BuildValue("NNNN", t_obj, R_obj, u_obj, th_obj);
+
+    free_fluxParams(&pars);
     
     return ret;
 }

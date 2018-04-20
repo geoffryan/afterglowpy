@@ -52,7 +52,7 @@ def dP(theta, amu, ate, au, ar, nu, n0, p, epsE, epsB, ksiN, specType):
 
 
 def fluxDensity(t, nu, jetType, specType, umax, umin, Ei, k, Mej_solar, L0, q,
-                        n0, p, epsE, epsB, ksiN, dL, tRes=1000, latRes=0,
+                        ts, n0, p, epsE, epsB, ksiN, dL, tRes=1000, latRes=0,
                         rtol=1.0e-3):
 
     rho0 = mp * n0
@@ -77,7 +77,7 @@ def fluxDensity(t, nu, jetType, specType, umax, umin, Ei, k, Mej_solar, L0, q,
 
 
     ar, au = shock.shockEvolRK4(ate, r0, umax, 
-                                Mej_solar*Msun, rho0, Ei, k, umin, L0, q)
+                                Mej_solar*Msun, rho0, Ei, k, umin, L0, q, ts)
 
 
     P = np.zeros(t.shape)
