@@ -302,7 +302,8 @@ void make_R_table(struct fluxParams *pars)
     double R0 = romb(&Rintegrand, 0.0, Rt0, 1000, 0, R_ACC, Rpar);
     double u0 = sqrt(get_lfacbetasqrd(Rt0, pars->C_BMsqrd, pars->C_STsqrd));
     double th0 = pars->theta_h;
-    double args[9] = {u0, 0.0, m_p*pars->n_0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double args[9] = {u0, 0.0, m_p*pars->n_0, 0.0, 0.0, 0.0, 
+                        pars->L0, pars->q, pars->ts};
 
 
     shockEvolveSpreadRK4(t_table, R_table, u_table, th_table, table_entries,
@@ -447,23 +448,23 @@ double theta_integrand(double a_theta, void* params) // inner integral
     double R = interpolateLog(ia, ib, t_e, pars->t_table, pars->R_table, 
                             pars->table_entries);
 
-    double us2, u2;
+    double us, u;
     if(pars->u_table != NULL)
     {
-        double u = interpolateLog(ia, ib, t_e, pars->t_table, pars->u_table,
+        u = interpolateLog(ia, ib, t_e, pars->t_table, pars->u_table,
                                         pars->table_entries);
-        double us = shockVel(u);
-        u2 = u*u;
-        us2 = us*us;
+        us = shockVel(u);
     }
     else
     {
-        us2 = get_lfacbetashocksqrd(t_e, pars->C_BMsqrd, pars->C_STsqrd);
-        u2 = get_lfacbetasqrd(t_e, pars->C_BMsqrd, pars->C_STsqrd);
+        double us2 = get_lfacbetashocksqrd(t_e, pars->C_BMsqrd, pars->C_STsqrd);
+        double u2 = get_lfacbetasqrd(t_e, pars->C_BMsqrd, pars->C_STsqrd);
+        us = sqrt(us2);
+        u = sqrt(u2);
     }
     
-    double dFnu =  emissivity(pars->nu_obs, R, ast, mu, t_e, sqrt(u2), 
-                                sqrt(us2), pars->n_0, pars->p, pars->epsilon_E,
+    double dFnu =  emissivity(pars->nu_obs, R, ast, mu, t_e, u, us,
+                                pars->n_0, pars->p, pars->epsilon_E,
                                 pars->epsilon_B, pars->ksi_N, pars->spec_type);
 
     if(dFnu != dFnu || dFnu < 0.0)
@@ -471,7 +472,7 @@ double theta_integrand(double a_theta, void* params) // inner integral
         printf("bad dFnu:%.3le nu=%.3le R=%.3le th=%.3lf mu=%.3lf\n",
                 dFnu, pars->nu_obs, R, a_theta, mu);
         printf("               t=%.3le u=%.3le us=%.3le n0=%.3le p=%.3lf\n",
-                t_e, sqrt(u2), sqrt(us2), pars->n_0, pars->p);
+                t_e, u, us, pars->n_0, pars->p);
         printf("               epse=%.3le epsB=%.3le ksiN=%.3le specType=%d\n",
                 pars->epsilon_E, pars->epsilon_B, pars->ksi_N, pars->spec_type);
     }
@@ -924,6 +925,7 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
                             double *Fnu, int N,
                             double theta_obs, double E_iso_core,
                             double theta_h_core, double theta_h_wing, 
+                            double L0, double q, double ts, 
                             double n_0, double p, double epsilon_E,
                             double epsilon_B, double ksi_N, double d_L,
                             int tRes, int latRes, double rtol, double *mask,
@@ -944,7 +946,7 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
 
     struct fluxParams fp;
     setup_fluxParams(&fp, d_L, theta_obs, E_iso_core, theta_h_core,
-                        theta_h_wing,
+                        theta_h_wing, L0, q, ts,
                         n_0, p, epsilon_E, epsilon_B, ksi_N, ta, tb, tRes,
                         spec_type, rtol, mask, nmask);
 
@@ -998,6 +1000,7 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
 void setup_fluxParams(struct fluxParams *pars,
                         double d_L, double theta_obs, double E_iso_core,
                         double theta_core, double theta_wing, 
+                        double L0, double q, double ts, 
                         double n_0, double p, double epsilon_E,
                         double epsilon_B, double ksi_N, double ta, double tb,
                         double tRes, int spec_type, double flux_rtol,
@@ -1016,7 +1019,11 @@ void setup_fluxParams(struct fluxParams *pars,
     pars->theta_core = theta_core;
     pars->theta_wing = theta_wing;
     pars->E_tot = -1;
-    
+   
+    pars->L0 = L0;
+    pars->q = q;
+    pars->ts = ts;
+
     pars->n_0 = n_0;
     pars->p = p;
     pars->epsilon_E = epsilon_E;
@@ -1067,9 +1074,9 @@ void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h)
     //at fixed t_obs, latest emission is *always* from mu=+1
     // so t_obs ~ t-R/c
     if(tb > 0.1*t_NR)  // at late times R ~ c t_NR << c t so t_obs ~ t_e
-        Rt1 = 10*(tb+t_NR);
+        Rt1 = 100*(tb+t_NR);
     else // at early times t_obs ~ t*(gamma_sh^-2)/8 ~ CBM^-2 * t^4 / 8
-        Rt1 = 10*pow(8*tb*C_BM*C_BM, 0.25);
+        Rt1 = 100*pow(8*tb*C_BM*C_BM, 0.25);
     pars->Rt0 = Rt0;
     pars->Rt1 = Rt1;
     

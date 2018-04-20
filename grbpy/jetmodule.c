@@ -112,21 +112,25 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     PyObject *mask_obj = NULL;
 
     int jet_type, spec_type;
-    double theta_obs, E_iso_core, theta_h_core, theta_h_wing, n_0,
+    double theta_obs, E_iso_core, theta_h_core, theta_h_wing, L0, q, ts, n_0,
            p, epsilon_E, epsilon_B, ksi_N, d_L;
 
     int latRes = 5;
     double rtol = 1.0e-4;
     int tRes = 1000;
     static char *kwlist[] = {"t", "nu", "jetType", "specType", "thetaObs", 
-                                "E0", "thetaCore", "thetaWing", "n0", "p",
+                                "E0", "thetaCore", "thetaWing",
+                                "L0", "q", "ts",
+                                "n0", "p",
                                 "epsilon_e", "epsilon_B", "ksiN", "dL", 
                                 "tRes", "latRes", "rtol", "mask", NULL};
 
     //Parse Arguments
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "OOiidddddddddd|iidO", kwlist,
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "OOiiddddddddddddd|iidO",
+                kwlist,
                 &t_obj, &nu_obj, &jet_type, &spec_type, &theta_obs, &E_iso_core,
-                &theta_h_core, &theta_h_wing, &n_0, &p, &epsilon_E, &epsilon_B, 
+                &theta_h_core, &theta_h_wing, &L0, &q, &ts,
+                &n_0, &p, &epsilon_E, &epsilon_B, 
                 &ksi_N, &d_L, &tRes, &latRes, &rtol, &mask_obj))
     {
         //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
@@ -220,9 +224,9 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
 
     // Calculate the flux!
     calc_flux_density(jet_type, spec_type, t, nu, Fnu, N, theta_obs, 
-                        E_iso_core, theta_h_core, theta_h_wing, n_0, p, 
-                        epsilon_E, epsilon_B, ksi_N, d_L, tRes, latRes, rtol,
-                        mask, masklen);
+                        E_iso_core, theta_h_core, theta_h_wing, L0, q, ts,
+                        n_0, p, epsilon_E, epsilon_B, ksi_N, d_L,
+                        tRes, latRes, rtol, mask, masklen);
 
     // Clean up!
     Py_DECREF(t_arr);
@@ -262,11 +266,12 @@ static PyObject *jet_emissivity(PyObject *self, PyObject *args)
 
 static PyObject *jet_shock(PyObject *self, PyObject *args)
 {
-    double Rt0, Rt1, E0, n0, thetah;
+    double Rt0, Rt1, E0, n0, thetah, L0, q, ts;
     int tRes;
 
     //Parse Arguments
-    if(!PyArg_ParseTuple(args, "ddiddd", &Rt0, &Rt1, &tRes, &E0, &n0, &thetah))
+    if(!PyArg_ParseTuple(args, "ddidddddd", &Rt0, &Rt1, &tRes, &E0, &n0,
+                &thetah, &L0, &q, &ts))
     {
         //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
         return NULL;
@@ -279,6 +284,9 @@ static PyObject *jet_shock(PyObject *self, PyObject *args)
     pars.ta = ta;
     pars.tb = tb;
     pars.n_0 = n0;
+    pars.L0 = L0;
+    pars.q = q;
+    pars.ts = ts;
     pars.tRes = tRes;
     pars.E_tot = -1.0;
     pars.t_table = NULL;
@@ -347,11 +355,12 @@ static PyObject *jet_shock(PyObject *self, PyObject *args)
 }
 static PyObject *jet_shockObs(PyObject *self, PyObject *args)
 {
-    double ta, tb, E0, n0, thetah;
+    double ta, tb, E0, n0, thetah, L0, q, ts;
     int tRes;
 
     //Parse Arguments
-    if(!PyArg_ParseTuple(args, "ddiddd", &ta, &tb, &tRes, &E0, &n0, &thetah))
+    if(!PyArg_ParseTuple(args, "ddidddddd", &ta, &tb, &tRes, &E0, &n0, &thetah,
+                                            &L0, &q, &ts))
     {
         //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
         return NULL;
@@ -361,6 +370,9 @@ static PyObject *jet_shockObs(PyObject *self, PyObject *args)
     pars.ta = ta;
     pars.tb = tb;
     pars.n_0 = n0;
+    pars.L0 = L0;
+    pars.q = q;
+    pars.ts = ts;
     pars.tRes = tRes;
     pars.E_tot = -1.0;
     pars.t_table = NULL;

@@ -79,6 +79,10 @@ struct fluxParams
     double theta_wing;
     double E_tot;
 
+    double L0;
+    double q;
+    double ts;
+    
     double current_theta_cone_hi;
     double current_theta_cone_low;
     double theta_obs_cur;
@@ -177,6 +181,7 @@ void calc_flux_density(int jet_type, int spec_type,
                             double *t, double *nu, double *Fnu, int N,
                             double theta_obs, double E_iso_core,
                             double theta_h_core, double theta_h_wing, 
+                            double L0, double q, double ts, 
                             double n_0, double p, double epsilon_E,
                             double epsilon_B, double ksi_N, double d_L,
                             int tRes, int latRes, double rtol,
@@ -186,6 +191,7 @@ void setup_fluxParams(struct fluxParams *pars,
                     double d_L,
                     double theta_obs,
                     double E_iso_core, double theta_core, double theta_wing,
+                    double L0, double q, double ts, 
                     double n_0,
                     double p,
                     double epsilon_E,
