@@ -1084,11 +1084,13 @@ void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h)
     //at fixed t_obs, earliest emission is *always* from mu=-1
     // so t_obs ~ t_e
     Rt0 = 0.1*ta;
-    
+
     if(pars->L0 > 0.0 && pars->ts > 0.0)
     {
         if(Rt0 * pars->L0 > 0.1*E_iso)
             Rt0 = 0.1 * E_iso / pars->L0;
+
+        C_BM *= sqrt((E_iso+Einj)/E_iso);
     }
 
     //at fixed t_obs, latest emission is *always* from mu=+1
