@@ -27,15 +27,21 @@ void Rudot2D(double t, double *x, void *argv, double *xdot)
     double g = sqrt(1+u*u);
     double be = u/g;
 
-    double dRdt = 4*u*g/(4*u*u+3) * v_light;
+    double bes = 4*u*g/(4*u*u+3);
+
+    double dRdt = bes * v_light;
 
     double dEdu = 0.0;
     if(Einj > 0.0 && u>umin)
         dEdu = -k*Einj*pow(u,-k-1);
 
     double dEdt = 0.0;
-    if(L0 > 0.0 && t < ts)
-        dEdt = L0*pow(t/1.0e3, -q);
+    double te = t - R/v_light;
+    if(L0 > 0.0 && te < ts)
+    {
+        double gs2 = (4*u*u+3)*(4*u*u+3) / (8*u*u+9);
+        dEdt = L0*pow(te/1.0e3, -q) / (gs2*(1+bes)); // Doppler factor (1-bes)
+    }
 
     double num = -16*M_PI/3.0 * rho0*R*R * be*u*u * v_light
                     + dEdt/(v_light*v_light);
@@ -66,6 +72,7 @@ void RuThdot3D(double t, double *x, void *argv, double *xdot)
 
     double g = sqrt(1+u*u);
     double be = u/g;
+    double bes = 4*u*g/(4*u*u+3);
 
     double sinth = sin(0.5*th);
     double costh = cos(0.5*th);
@@ -89,12 +96,17 @@ void RuThdot3D(double t, double *x, void *argv, double *xdot)
         dEdu = -k*Einj*pow(u,-k-1);
 
     double dEdt = 0.0;
-    if(L0 > 0.0 && t < ts)
-        dEdt = L0*pow(t/1.0e3, -q);
+    double te = t - R/v_light;
+    if(L0 > 0.0 && te < ts)
+    {
+        double ti0 = 1.0e3;
+        double gs2 = (4*u*u+3)*(4*u*u+3) / (8*u*u+9);
+        dEdt = L0*pow(te/ti0, -q) / (gs2*(1+bes)); // Doppler factor (1-bes)
+    }
 
     double num = -16*M_PI/3.0 * om*rho0*R*R * be*u*u * v_light
                  -8*M_PI/9.0*rho0*R*R*R*(4*u*u+3)*be*be*sinth*costh*dThdt
-                    + dEdt/(v_light*v_light);
+                    + om*dEdt/(v_light*v_light);
     double denom = be*Mej
                     + 8*M_PI*om*rho0*R*R*R*u*(2*u*u+1)*(2*u*u+3)/(9*g*g*g*g)
                     - dEdu/(v_light*v_light);
