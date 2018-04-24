@@ -1048,6 +1048,16 @@ void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h)
         E_jet = pars->E_tot;
     else
         E_jet = (1.0 - cos(theta_h)) * E_iso;
+
+    if(pars->L0 > 0.0 && pars->ts > 0.0)
+    {
+        // Energy injection uses 1e3s as reference time. 
+        double t0 = 1.0e3;
+        double Einj = pars->L0 * t0 * pow(pars->ts / t0, 1-pars->q)
+                                        / (1-pars->q);
+        E_jet += Einj;
+    }
+
     double n_0 = pars->n_0;
     double C_BM = sqrt(17.0 * E_iso / (8.0 * PI * m_p * n_0
                                         * pow( v_light, 5.0)));
@@ -1070,6 +1080,12 @@ void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h)
     //at fixed t_obs, earliest emission is *always* from mu=-1
     // so t_obs ~ t_e
     Rt0 = 0.1*ta;
+    
+    if(pars->L0 > 0.0 && pars->ts > 0.0)
+    {
+        if(Rt0 * pars->L0 > 0.1*E_iso)
+            Rt0 = 0.1 * E_iso / pars->L0;
+    }
 
     //at fixed t_obs, latest emission is *always* from mu=+1
     // so t_obs ~ t-R/c
