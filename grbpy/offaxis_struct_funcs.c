@@ -419,7 +419,7 @@ double emissivity(double nu, double R, double sinTheta, double mu, double te,
 
 
     if(em != em || em < 0.0)
-        printf("bad em at:%.3le te=%.3le sinTheta=%.3lf mu=%.3lf\n",
+        printf("bad em:%.3le te=%.3le sinTheta=%.3lf mu=%.3lf\n",
                 em, te, sinTheta, mu);
     if(freq != freq || freq < 0.0)
         printf("bad freq at:%.3le te=%.3le sinTheta=%.3lf mu=%.3lf\n",
@@ -475,6 +475,8 @@ double theta_integrand(double a_theta, void* params) // inner integral
                 t_e, u, us, pars->n_0, pars->p);
         printf("               epse=%.3le epsB=%.3le ksiN=%.3le specType=%d\n",
                 pars->epsilon_E, pars->epsilon_B, pars->ksi_N, pars->spec_type);
+        printf("               Rt0=%.3le Rt1=%.3le E_iso=%.3le L0=%.3le ts=%.3le\n",
+                pars->Rt0, pars->Rt1, pars->E_iso, pars->L0, pars->ts);
     }
 
     int i;
