@@ -301,10 +301,12 @@ void make_R_table(struct fluxParams *pars)
     double Rpar[2] = {pars->C_BMsqrd, pars->C_STsqrd};
     double R0 = romb(&Rintegrand, 0.0, Rt0, 1000, 0, R_ACC, Rpar);
     double u0 = sqrt(get_lfacbetasqrd(Rt0, pars->C_BMsqrd, pars->C_STsqrd));
-    double th0 = pars->theta_h;
-    double args[9] = {u0, 0.0, m_p*pars->n_0, 0.0, 0.0, 0.0, 
+    double args[9] = {pars->E_iso, 0.0, m_p*pars->n_0, 0.0, 0.0, 0.0, 
                         pars->L0, pars->q, pars->ts};
-
+    printf("t0=%.6le R0=%.6le u0=%.6le\n", Rt0, R0, u0);
+    shockInitDecel(Rt0, &R0, &u0, args);
+    printf("t0=%.6le R0=%.6le u0=%.6le\n", Rt0, R0, u0);
+    double th0 = pars->theta_h;
 
     shockEvolveSpreadRK4(t_table, R_table, u_table, th_table, table_entries,
                             R0, u0, th0, args);
@@ -1045,38 +1047,6 @@ void setup_fluxParams(struct fluxParams *pars,
 
 void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h)
 {
-    double E_jet;
-    if(pars->E_tot > 0.0)
-        E_jet = pars->E_tot;
-    else
-        E_jet = (1.0 - cos(theta_h)) * E_iso;
-
-    double Einj = 0.0;
-    if(pars->L0 > 0.0 && pars->ts > 0.0)
-    {
-        // Energy injection uses 1e3s as reference time. 
-        double t0 = 1.0e3;
-        Einj = pars->L0 * t0 * pow(pars->ts / t0, 1-pars->q) / (1-pars->q);
-    }
-    E_jet += Einj;
-
-    double n_0 = pars->n_0;
-    double C_BM = sqrt(17.0 * E_iso / (8.0 * PI * m_p * n_0
-                                        * pow( v_light, 5.0)));
-    double C_ST = 2.0 / 5.0 * 1.15 * pow(E_jet / (m_p * n_0), 1.0 / 5.0 )
-                            * invv_light;
-    double t_NR = pow(2.0, 1.0 / 3.0) * pow(C_BM, 2.0 / 3.0);
-
-    if(Einj > 0.0)
-        t_NR *= pow((E_iso+Einj)/E_iso, 1.0/3.0);
-
- 
-
-    pars->E_iso = E_iso;
-    pars->theta_h = theta_h;
-    pars->C_BMsqrd = C_BM * C_BM;
-    pars->C_STsqrd = C_ST * C_ST;
-    pars->t_NR = t_NR;
     // min/max observer times
     double ta = pars->ta;
     double tb = pars->tb;
@@ -1086,7 +1056,44 @@ void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h)
     //at fixed t_obs, earliest emission is *always* from mu=-1
     // so t_obs ~ t_e
     Rt0 = 0.1*ta;
+    double E_jet;
+    if(pars->E_tot > 0.0)
+        E_jet = pars->E_tot;
+    else
+        E_jet = (1.0 - cos(theta_h)) * E_iso;
 
+    double Einj = 0.0;
+    double Einj0 = 0.0;
+    if(pars->L0 > 0.0 && pars->ts > 0.0)
+    {
+        // Energy injection uses 1e3s as reference time. 
+        double t0 = 1.0e3;
+        double sinth = sin(0.5*theta_h);
+        double om = 2*sinth*sinth;
+        Einj = pars->L0 * t0 * pow(pars->ts / t0, 1-pars->q) / (1-pars->q);
+        Einj0 = om * pars->L0 * t0 * pow(Rt0 / t0, 1-pars->q) / (1-pars->q);
+    }
+    E_jet += Einj;
+    //E_iso += Einj0;
+
+    double n_0 = pars->n_0;
+    double C_BM = sqrt(17.0 * E_iso / (8.0 * PI * m_p * n_0
+                                        * pow( v_light, 5.0)));
+    double C_ST = 2.0 / 5.0 * 1.15 * pow(E_jet / (m_p * n_0), 1.0 / 5.0 )
+                            * invv_light;
+    double t_NR = pow(2.0, 1.0 / 3.0) * pow(C_BM, 2.0 / 3.0);
+
+    //if(Einj > 0.0)
+    //    t_NR *= pow((E_iso+Einj)/E_iso, 1.0/3.0);
+ 
+
+    pars->E_iso = E_iso;
+    pars->theta_h = theta_h;
+    pars->C_BMsqrd = C_BM * C_BM;
+    pars->C_STsqrd = C_ST * C_ST;
+    pars->t_NR = t_NR;
+
+    /*
     if(pars->L0 > 0.0 && pars->ts > 0.0)
     {
         if(Rt0 * pars->L0 > 0.1*E_iso)
@@ -1094,6 +1101,7 @@ void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h)
 
         C_BM *= sqrt((E_iso+Einj)/E_iso);
     }
+    */
 
     //at fixed t_obs, latest emission is *always* from mu=+1
     // so t_obs ~ t-R/c
