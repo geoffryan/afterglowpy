@@ -1,7 +1,11 @@
 #ifndef GRBPY_SHOCK
 #define GRBPY_SHOCK
 
+static const double T0_inj = 1.0e3;
+
 double shockVel(double u);
+double E_inj(double te, double L0, double q, double ts);
+double L_inj(double te, double L0, double q, double ts);
 void shockInitDecel(double t0, double *R0, double *u0, void *argv); 
 void shockInitFind(double t0, double *R0, double *u0, double tRes, void *argv);
 void Rudot2D(double t, double *x, void *argv, double *xdot);

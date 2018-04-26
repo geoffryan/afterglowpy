@@ -3,7 +3,6 @@
 #include "offaxis_struct.h"
 #include "shockEvolution.h"
 
-static const double T0_inj = 1.0e3;
 
 double shockVel(double u)
 {
@@ -180,7 +179,7 @@ void shockInitFind(double t0, double *R0, double *u0, double tRes, void *argv)
     double q = args[7];
     double ts = args[8];
 
-    double R, u;
+    double u;
     double c = v_light;
     double c5 = c*c*c*c*c;
     
@@ -285,7 +284,7 @@ void Rudot2D(double t, double *x, void *argv, double *xdot)
     if(L0 > 0.0 && te < ts)
     {
         double gs2 = (4*u*u+3)*(4*u*u+3) / (8*u*u+9);
-        dEdt = L0*pow(te/T0_inj, -q) / (gs2*(1+bes)); // Doppler factor (1-bes)
+        dEdt = L_inj(te, L0, q, ts) / (gs2*(1+bes)); // Doppler factor (1-bes)
     }
 
     double num = -16*M_PI/3.0 * rho0*R*R * be*u*u * v_light
@@ -345,7 +344,7 @@ void RuThdot3D(double t, double *x, void *argv, double *xdot)
     if(L0 > 0.0 && te < ts)
     {
         double gs2 = (4*u*u+3)*(4*u*u+3) / (8*u*u+9);
-        dEdt = L0*pow(te/T0_inj, -q) / (gs2*(1+bes)); // Doppler factor (1-bes)
+        dEdt = L_inj(te, L0, q, ts) / (gs2*(1+bes)); // Doppler factor (1-bes)
     }
 
     double num = -16*M_PI/3.0 * om*rho0*R*R * be*u*u * v_light

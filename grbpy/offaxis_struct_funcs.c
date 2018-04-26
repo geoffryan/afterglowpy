@@ -1081,22 +1081,18 @@ void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h)
         E_jet = (1.0 - cos(theta_h)) * E_iso;
 
     double Einj = 0.0;
-    double Einj0 = 0.0;
+    double ti = 0.0;
     if(pars->L0 > 0.0 && pars->ts > 0.0)
     {
         // Energy injection uses 1e3s as reference time. 
-        double t0 = 1.0e3;
-        double sinth = sin(0.5*theta_h);
-        double om = 2*sinth*sinth;
-        Einj = pars->L0 * t0 * pow(pars->ts / t0, 1-pars->q) / (1-pars->q);
-        Einj0 = om * pars->L0 * t0 * pow(Rt0 / t0, 1-pars->q) / (1-pars->q);
+        Einj = E_inj(pars->ts, pars->L0, pars->q, pars->ts);
+        ti = pars->ts;
     }
     E_jet += Einj;
-    //E_iso += Einj0;
 
+    double c5 = v_light*v_light*v_light*v_light*v_light;
     double n_0 = pars->n_0;
-    double C_BM = sqrt(17.0 * E_iso / (8.0 * PI * m_p * n_0
-                                        * pow( v_light, 5.0)));
+    double C_BM = sqrt(17.0 * E_iso / (8.0 * PI * m_p * n_0 * c5));
     double C_ST = 2.0 / 5.0 * 1.15 * pow(E_jet / (m_p * n_0), 1.0 / 5.0 )
                             * invv_light;
     double t_NR = pow(2.0, 1.0 / 3.0) * pow(C_BM, 2.0 / 3.0);
@@ -1111,6 +1107,9 @@ void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h)
     pars->C_STsqrd = C_ST * C_ST;
     pars->t_NR = t_NR;
 
+    //This *should* be an over-estimate of the non-relativistic time.
+    double t_NR2 = pow((E_iso+Einj) / (m_p*n_0 * c5), 1.0/3.0); 
+
     /*
     if(pars->L0 > 0.0 && pars->ts > 0.0)
     {
@@ -1123,10 +1122,15 @@ void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h)
 
     //at fixed t_obs, latest emission is *always* from mu=+1
     // so t_obs ~ t-R/c
+    /*
     if(tb > 0.1*t_NR)  // at late times R ~ c t_NR << c t so t_obs ~ t_e
         Rt1 = 100*(tb+t_NR);
     else // at early times t_obs ~ t*(gamma_sh^-2)/8 ~ CBM^-2 * t^4 / 8
         Rt1 = 100*pow(8*tb*C_BM*C_BM, 0.25);
+    */
+
+    Rt1 = 100*(tb + t_NR2 + ti);
+
     pars->Rt0 = Rt0;
     pars->Rt1 = Rt1;
     
