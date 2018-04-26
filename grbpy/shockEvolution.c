@@ -92,7 +92,7 @@ void shockInitDecel(double t0, double *R0, double *u0, void *argv)
 
     if(L0 < 0.0 || ts < 0.0)
     {
-        //printf("No energy injection! E=%.3le\n", E0);
+        printf("No energy injection! E=%.3le\n", E0);
         *R0 = R;
         *u0 = u;
         return;
@@ -104,7 +104,7 @@ void shockInitDecel(double t0, double *R0, double *u0, void *argv)
 
     if(Ei <= E0)
     {
-        //printf("Energy injection not important! E0=%.3le Ei=%.3le\n", E0, Ei);
+        printf("Energy injection not important! E0=%.3le Ei=%.3le\n", E0, Ei);
         *R0 = R;
         *u0 = u;
         return;
@@ -169,6 +169,88 @@ void shockInitDecel(double t0, double *R0, double *u0, void *argv)
 
     *R0 = c*t0*(1 - 1/(16*u*u));
     *u0 = u;
+}
+
+void shockInitFind(double t0, double *R0, double *u0, double tRes, void *argv)
+{
+    double *args = (double *)argv;
+    double E0 = args[0];
+    double rho0 = args[2];
+    double L0 = args[6];
+    double q = args[7];
+    double ts = args[8];
+
+    double R, u;
+    double c = v_light;
+    double c5 = c*c*c*c*c;
+    
+    double C = sqrt(9/(16.0*M_PI) * E0/(rho0*c5));
+    double tNR = pow(C, 2.0/3.0);
+
+    //Time for transition
+    double ti;
+    if(L0 > 0 && ts > 0)
+    {
+        double tei = te_inj(E0, L0, q, ts);
+        ti = pow(16*C*C*tei, 0.25);
+        if(tei < 0.0)
+            ti = 1.0e20 * tNR; //Arbitrary val
+    }
+    else
+        ti = 1.0e20 * tNR; //Arbitrary val
+
+    if(t0 < 0.01*tNR && t0< 0.01*ti)
+    {
+        //printf("the EASY way\n");
+        u = C*pow(t0, -1.5);
+        *R0 = c*t0*(1-1/(16*u*u));
+        *u0 = u;
+        return;
+    }
+    
+    double dt, x[2], x0[2], k1[2], k2[2], k3[2], k4[2];
+
+    double t00 = ti < tNR ? 0.01*ti : 0.01*tNR;
+    double u00 = C*pow(t00, -1.5);
+    double R00 = c*t00*(1-1/(16*u00*u00));
+
+    //printf("t00=%.6le R00=%.6le u00=%.6le (tNR=%.3le ti=%.3le)\n", t00, R00, u00, tNR, ti);
+
+    x[0] = R00;
+    x[1] = u00;
+
+    double t = t00;
+    double fac = pow(10, 1.0/tRes);
+    int j;
+
+    while(t < t0)
+    {
+        dt = (fac-1)*t;
+        if(fac*t >= t0)
+            dt = t0-t;
+        x0[0] = x[0];
+        x0[1] = x[1];
+        Rudot2D(t, x, args, k1);
+        
+        for(j=0; j<2; j++)
+            x[j] = x0[j] + 0.5*dt*k1[j];
+        Rudot2D(t, x, args, k2);
+        
+        for(j=0; j<2; j++)
+            x[j] = x0[j] + 0.5*dt*k2[j];
+        Rudot2D(t, x, args, k3);
+        
+        for(j=0; j<2; j++)
+            x[j] = x0[j] + dt*k3[j];
+        Rudot2D(t, x, args, k4);
+        
+        for(j=0; j<2; j++)
+            x[j] = x0[j] + dt*(k1[j]+2*k2[j]+2*k3[j]+k4[j])/6.0;
+        t *= fac;
+    }
+
+    *R0 = x[0];
+    *u0 = x[1];
 }
 
 void Rudot2D(double t, double *x, void *argv, double *xdot)
