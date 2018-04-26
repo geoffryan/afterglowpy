@@ -106,13 +106,14 @@ double check_t_e(double t_e, double mu, double t_obs, double *mu_table, int N)
         printf("mu >> 1? this should not have happened\n");
         printf("   t_obs=%.6lg t_e=%.6lg mu=%.6lg mu_table[-1]=%.6lg\n",
                 t_obs, t_e, mu, mu_table[N-1]);
-        abort();
+        return -1;
     }
 
     if(mu_table[0] >= mu) // happens only if t_e very small
     {
         printf("very small mu: mu=%.3lg, mu[0]=%.3lg\n", mu, mu_table[0]);
-        return t_obs / (1.0 - mu); // so return small t_e limit
+        //return t_obs / (1.0 - mu); // so return small t_e limit
+        return -1;
     }
 
     return t_e;
@@ -446,6 +447,22 @@ double theta_integrand(double a_theta, void* params) // inner integral
     double t_e = interpolateLin(ia, ib, mu, pars->mu_table, pars->t_table, 
                             pars->table_entries);
     t_e = check_t_e(t_e, mu, pars->t_obs, pars->mu_table, pars->table_entries);
+
+    if(t_e < 0.0)
+    {
+        printf("BAD t_e: %.6lf Eiso=%.3le n0=%.3le thetah=%.3le\n",
+                t_e, pars->E_iso, pars->n_0, pars->theta_h);
+        printf("    theta_obs=%.3lf phi=%.3lf theta=%.3lf mu=%.3lf\n",
+                pars->theta_obs, pars->phi, pars->theta, mu);
+        printf("    L0=%.3le q=%.3lf ts=%.3le\n", pars->L0, pars->q, pars->ts);
+        printf("    t[0]=%.3le t[-1]=%.3le R[0]=%.3le R[-1]=%.3le\n",
+                pars->t_table[0], pars->t_table[pars->table_entries-1],
+                pars->R_table[0], pars->R_table[pars->table_entries-1]);
+        printf("    u[0]=%.3le u[-1]=%.3le th[0]=%.3le th[-1]=%.3le\n",
+                pars->u_table[0], pars->u_table[pars->table_entries-1],
+                pars->th_table[0], pars->th_table[pars->table_entries-1]);
+
+    }
     
     double R = interpolateLog(ia, ib, t_e, pars->t_table, pars->R_table, 
                             pars->table_entries);
