@@ -461,7 +461,7 @@ double theta_integrand(double a_theta, void* params) // inner integral
         printf("    u[0]=%.3le u[-1]=%.3le th[0]=%.3le th[-1]=%.3le\n",
                 pars->u_table[0], pars->u_table[pars->table_entries-1],
                 pars->th_table[0], pars->th_table[pars->table_entries-1]);
-
+        abort();
     }
     
     double R = interpolateLog(ia, ib, t_e, pars->t_table, pars->R_table, 

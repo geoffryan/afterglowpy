@@ -130,7 +130,7 @@ void shockInitDecel(double t0, double *R0, double *u0, void *argv)
         {
             //printf("Early energy injection.\n");
             u = u1*pow(t0/t1, -0.5);
-            dr = (t1*dr1 + c*2*(t0/(u*u)-t1/(u1*u1))/16.0) / t0;
+            dr = (t1*dr1 + 2*(t0/(u*u)-t1/(u1*u1))/16.0) / t0;
             *R0 = c*t0*(1-dr);
             *u0 = u;
             return;
