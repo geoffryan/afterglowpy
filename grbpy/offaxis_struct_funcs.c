@@ -303,9 +303,9 @@ void make_R_table(struct fluxParams *pars)
     double u0 = sqrt(get_lfacbetasqrd(Rt0, pars->C_BMsqrd, pars->C_STsqrd));
     double args[9] = {pars->E_iso, 0.0, m_p*pars->n_0, 0.0, 0.0, 0.0, 
                         pars->L0, pars->q, pars->ts};
-    printf("t0=%.6le R0=%.6le u0=%.6le\n", Rt0, R0, u0);
+    //printf("t0=%.6le R0=%.6le u0=%.6le\n", Rt0, R0, u0);
     shockInitDecel(Rt0, &R0, &u0, args);
-    printf("t0=%.6le R0=%.6le u0=%.6le\n", Rt0, R0, u0);
+    //printf("t0=%.6le R0=%.6le u0=%.6le\n", Rt0, R0, u0);
     double th0 = pars->theta_h;
 
     shockEvolveSpreadRK4(t_table, R_table, u_table, th_table, table_entries,

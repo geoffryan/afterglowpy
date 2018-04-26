@@ -92,7 +92,7 @@ void shockInitDecel(double t0, double *R0, double *u0, void *argv)
 
     if(L0 < 0.0 || ts < 0.0)
     {
-        printf("No energy injection! E=%.3le\n", E0);
+        //printf("No energy injection! E=%.3le\n", E0);
         *R0 = R;
         *u0 = u;
         return;
@@ -104,7 +104,7 @@ void shockInitDecel(double t0, double *R0, double *u0, void *argv)
 
     if(Ei <= E0)
     {
-        printf("Energy injection not important! E0=%.3le Ei=%.3le\n", E0, Ei);
+        //printf("Energy injection not important! E0=%.3le Ei=%.3le\n", E0, Ei);
         *R0 = R;
         *u0 = u;
         return;
@@ -128,7 +128,7 @@ void shockInitDecel(double t0, double *R0, double *u0, void *argv)
 
         if(t0 < t0i) //Praise be
         {
-            printf("Early energy injection.\n");
+            //printf("Early energy injection.\n");
             u = u1*pow(t0/t1, -0.5);
             dr = (t1*dr1 + c*2*(t0/(u*u)-t1/(u1*u1))/16.0) / t0;
             *R0 = c*t0*(1-dr);
@@ -151,7 +151,7 @@ void shockInitDecel(double t0, double *R0, double *u0, void *argv)
     double tls = t_inj(ts, t1, te1, L0, q, ts);
     if(t0 < tls)
     {
-        printf("Late energy injection.\n");
+        //printf("Late energy injection.\n");
         u = u1*pow(t0/t1, -0.5*(2+q)/(2-q));
         dr = (t1*dr1 + (2-q)*(t0/(u*u)-t1/(u1*u1))/16.0) / t0;
 
@@ -162,7 +162,7 @@ void shockInitDecel(double t0, double *R0, double *u0, void *argv)
 
     //Energy injection is over!
     //Just use original solution with boosted energy.
-    printf("All energy injected.\n");
+    //printf("All energy injected.\n");
     Ei = E_inj(ts, L0, q, ts);
     C = sqrt(9/(16.0*M_PI) * (E0+Ei)/(rho0*c5));
     u = C * pow(t0, -1.5);
