@@ -38,7 +38,7 @@ double L_inj(double te, double L0, double q, double ts)
         if(q == 0.0)
             return L0;
         else
-            return L0*pow(te/T0_inj,q);
+            return L0*pow(te/T0_inj,-q);
     }
 
     return 0.0;
