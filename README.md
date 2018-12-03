@@ -28,7 +28,7 @@ $ python setup.py install
 
 In your python code, import the library with `import grbpy as grb`.  
 
-The main function of interest is`grb.fluxDensity(t, nu, jetType, specType, *pars, **kwargs)`
+The main function of interest is`grb.fluxDensity(t, nu, jetType, specType, *pars, **kwargs)`.  See `tests/plotLC.py` for a simple example.
 
 `jetType` can be -1 (top hat), 0 (Gaussian), 1 (Power Law w/ core), 2 (Gaussian w/ core), 3 (Cocoon), or 4 (Smooth Power Law).  
 
