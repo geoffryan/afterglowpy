@@ -47,7 +47,11 @@ f.close()
 
 print("Plotting")
 fig, ax = plt.subplots(1,1)
-ax.plot(t/day, Fnu)
+thVs = [0.1, 0.5, 1.0, 1.4]
+for thV in thVs:
+    Y[0] = thV
+    Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y)
+    ax.plot(t/day, Fnu)
 ax.set_xscale('log')
 ax.set_yscale('log')
 ax.set_xlabel(r'$t$ (d)')

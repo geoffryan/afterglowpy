@@ -36,10 +36,10 @@ def dP(theta, amu, ate, au, ar, nu, n0, p, epsE, epsB, ksiN, specType):
     ia = ib-1
 
     te = ((mu-amu[ia])*ate[ib] + (amu[ib]-mu)*ate[ia]) / (amu[ib]-amu[ia])
-    u = au[ia]*math.pow(te/ate[ia], math.log(au[ib]/au[ia]) 
-                                        / math.log(ate[ib]/ate[ia]))
+    u = au[ia]*math.pow(te/ate[ia], math.log(au[ib]/au[ia])
+                        / math.log(ate[ib]/ate[ia]))
     r = ar[ia]*math.pow(te/ate[ia], math.log(ar[ib]/ar[ia])
-                                        / math.log(ate[ib]/ate[ia]))
+                        / math.log(ate[ib]/ate[ia]))
 
     g = math.sqrt(u*u+1)
 
@@ -52,8 +52,8 @@ def dP(theta, amu, ate, au, ar, nu, n0, p, epsE, epsB, ksiN, specType):
 
 
 def fluxDensity(t, nu, jetType, specType, umax, umin, Ei, k, Mej_solar, L0, q,
-                        ts, n0, p, epsE, epsB, ksiN, dL, tRes=1000, latRes=0,
-                        rtol=1.0e-3):
+                ts, n0, p, epsE, epsB, ksiN, dL, tRes=1000, latRes=0,
+                rtol=1.0e-3):
 
     rho0 = mp * n0
     Mej = Mej_solar * Msun
@@ -67,18 +67,16 @@ def fluxDensity(t, nu, jetType, specType, umax, umin, Ei, k, Mej_solar, L0, q,
     t1 = 2. * g0*g0*t.max()
 
     NT = int(tRes * math.log10(t1/t0))
-    #print("{0:.3e} {1:.3e} {2:.3e} {3:d}".format(t0, t1, t1/t0, NT))
+    # print("{0:.3e} {1:.3e} {2:.3e} {3:d}".format(t0, t1, t1/t0, NT))
 
     r0 = bes0*c*t0
 
-    Vej0 = 4.0/3.0*np.pi*r0*r0*r0
+    # Vej0 = 4.0/3.0*np.pi*r0*r0*r0
 
     ate = np.logspace(math.log10(t0), math.log10(t1), num=NT, base=10.0)
 
-
-    ar, au = shock.shockEvolRK4(ate, r0, umax, 
+    ar, au = shock.shockEvolRK4(ate, r0, umax,
                                 Mej_solar*Msun, rho0, Ei, k, umin, L0, q, ts)
-
 
     P = np.zeros(t.shape)
 
@@ -90,11 +88,9 @@ def fluxDensity(t, nu, jetType, specType, umax, umin, Ei, k, Mej_solar, L0, q,
         args = (amu, ate, au, ar, nu[i], n0, p, epsE, epsB, ksiN, specType)
 
         res = integrate.quad(dP, 0.0, np.pi, args, full_output=1, wopts=wopts,
-                                epsrel=rtol)
+                             epsrel=rtol)
         P[i] = res[0]
 
     Fnu = cgs2mJy * P / (4*np.pi*dL*dL)
 
     return Fnu
-
-

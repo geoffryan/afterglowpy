@@ -149,6 +149,25 @@ double flux(struct fluxParams *pars, double atol); // determine flux for a given
 double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
                     double theta_cone_low, double theta_cone_hi,
                     double atol, struct fluxParams *pars);
+double intensity(double theta, double phi, double tobs, double nuobs,
+                double theta_obs, double theta_cone_hi, double theta_cone_low,
+                struct fluxParams *pars);
+void intensity_cone(double *theta, double *phi, double *t, double *nu, 
+                        double *I, int N, double E_iso_core, 
+                        double theta_h_core, double theta_h_wing, 
+                        struct fluxParams *pars);
+void intensity_struct(double *theta, double *phi, double *t, double *nu, 
+                        double *I, int N,
+                        double E_iso_core, 
+                        double theta_h_core, double theta_h_wing,
+                        int res_cones, double (*f_E)(double,void *),
+                        struct fluxParams *pars);
+void intensity_structCore(double *theta, double *phi, double *t, double *nu, 
+                        double *I, int N,
+                        double E_iso_core, 
+                        double theta_h_core, double theta_h_wing,
+                        int res_cones, double (*f_E)(double,void *),
+                        struct fluxParams *pars);
 void lc_tophat(double *t, double *nu, double *F, int Nt,
                 double E_iso, double theta_h, struct fluxParams *pars);
 void lc_cone(double *t, double *nu, double *F, int Nt, double E_iso,
@@ -186,6 +205,15 @@ void calc_flux_density(int jet_type, int spec_type,
                             double epsilon_B, double ksi_N, double d_L,
                             int tRes, int latRes, double rtol,
                             double *mask, int nmask);
+void calc_intensity(int jet_type, int spec_type, double *theta, double *phi,
+                            double *t, double *nu, double *Inu, int N,
+                            double theta_obs, double E_iso_core,
+                            double theta_h_core, double theta_h_wing, 
+                            double L0, double q, double ts, 
+                            double n_0, double p, double epsilon_E,
+                            double epsilon_B, double ksi_N, double d_L,
+                            int tRes, int latRes, double rtol, double *mask,
+                            int nmask);
 
 void setup_fluxParams(struct fluxParams *pars,
                     double d_L,
