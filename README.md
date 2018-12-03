@@ -24,7 +24,7 @@ $ python setup.py install
 
 ## Using
 
-*This interface will be updated to be more sensible in the VERY near future*
+**This interface will be updated to be more sensible in the VERY near future**
 
 In your python code, import the library with `import grbpy as grb`.  
 
