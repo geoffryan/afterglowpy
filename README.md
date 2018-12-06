@@ -2,6 +2,8 @@
 
 A Python module to calculate GRB afterglow light curves and spectra. Makes liberal use of [van Eerten & MacFadyen 2010](https://arxiv.org/abs/1006.5125) and [van Eerten 2018](https://arxiv.org/abs/1801.01848).
 
+If you use this code in a publication, please refer to the package by name and cite "Ryan, G., van Eerten, H., Troja, N., and Piro, L. (in prep)". A publication describing the code is forthcoming in the very near future.
+
 ## Installation/Building
 
 To build:
