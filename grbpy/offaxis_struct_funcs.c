@@ -63,6 +63,31 @@ double f_E_powerlawCore(double theta, void *params)
     return 0.0;
 }
 
+double f_E_twocomponent(double theta, void *params)
+{
+    struct fluxParams *pars = (struct fluxParams *)params;
+
+    double th0 = 0.15;
+    double th1 = 0.02;
+    double b0 = 42;
+    double b1 = 15;
+    double e0 = 1.0;
+    double e1 = 0.3;
+    double f0 = 1.0;
+    double f1 = 1.0;
+    if(theta > th0)
+        f0 = exp(-b0*(theta-th0));
+    if(theta > th1)
+        f1 = exp(-b1*(theta-th1));
+    if(theta <= pars->theta_wing)
+    {
+        double x = theta / pars->theta_core;
+        return pars->E_iso_core / (1 + x*x);
+    }
+
+    return pars->E_iso_core * (f0 + f1) / (e0 + e1);
+}
+
 double f_Etot_tophat(void *params)
 {
     struct fluxParams *pars = (struct fluxParams *)params;
@@ -1088,6 +1113,11 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
     {
         lc_struct(t, nu, Fnu, N, E_iso_core, theta_h_core, 
                 theta_h_wing, NULL, NULL, res_cones, &f_E_powerlaw, &fp);
+    }
+    else if(jet_type == _twocomponent)
+    {
+        lc_struct(t, nu, Fnu, N, E_iso_core, theta_h_core, 
+                theta_h_wing, NULL, NULL, res_cones, &f_E_twocomponent, &fp);
     }
     else if(jet_type == _Gaussian_core)
     {

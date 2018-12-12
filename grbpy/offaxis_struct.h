@@ -44,6 +44,7 @@
 #define _powerlaw_core 1 //has a core as well
 #define _Gaussian_core 2 // has a core as well
 #define _powerlaw 4
+#define _twocomponent 5
 
 //Integration accuracy targets (for non GSL functions)
 #define R_ACC 1.0e-6
@@ -122,6 +123,7 @@ double dmin(const double a, const double b);
 double f_E_tophat(double theta, void *params);
 double f_E_Gaussian(double theta, void *params);
 double f_E_powerlaw(double theta, void *params);
+double f_E_twocomponent(double theta, void *params);
 double f_Etot_tophat(void *params);
 double f_Etot_Gaussian(void *params);
 double f_Etot_powerlaw(void *params);
