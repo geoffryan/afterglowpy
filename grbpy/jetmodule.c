@@ -159,9 +159,6 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
         //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
         return NULL;
     }
-    
-    printf("latRes: %d\n", latRes);
-    printf("spread: %d\n", spread);
 
     //Grab NUMPY arrays
     PyArrayObject *t_arr;
