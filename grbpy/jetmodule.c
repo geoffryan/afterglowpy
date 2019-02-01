@@ -1,7 +1,13 @@
 #include <Python.h>
 #define NPY_NO_DEPRECATED_API NPY_1_11_API_VERSION
 #include <numpy/arrayobject.h>
+#include <time.h>
 #include "offaxis_struct.h"
+
+#define PROFILE
+#define PROFILE1
+#define PROFILE2
+#define PROFILEOUTA
 
 static char jet_docstring[] = 
     "This module calculates emission from a semi-analytic GRB afterglow model.";
@@ -117,31 +123,45 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     PyObject *nu_obj = NULL;
     PyObject *mask_obj = NULL;
 
+#ifdef PROFILE
+    clock_t profClock1A, profClock1B, profClock2A, profClock2B;
+#endif
+
+#ifdef PROFILE1
+    //Profile 1
+    profClock1A = clock();
+#endif
+
     int jet_type, spec_type;
-    double theta_obs, E_iso_core, theta_h_core, theta_h_wing, L0, q, ts, n_0,
-           p, epsilon_E, epsilon_B, ksi_N, d_L;
+    double theta_obs, E_iso_core, theta_h_core, theta_h_wing, b, L0, q, ts, 
+           n_0, p, epsilon_E, epsilon_B, ksi_N, d_L;
 
     int latRes = 5;
     double rtol = 1.0e-4;
     int tRes = 1000;
+    int spread = 1;
     static char *kwlist[] = {"t", "nu", "jetType", "specType", "thetaObs", 
-                                "E0", "thetaCore", "thetaWing",
+                                "E0", "thetaCore", "thetaWing", "b",
                                 "L0", "q", "ts",
                                 "n0", "p",
                                 "epsilon_e", "epsilon_B", "ksiN", "dL", 
-                                "tRes", "latRes", "rtol", "mask", NULL};
+                                "tRes", "latRes", "rtol", "mask", "spread",
+                                NULL};
 
     //Parse Arguments
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "OOiiddddddddddddd|iidO",
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "OOiidddddddddddddd|iidOi",
                 kwlist,
                 &t_obj, &nu_obj, &jet_type, &spec_type, &theta_obs, &E_iso_core,
-                &theta_h_core, &theta_h_wing, &L0, &q, &ts,
+                &theta_h_core, &theta_h_wing, &b, &L0, &q, &ts,
                 &n_0, &p, &epsilon_E, &epsilon_B, 
-                &ksi_N, &d_L, &tRes, &latRes, &rtol, &mask_obj))
+                &ksi_N, &d_L, &tRes, &latRes, &rtol, &mask_obj, &spread))
     {
         //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
         return NULL;
     }
+    
+    printf("latRes: %d\n", latRes);
+    printf("spread: %d\n", spread);
 
     //Grab NUMPY arrays
     PyArrayObject *t_arr;
@@ -228,11 +248,21 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     }
     double *Fnu = PyArray_DATA((PyArrayObject *) Fnu_obj);
 
+#ifdef PROFILE2
+    //Profile 2
+    profClock2A = clock();
+#endif
+
     // Calculate the flux!
     calc_flux_density(jet_type, spec_type, t, nu, Fnu, N, theta_obs, 
-                        E_iso_core, theta_h_core, theta_h_wing, L0, q, ts,
+                        E_iso_core, theta_h_core, theta_h_wing, b, L0, q, ts,
                         n_0, p, epsilon_E, epsilon_B, ksi_N, d_L,
-                        tRes, latRes, rtol, mask, masklen);
+                        tRes, latRes, rtol, mask, masklen, spread);
+#ifdef PROFILE2
+    //Profile 2
+    profClock2B = clock();
+#endif
+
 
     // Clean up!
     Py_DECREF(t_arr);
@@ -242,6 +272,22 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
 
     //Build output
     PyObject *ret = Py_BuildValue("N", Fnu_obj);
+    
+#ifdef PROFILE1
+    //Profile 1 and output
+    profClock1B = clock();
+#endif
+
+#ifdef PROFILEOUT
+#ifdef PROFILE2
+    printf("C Eval Inner: %lf s\n",
+            ((double) profClock2B-profClock2A)/CLOCKS_PER_SEC);
+#endif
+#ifdef PROFILE1
+    printf("C Eval Outer: %lf s\n",
+            ((double) profClock1B-profClock1A)/CLOCKS_PER_SEC);
+#endif
+#endif
     
     return ret;
 }
@@ -279,28 +325,30 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
     PyObject *mask_obj = NULL;
 
     int jet_type, spec_type;
-    double theta_obs, E_iso_core, theta_h_core, theta_h_wing, L0, q, ts, n_0,
-           p, epsilon_E, epsilon_B, ksi_N, d_L;
+    double theta_obs, E_iso_core, theta_h_core, theta_h_wing, b, L0, q, ts,
+           n_0, p, epsilon_E, epsilon_B, ksi_N, d_L;
 
     int latRes = 5;
     double rtol = 1.0e-4;
     int tRes = 1000;
+    int spread = 1;
     static char *kwlist[] = {"theta", "phi", "t", "nu", "jetType", "specType",
                                 "thetaObs", 
-                                "E0", "thetaCore", "thetaWing",
+                                "E0", "thetaCore", "thetaWing", "b",
                                 "L0", "q", "ts",
                                 "n0", "p",
                                 "epsilon_e", "epsilon_B", "ksiN", "dL",
-                                "tRes", "latRes", "rtol", "mask", NULL};
+                                "tRes", "latRes", "rtol", "mask", "spread",
+                                NULL};
 
     //Parse Arguments
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "OOOOiiddddddddddddd|iidO",
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "OOOOiiddddddddddddd|iidOi",
                 kwlist,
                 &theta_obj, &phi_obj, &t_obj, &nu_obj, &jet_type, &spec_type,
                 &theta_obs, &E_iso_core,
-                &theta_h_core, &theta_h_wing, &L0, &q, &ts,
+                &theta_h_core, &theta_h_wing, &b, &L0, &q, &ts,
                 &n_0, &p, &epsilon_E, &epsilon_B, 
-                &ksi_N, &d_L, &tRes, &latRes, &rtol, &mask_obj))
+                &ksi_N, &d_L, &tRes, &latRes, &rtol, &mask_obj, &spread))
     {
         //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
         return NULL;
@@ -416,9 +464,9 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
 
     // Calculate the intensity!
     calc_intensity(jet_type, spec_type, theta, phi, t, nu, Inu, N, theta_obs, 
-                        E_iso_core, theta_h_core, theta_h_wing, L0, q, ts,
+                        E_iso_core, theta_h_core, theta_h_wing, b, L0, q, ts,
                         n_0, p, epsilon_E, epsilon_B, ksi_N, d_L,
-                        tRes, latRes, rtol, mask, masklen);
+                        tRes, latRes, rtol, mask, masklen, spread);
 
     // Clean up!
     Py_DECREF(theta_arr);
@@ -438,6 +486,7 @@ static PyObject *jet_shock(PyObject *self, PyObject *args)
 {
     double Rt0, Rt1, E0, n0, thetah, L0, q, ts;
     int tRes;
+    int spread = 1;
 
     //Parse Arguments
     if(!PyArg_ParseTuple(args, "ddidddddd", &Rt0, &Rt1, &tRes, &E0, &n0,
@@ -464,6 +513,7 @@ static PyObject *jet_shock(PyObject *self, PyObject *args)
     pars.u_table = NULL;
     pars.th_table = NULL;
     pars.mu_table = NULL;
+    pars.spread = spread;
 
     set_jet_params(&pars, E0, thetah);
     pars.Rt0 = Rt0;
@@ -527,6 +577,7 @@ static PyObject *jet_shockObs(PyObject *self, PyObject *args)
 {
     double ta, tb, E0, n0, thetah, L0, q, ts;
     int tRes;
+    int spread = 1;
 
     //Parse Arguments
     if(!PyArg_ParseTuple(args, "ddidddddd", &ta, &tb, &tRes, &E0, &n0, &thetah,
@@ -550,6 +601,7 @@ static PyObject *jet_shockObs(PyObject *self, PyObject *args)
     pars.u_table = NULL;
     pars.th_table = NULL;
     pars.mu_table = NULL;
+    pars.spread = spread;
 
     set_jet_params(&pars, E0, thetah);
 

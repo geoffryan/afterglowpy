@@ -297,7 +297,7 @@ void Rudot2D(double t, double *x, void *argv, double *xdot)
     xdot[1] = dudt;
 }
 
-void RuThdot3D(double t, double *x, void *argv, double *xdot)
+void RuThdot3D(double t, double *x, void *argv, double *xdot, int spread)
 {
     double *args = (double *)argv;
 
@@ -325,7 +325,7 @@ void RuThdot3D(double t, double *x, void *argv, double *xdot)
     double dRdt = 4*u*g/(4*u*u+3) * v_light;
 
     double dThdt = 0.0;
-    if(th < 0.5*M_PI && u < 1)
+    if(spread && th < 0.5*M_PI && u < 1)
     {
         double e = u*u/(g+1); // specific internal energy == gamma-1
 
@@ -397,7 +397,8 @@ void shockEvolveRK4(double *t, double *R, double *u, int N, double R0,
     }
 }
 void shockEvolveSpreadRK4(double *t, double *R, double *u, double *th, int N,
-                            double R0, double u0, double th0, void *args)
+                            double R0, double u0, double th0, void *args,
+                            int spread)
 {
     int i,j;
 
@@ -413,19 +414,19 @@ void shockEvolveSpreadRK4(double *t, double *R, double *u, double *th, int N,
         x0[0] = R[i];
         x0[1] = u[i];
         x0[2] = th[i];
-        RuThdot3D(t[i], x0, args, k1);
+        RuThdot3D(t[i], x0, args, k1, spread);
         
         for(j=0; j<3; j++)
             x[j] = x0[j] + 0.5*dt*k1[j];
-        RuThdot3D(t[i], x, args, k2);
+        RuThdot3D(t[i], x, args, k2, spread);
         
         for(j=0; j<3; j++)
             x[j] = x0[j] + 0.5*dt*k2[j];
-        RuThdot3D(t[i], x, args, k3);
+        RuThdot3D(t[i], x, args, k3, spread);
         
         for(j=0; j<3; j++)
             x[j] = x0[j] + dt*k3[j];
-        RuThdot3D(t[i], x, args, k4);
+        RuThdot3D(t[i], x, args, k4, spread);
         
         for(j=0; j<3; j++)
             x[j] = x0[j] + dt*(k1[j]+2*k2[j]+2*k3[j]+k4[j])/6.0;

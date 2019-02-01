@@ -1,5 +1,6 @@
 from . import cocoon
 from . import jet
+# import time
 import numpy as np
 
 
@@ -39,10 +40,13 @@ def fluxDensity(t, nu, jetType, specType, *args, **kwargs):
     tz = t / (1+z)
     nuz = nu * (1+z)
 
+    # timeA = time.time()
     if jetType == 3:
         Fnu = cocoon.fluxDensity(tz, nuz, jetType, specType, *args, **kwargs)
     else:
         Fnu = jet.fluxDensity(tz, nuz, jetType, specType, *args, **kwargs)
+    # timeB = time.time()
+    # print("Eval took: {0:f} s".format(timeB - timeA))
 
     # K-correct the flux
     Fnu *= 1+z
