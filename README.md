@@ -71,10 +71,11 @@ For cocoon-like afterglows (`jetType` 3) `pars` has 14 positional arguments:
 - `13 d_L` Luminosity distance in cm
 
 Keyword arguments are:
-- `z` redshift
+- `z` redshift (defaults to 0)
 - `tRes` time resolution of shock-evolution scheme, number of sample points per decade in time
 - `latRes` latitudinal resolution for structured jets, number of shells per `thetaC`
 - `rtol` target relative tolerance of flux integration
+- `spread` boolean (defaults to True), whether to allow the jet to spread.
 
 
 
