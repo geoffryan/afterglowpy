@@ -1,4 +1,3 @@
-import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import grbpy as grb
@@ -19,7 +18,8 @@ dL = 1.23e26
 jetType = 3
 specType = 0
 
-Y = np.array([umax, umin, Ei, k, Mej, n0, p, epsE, epsB, ksiN, dL])
+Y = np.array([umax, umin, Ei, k, Mej, 0.0, 0.0, 0.0, n0, p, epsE, epsB, ksiN,
+              dL])
 t = np.logspace(3, 7, num=100, base=10.0)
 nu = np.empty(t.shape)
 nu[:] = 6.0e9
@@ -37,7 +37,7 @@ Fnu10 = grb.fluxDensity(t, nu, jetType, specType, *Y)
 Fnu11 = grb.fluxDensity(t, nu, jetType, specType, *Y)
 Fnu12 = grb.fluxDensity(t, nu, jetType, specType, *Y)
 
-fig, ax = plt.subplots(1,1)
+fig, ax = plt.subplots(1, 1)
 ax.plot(t, Fnu1, 'b-')
 ax.plot(t, Fnu2, 'g-')
 ax.plot(t, Fnu3, 'r-')

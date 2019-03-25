@@ -7,7 +7,7 @@ import grbpy.shock as shock
 
 
 if __name__ == "__main__":
-    
+
     gmax = 3.5
     umax = np.sqrt(gmax*gmax-1.0)
     umin = 0.1
@@ -16,6 +16,7 @@ if __name__ == "__main__":
     Mej_solar = 1.0e-5
     L0 = 1.0e45
     q = 0.5
+    ts = 1.0e5
     n0 = 8.0e-5
     p = 2.2
     epsE = 1.0e-1
@@ -24,22 +25,22 @@ if __name__ == "__main__":
     dL = 1.23e26
     specType = 0
 
-    Y = np.array([umax, umin, Ei, k, Mej_solar, L0, q, n0, p, epsE, epsB, 
-                    ksiN, dL])
+    Y = np.array([umax, umin, Ei, k, Mej_solar, L0, q, ts, n0, p, epsE, epsB,
+                  ksiN, dL])
     t = np.logspace(3, 9, num=100, base=10.0)
     nu = np.empty(t.shape)
     nu[:] = 6.0e9
 
     Fnu = grb.fluxDensity(t, nu, 3, specType, *Y)
 
-    fig, ax = plt.subplots(1,1)
+    fig, ax = plt.subplots(1, 1)
     ax.plot(t, Fnu, 'k-')
     ax.set_xscale("log")
     ax.set_yscale("log")
     ax.set_xlabel(r"$t_{obs}$ (s)")
     ax.set_ylabel(r"$F_\nu$ (mJy)")
-    
-    fig, ax = plt.subplots(1,1)
+
+    fig, ax = plt.subplots(1, 1)
     ax.plot(t*grb.sec2day, Fnu, 'k-')
     ax.set_xscale("log")
     ax.set_yscale("log")
@@ -54,10 +55,11 @@ if __name__ == "__main__":
     t1 = 1.0e12 * t0
     NT = 15000
     ate = np.logspace(math.log10(t0), math.log10(t1), num=NT, base=10.0)
-    ar, au = shock.shockEvolRK4(ate, r0, umax, 
-                                Mej_solar*grb.Msun, rho0, Ei, k, umin, L0, q)
+    ar, au = shock.shockEvolRK4(ate, r0, umax,
+                                Mej_solar*grb.Msun, rho0, Ei, k, umin, L0, q,
+                                ts)
 
-    fig, ax = plt.subplots(2,1)
+    fig, ax = plt.subplots(2, 1)
     ax[0].plot(ate, ar, 'k-')
     ax[0].set_xscale("log")
     ax[0].set_yscale("log")
