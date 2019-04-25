@@ -224,7 +224,7 @@ static PyObject *shock_shockEvolSpreadRK4(PyObject *self, PyObject *args)
     double *th = PyArray_DATA((PyArrayObject *) th_obj);
 
     // Evolve the shock!
-    double shockArgs[9] = {u0, Mej, rho0, Einj, k, umin, L0, q, ts};
+    double shockArgs[10] = {u0, Mej, rho0, Einj, k, umin, L0, q, ts, th0};
     shockEvolveSpreadRK4(t, R, u, th, N, R0, u0, th0, shockArgs, spread);
 
     // Clean up!

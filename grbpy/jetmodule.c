@@ -140,21 +140,23 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     double rtol = 1.0e-4;
     int tRes = 1000;
     int spread = 1;
+    double g0 = -1.0;
     static char *kwlist[] = {"t", "nu", "jetType", "specType", "thetaObs", 
                                 "E0", "thetaCore", "thetaWing", "b",
                                 "L0", "q", "ts",
                                 "n0", "p",
-                                "epsilon_e", "epsilon_B", "ksiN", "dL", 
+                                "epsilon_e", "epsilon_B", "ksiN", "dL",
+                                "g0",
                                 "tRes", "latRes", "rtol", "mask", "spread",
                                 NULL};
 
     //Parse Arguments
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "OOiidddddddddddddd|iidOi",
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "OOiidddddddddddddd|diidOi",
                 kwlist,
                 &t_obj, &nu_obj, &jet_type, &spec_type, &theta_obs, &E_iso_core,
                 &theta_h_core, &theta_h_wing, &b, &L0, &q, &ts,
                 &n_0, &p, &epsilon_E, &epsilon_B, 
-                &ksi_N, &d_L, &tRes, &latRes, &rtol, &mask_obj, &spread))
+                &ksi_N, &d_L, &g0, &tRes, &latRes, &rtol, &mask_obj, &spread))
     {
         //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
         return NULL;
@@ -253,7 +255,7 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     // Calculate the flux!
     calc_flux_density(jet_type, spec_type, t, nu, Fnu, N, theta_obs, 
                         E_iso_core, theta_h_core, theta_h_wing, b, L0, q, ts,
-                        n_0, p, epsilon_E, epsilon_B, ksi_N, d_L,
+                        n_0, p, epsilon_E, epsilon_B, ksi_N, d_L, g0,
                         tRes, latRes, rtol, mask, masklen, spread);
 #ifdef PROFILE2
     //Profile 2
@@ -329,12 +331,13 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
     double rtol = 1.0e-4;
     int tRes = 1000;
     int spread = 1;
+    double g0 = -1.0;
     static char *kwlist[] = {"theta", "phi", "t", "nu", "jetType", "specType",
                                 "thetaObs", 
                                 "E0", "thetaCore", "thetaWing", "b",
                                 "L0", "q", "ts",
                                 "n0", "p",
-                                "epsilon_e", "epsilon_B", "ksiN", "dL",
+                                "epsilon_e", "epsilon_B", "ksiN", "dL", "g0",
                                 "tRes", "latRes", "rtol", "mask", "spread",
                                 NULL};
 
@@ -462,7 +465,7 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
     // Calculate the intensity!
     calc_intensity(jet_type, spec_type, theta, phi, t, nu, Inu, N, theta_obs, 
                         E_iso_core, theta_h_core, theta_h_wing, b, L0, q, ts,
-                        n_0, p, epsilon_E, epsilon_B, ksi_N, d_L,
+                        n_0, p, epsilon_E, epsilon_B, ksi_N, d_L, g0,
                         tRes, latRes, rtol, mask, masklen, spread);
 
     // Clean up!

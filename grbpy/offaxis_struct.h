@@ -68,6 +68,7 @@ struct fluxParams
 
     double E_iso;
     double n_0;
+    double g_init;
 
     double p;
     double epsilon_E;
@@ -80,6 +81,7 @@ struct fluxParams
     double theta_wing;
     double b;
     double E_tot;
+    double g_core;
 
     double L0;
     double q;
@@ -207,6 +209,7 @@ void calc_flux_density(int jet_type, int spec_type,
                             double b, double L0, double q, double ts, 
                             double n_0, double p, double epsilon_E,
                             double epsilon_B, double ksi_N, double d_L,
+                            double g0,
                             int tRes, int latRes, double rtol,
                             double *mask, int nmask, int spread);
 void calc_intensity(int jet_type, int spec_type, double *theta, double *phi,
@@ -216,6 +219,7 @@ void calc_intensity(int jet_type, int spec_type, double *theta, double *phi,
                             double b, double L0, double q, double ts, 
                             double n_0, double p, double epsilon_E,
                             double epsilon_B, double ksi_N, double d_L,
+                            double g0,
                             int tRes, int latRes, double rtol, double *mask,
                             int nmask, int spread);
 
@@ -229,6 +233,7 @@ void setup_fluxParams(struct fluxParams *pars,
                     double epsilon_E,
                     double epsilon_B, 
                     double ksi_N,
+                    double g0,
                     double ta, double tb, double tRes,
                     int spec_type, double flux_rtol,
                     double *mask, int nmask, int spread);

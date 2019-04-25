@@ -174,10 +174,15 @@ void shockInitFind(double t0, double *R0, double *u0, double tRes, void *argv)
 {
     double *args = (double *)argv;
     double E0 = args[0];
+    double Mej = args[1];
     double rho0 = args[2];
     double L0 = args[6];
     double q = args[7];
     double ts = args[8];
+
+    //printf("shockInitFind: t0=%.6lg E0=%.6lg Mej=%.6lg rho0=%.6lg\n",
+    //        t0, E0, Mej, rho0);
+    //printf("               L0=%.6lg q=%.6lg ts=%.6lg\n", L0, q, ts);
 
     double u;
     double c = v_light;
@@ -185,6 +190,23 @@ void shockInitFind(double t0, double *R0, double *u0, double tRes, void *argv)
     
     double C = sqrt(9/(16.0*M_PI) * E0/(rho0*c5));
     double tNR = pow(C, 2.0/3.0);
+
+    //Time for deceleration
+    double td;
+    if(Mej > 0.0)
+    {
+        // gc, uc, beSc = coasting gamma, u, beta_shock
+        double gcmo = E0/(Mej *c*c);
+        double uc = sqrt(gcmo * (gcmo+2));
+        double gc = sqrt(1+uc*uc);
+        double beSc = 4*uc*gc / (4*uc*uc+3);
+        double Rd = pow(9*gc*gc*Mej / (4*M_PI*(gc+1)*(4*uc*uc+3)*rho0), 1./3.);
+        td = Rd / (beSc * c);
+    }
+    else
+    {
+        td = 0.0;
+    }
 
     //Time for transition
     double ti;
@@ -198,7 +220,9 @@ void shockInitFind(double t0, double *R0, double *u0, double tRes, void *argv)
     else
         ti = 1.0e20 * tNR; //Arbitrary val
 
-    if(t0 < 0.01*tNR && t0< 0.01*ti)
+    //printf("               td=%.6lg ti=%.6lg tNR=%.6lg\n", td, ti, tNR);
+
+    if(t0 < 0.01*tNR && t0 < 0.01*ti && t0 > 100*td)
     {
         //printf("the EASY way\n");
         u = C*pow(t0, -1.5);
@@ -206,12 +230,39 @@ void shockInitFind(double t0, double *R0, double *u0, double tRes, void *argv)
         *u0 = u;
         return;
     }
+    else if(t0 < 0.01 * td)
+    {
+        double gcmo = E0/(Mej *c*c);
+        double uc = sqrt(gcmo * (gcmo+2));
+        double gc = sqrt(1+uc*uc);
+        double beSc = 4*uc*gc / (4*uc*uc+3);
+
+        *R0 = beSc * c * t0;
+        *u0 = uc;
+        return;
+    }
     
     double dt, x[2], x0[2], k1[2], k2[2], k3[2], k4[2];
 
-    double t00 = ti < tNR ? 0.01*ti : 0.01*tNR;
-    double u00 = C*pow(t00, -1.5);
-    double R00 = c*t00*(1-1/(16*u00*u00));
+    double t00, u00, R00;
+
+    if(td > 0.0)
+    {
+        double gcmo = E0/(Mej *c*c);
+        double uc = sqrt(gcmo * (gcmo+2));
+        double gc = sqrt(1+uc*uc);
+        double beSc = 4*uc*gc / (4*uc*uc+3);
+
+        t00 = td<t0 ? 0.01*td : 0.01*t0;
+        R00 = beSc * c * t0;
+        u00 = uc;
+    }
+    else
+    {
+        t00 = ti < tNR ? 0.01*ti : 0.01*tNR;
+        u00 = C*pow(t00, -1.5);
+        R00 = c*t00*(1-1/(16*u00*u00));
+    }
 
     //printf("t00=%.6le R00=%.6le u00=%.6le (tNR=%.3le ti=%.3le)\n", t00, R00, u00, tNR, ti);
 
@@ -309,6 +360,7 @@ void RuThdot3D(double t, double *x, void *argv, double *xdot, int spread)
     double L0 = args[6];
     double q = args[7];
     double ts = args[8];
+    double thC = args[9];
 
     double R = x[0];
     double u = x[1];
@@ -325,7 +377,10 @@ void RuThdot3D(double t, double *x, void *argv, double *xdot, int spread)
     double dRdt = 4*u*g/(4*u*u+3) * v_light;
 
     double dThdt = 0.0;
-    if(spread && th < 0.5*M_PI && u < 1)
+    //TODO: verify spreading procedure 190401
+    //if(spread && th < 0.5*M_PI && u < 1)
+    //if(spread && th < 0.5*M_PI && u*3.0*th < 1)
+    if(spread && th < 0.5*M_PI && u*3.0*thC < 1)
     {
         double e = u*u/(g+1); // specific internal energy == gamma-1
 

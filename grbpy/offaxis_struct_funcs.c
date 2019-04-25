@@ -351,15 +351,25 @@ void make_R_table(struct fluxParams *pars)
     double Rpar[2] = {pars->C_BMsqrd, pars->C_STsqrd};
     double R0 = romb(&Rintegrand, 0.0, Rt0, 1000, 0, R_ACC, Rpar);
     double u0 = sqrt(get_lfacbetasqrd(Rt0, pars->C_BMsqrd, pars->C_STsqrd));
-    double args[9] = {pars->E_iso, 0.0, m_p*pars->n_0, 0.0, 0.0, 0.0, 
-                        pars->L0, pars->q, pars->ts};
+    double th0 = pars->theta_h;
+    double fom = 2*sin(0.5*th0)*sin(0.5*th0); //Fraction of solid angle in jet.
+
+    double Mej_sph;
+    if(pars->g_core > 1.0)
+        Mej_sph = pars->E_iso / ((pars->g_init - 1.0) * v_light*v_light);
+    else
+        Mej_sph = 0.0;
+
+    double args[10] = {pars->E_iso, Mej_sph, m_p*pars->n_0, 0.0, 0.0, 0.0, 
+                        pars->L0, pars->q, pars->ts, pars->theta_core};
     int spread = pars->spread;
     //printf("t0=%.6le R0=%.6le u0=%.6le\n", Rt0, R0, u0);
     //shockInitDecel(Rt0, &R0, &u0, args);
     shockInitFind(Rt0, &R0, &u0, pars->tRes/10, args);
     //printf("t0=%.6le R0=%.6le u0=%.6le\n", Rt0, R0, u0);
-    double th0 = pars->theta_h;
 
+    args[0] = pars->E_iso * fom;
+    args[1] = Mej_sph * fom;
     shockEvolveSpreadRK4(t_table, R_table, u_table, th_table, table_entries,
                             R0, u0, th0, args, spread);
 
@@ -1077,6 +1087,7 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
                             double b, double L0, double q, double ts, 
                             double n_0, double p, double epsilon_E,
                             double epsilon_B, double ksi_N, double d_L,
+                            double g0,
                             int tRes, int latRes, double rtol, double *mask,
                             int nmask, int spread)
 {
@@ -1096,7 +1107,7 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
     struct fluxParams fp;
     setup_fluxParams(&fp, d_L, theta_obs, E_iso_core, theta_h_core,
                         theta_h_wing, b, L0, q, ts,
-                        n_0, p, epsilon_E, epsilon_B, ksi_N, ta, tb, tRes,
+                        n_0, p, epsilon_E, epsilon_B, ksi_N, g0, ta, tb, tRes,
                         spec_type, rtol, mask, nmask, spread);
 
     if(jet_type == _tophat)
@@ -1157,6 +1168,7 @@ void calc_intensity(int jet_type, int spec_type, double *theta, double *phi,
                             double b, double L0, double q, double ts, 
                             double n_0, double p, double epsilon_E,
                             double epsilon_B, double ksi_N, double d_L,
+                            double g0,
                             int tRes, int latRes, double rtol, double *mask,
                             int nmask, int spread)
 {
@@ -1176,7 +1188,7 @@ void calc_intensity(int jet_type, int spec_type, double *theta, double *phi,
     struct fluxParams fp;
     setup_fluxParams(&fp, d_L, theta_obs, E_iso_core, theta_h_core,
                         theta_h_wing, b, L0, q, ts,
-                        n_0, p, epsilon_E, epsilon_B, ksi_N, ta, tb, tRes,
+                        n_0, p, epsilon_E, epsilon_B, ksi_N, g0, ta, tb, tRes,
                         spec_type, rtol, mask, nmask, spread);
 
     if(jet_type == _tophat)
@@ -1222,7 +1234,8 @@ void setup_fluxParams(struct fluxParams *pars,
                         double theta_core, double theta_wing, double b,
                         double L0, double q, double ts, 
                         double n_0, double p, double epsilon_E,
-                        double epsilon_B, double ksi_N, double ta, double tb,
+                        double epsilon_B, double ksi_N, double g0,
+                        double ta, double tb,
                         double tRes, int spec_type, double flux_rtol,
                         double *mask, int nmask, int spread)
 {
@@ -1240,6 +1253,7 @@ void setup_fluxParams(struct fluxParams *pars,
     pars->theta_wing = theta_wing;
     pars->b = b;
     pars->E_tot = -1;
+    pars->g_core = g0;
    
     pars->L0 = L0;
     pars->q = q;
@@ -1303,6 +1317,7 @@ void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h)
 
     pars->E_iso = E_iso;
     pars->theta_h = theta_h;
+    pars->g_init = 1.0 + (pars->g_core - 1) * E_iso / pars->E_iso_core;
     pars->C_BMsqrd = C_BM * C_BM;
     pars->C_STsqrd = C_ST * C_ST;
     pars->t_NR = t_NR;

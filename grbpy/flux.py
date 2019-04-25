@@ -33,7 +33,7 @@ class fluxCalc(object):
 def fluxDensity(t, nu, jetType, specType, *args, **kwargs):
 
     if 'z' in kwargs.keys():
-        z = kwargs['z']
+        z = kwargs.pop('z')
     else:
         z = 0.0
 

@@ -6,13 +6,13 @@ import grbpy as grb
 
 day = 86400.0
 
-jetType = 4
+jetType = 0
 specType = 0
-thV = 0.5
+thV = 0.4
 E0 = 1.0e52
-thC = 0.01
-thW = 0.3
-b = 4
+thC = 0.08
+thW = 0.4
+b = 6
 L0 = 0.0  # 1.0e47
 q = 0.0  # 1.0
 ts = 0.0  # 1.0e5
@@ -22,8 +22,10 @@ epse = 1.0e-1
 epsB = 1.0e-3
 ksiN = 1.0
 dL = 1.23e26
+g0 = 0.0
 
-Y = np.array([thV, E0, thC, thW, b, L0, q, ts, n0, p, epse, epsB, ksiN, dL])
+Y = np.array([thV, E0, thC, thW, b, L0, q, ts, n0, p, epse, epsB, ksiN, dL,
+              g0])
 
 ta = 1.0e0 * day
 tb = 1.0e3 * day
