@@ -6,9 +6,9 @@ import grbpy as grb
 
 day = 86400.0
 
-jetType = 0
+jetType = -1
 specType = 0
-thV = 0.4
+thV = 0.0
 E0 = 1.0e52
 thC = 0.08
 thW = 0.4
@@ -27,7 +27,7 @@ g0 = 0.0
 Y = np.array([thV, E0, thC, thW, b, L0, q, ts, n0, p, epse, epsB, ksiN, dL,
               g0])
 
-ta = 1.0e0 * day
+ta = 1.0e-1 * day
 tb = 1.0e3 * day
 t = np.logspace(np.log10(ta), np.log10(tb), base=10.0, num=100)
 
@@ -36,7 +36,7 @@ nu[:] = 1.0e14
 
 
 print("Calculating")
-Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y)
+Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y, spread=True)
 
 print("Writing lc.txt")
 f = open("lc.txt", 'w')

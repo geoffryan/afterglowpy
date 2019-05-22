@@ -141,6 +141,8 @@ double check_t_e(double t_e, double mu, double t_obs, double *mu_table, int N);
 int searchSorted(double x, double *arr, int N);
 double interpolateLin(int a, int b, double x, double *X, double *Y, int N);
 double interpolateLog(int a, int b, double x, double *X, double *Y, int N);
+double find_jet_edge(double phi, double cto, double sto, double theta0,
+                     double frac, double *a_mu, double *a_thj, int N);
 double theta_integrand(double a_theta, void* params); // inner integral
 double phi_integrand(double a_phi, void* params); // outer integral
 void theta_integrand_vec(double theta, double *Fnu, double *t, double *nu,

@@ -380,14 +380,45 @@ void RuThdot3D(double t, double *x, void *argv, double *xdot, int spread)
     //TODO: verify spreading procedure 190401
     //if(spread && th < 0.5*M_PI && u < 1)
     //if(spread && th < 0.5*M_PI && u*3.0*th < 1)
-    if(spread && th < 0.5*M_PI && u*3.0*thC < 1)
+    if(spread)
     {
-        double e = u*u/(g+1); // specific internal energy == gamma-1
+        double Q0 = 2.0;
+        double Q = 3.0;
 
-        //Sound speed from trans-relativistic EoS.
-        double cs = v_light * sqrt(e*(2+e)*(5+8*e+4*e*e)
-                                    / (3*(1+e)*(1+e)*(1+2*e)*(3+2*e)));
-        dThdt = cs / (R*g);
+        if(th < 0.5*M_PI && Q0*u*thC < 1)
+        {
+            double e = u*u/(g+1); // specific internal energy == gamma-1
+
+            //Sound speed from trans-relativistic EoS.
+            double cs = v_light * sqrt(e*(2+e)*(5+8*e+4*e*e)
+                                        / (3*(1+e)*(1+e)*(1+2*e)*(3+2*e)));
+            double fac = u*thC*Q < 1.0 ? 1.0 : Q*(1-Q0*u*thC) / (Q-Q0);
+            /*
+            if(fac < 1.0)
+            {
+                double sharp = 3.0;
+                double f0 = exp(-sharp);
+                fac = (exp(sharp*(fac-1.0))-f0) / (1.0-f0);
+            }
+            */
+            //fac = 0.0;
+            dThdt = fac * cs / (R*g);
+        }
+    }
+    else
+    {
+        if(th < 0.5*M_PI && u*thC < 1)
+        {
+            double e = u*u/(g+1); // specific internal energy == gamma-1
+
+            //Sound speed from trans-relativistic EoS.
+            double cs = v_light * sqrt(e*(2+e)*(5+8*e+4*e*e)
+                                        / (3*(1+e)*(1+e)*(1+2*e)*(3+2*e)));
+
+            double fac = u*thC*3.0 < 1.0 ? 1.0 : 0.5*(1-u*thC);
+            fac = 0.0;
+            dThdt = fac * cs / (R*g);
+        }
     }
 
     double dEdu = 0.0;
@@ -488,6 +519,9 @@ void shockEvolveSpreadRK4(double *t, double *R, double *u, double *th, int N,
 
         R[i+1] = x[0];
         u[i+1] = x[1];
-        th[i+1] = x[2];
+        if(x[2] > 0.5*M_PI)
+            th[i+1] = 0.5*M_PI;
+        else
+            th[i+1] = x[2];
     }
 }

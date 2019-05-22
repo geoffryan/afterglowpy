@@ -600,6 +600,25 @@ double phi_integrand(double a_phi, void* params) // outer integral
     int spread = 1;
     if(pars->th_table != NULL && spread==1)
     {
+        double th_1 = find_jet_edge(a_phi, pars->cto, pars->sto, theta_1,
+                                       1.0, pars->mu_table, pars->th_table,
+                                       pars->table_entries);
+        double frac = theta_0 / theta_1;
+        double th_0 = frac * th_1;
+        /*
+        double th_0 = find_jet_edge(a_phi, pars->cto, pars->sto, theta_1,
+                                       frac, pars->mu_table, pars->th_table,
+                                       pars->table_entries);
+        */
+        theta_0 = th_0;
+        theta_1 = th_1;
+        if(theta_0 > 0.5*M_PI)
+            theta_0 = 0.5*M_PI;
+        if(theta_1 > 0.5*M_PI)
+            theta_1 = 0.5*M_PI;
+    }
+    if(pars->th_table != NULL && spread==2)
+    {
         // approx mu
         double ct = cos(0.5*(theta_0+theta_1));
         double st = sin(0.5*(theta_0+theta_1));
@@ -617,7 +636,7 @@ double phi_integrand(double a_phi, void* params) // outer integral
         if(theta_1 > 0.5*M_PI)
             theta_1 = 0.5*M_PI;
     }
-    else if (pars->t_obs > pars->t_NR && spread==2)
+    else if (pars->t_obs > pars->t_NR && spread==3)
     {
         theta_1 = dmin(0.5 * PI, 
                         pars->theta_h + 0.1 * log( pars->t_obs / pars->t_NR));
@@ -643,6 +662,49 @@ double phi_integrand(double a_phi, void* params) // outer integral
   
     //return result
     return result;
+}
+
+double find_jet_edge(double phi, double cto, double sto, double theta0,
+                     double frac, double *a_mu, double *a_thj, int N)
+{
+    double cp = cos(phi);
+    double mu = cos(theta0)*cto + sin(theta0)*sto*cp;
+
+    int ia = searchSorted(mu, a_mu, N);
+    
+    if(frac*a_thj[ia] <= theta0 && theta0 <= frac*a_thj[ia+1])
+        return theta0;
+
+    double tha, thb;
+    if(theta0 < frac*a_thj[ia])
+    {
+        //The jet is spreading
+        tha = theta0;
+        thb = 0.5*M_PI;
+    }
+    else
+    {
+        //Guessed too far out!
+        tha = 0.0;
+        thb = theta0;
+    }
+
+    int i = 0;
+    while(thb-tha > 1.0e-5 && i < 100)
+    {
+        double th = 0.5*(tha+thb);
+        mu = cos(th)*cto + sin(th)*sto*cp;
+        ia = searchSorted(mu, a_mu, N);
+        if(th < frac*a_thj[ia])
+            tha = th;
+        else
+            thb = th;
+        i++;
+    }
+
+    //printf("iter: %d, th0=%.6lf, th=%.6lf\n", i, theta0, tha);
+
+    return tha;
 }
 
 double phi_integrand_vec(double phi, void *params)
@@ -739,6 +801,7 @@ double flux(struct fluxParams *pars, double atol) // determine flux for a given 
   //pars->theta_atol = 1.0e-6 * I0;
   result = 2 * Fcoeff * romb(&phi_integrand, phi_0, phi_1, 1000, 
                                             atol/(2*Fcoeff), PHI_ACC, pars);
+  //result = 2 * Fcoeff * PI * phi_integrand(0.0, pars);
 #endif
 
   //return result
@@ -891,12 +954,15 @@ double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
     F1 = flux(pars, atol);
     
     //Counter-jet
+    /*
     theta_obs_cur = 180*deg2rad - theta_obs;
     set_obs_params(pars, t_obs, nu_obs, theta_obs_cur, 
                     theta_cone_hi, theta_cone_low);
     F2 = flux(pars, atol);
-
+    */
+    F2 = 0.0;
     Fboth = F1 + F2;
+
 
     if(F1 != F1 || F1 < 0.0)
         printf("bad F1:%.3lg t_obs=%.3le theta_lo=%.3lf theta_hi=%.3lf\n",

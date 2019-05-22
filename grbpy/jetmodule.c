@@ -21,6 +21,8 @@ static char shock_docstring[] =
     "Calculate the evolution of a tophat shock.";
 static char shockObs_docstring[] = 
     "Calculate the evolution of a tophat shock with reference to observer time.";
+static char find_jet_edge_docstring[] = 
+    "Find jet edge at given observer time, phi, viewing angle.";
 
 static PyObject *error_out(PyObject *m);
 static PyObject *jet_fluxDensity(PyObject *self, PyObject *args, 
@@ -30,6 +32,7 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args,
                                     PyObject *kwargs);
 static PyObject *jet_shock(PyObject *self, PyObject *args);
 static PyObject *jet_shockObs(PyObject *self, PyObject *args);
+static PyObject *jet_find_jet_edge(PyObject *self, PyObject *args);
 
 struct module_state
 {
@@ -50,6 +53,8 @@ static PyMethodDef jetMethods[] = {
         intensity_docstring},
     {"shock", jet_shock, METH_VARARGS, shock_docstring},
     {"shockObs", jet_shockObs, METH_VARARGS, shockObs_docstring},
+    {"find_jet_edge", jet_find_jet_edge, METH_VARARGS, 
+        find_jet_edge_docstring},
     {"error_out", (PyCFunction)error_out, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}};
 
@@ -573,6 +578,7 @@ static PyObject *jet_shock(PyObject *self, PyObject *args)
     
     return ret;
 }
+
 static PyObject *jet_shockObs(PyObject *self, PyObject *args)
 {
     double ta, tb, E0, n0, thetah, L0, q, ts;
@@ -655,6 +661,86 @@ static PyObject *jet_shockObs(PyObject *self, PyObject *args)
     PyObject *ret = Py_BuildValue("NNNN", t_obj, R_obj, u_obj, th_obj);
 
     free_fluxParams(&pars);
+    
+    return ret;
+}
+
+static PyObject *jet_find_jet_edge(PyObject *self, PyObject *args)
+{
+    double tobs, phi, theta_obs, theta_0, frac;
+    PyObject *t_obj = NULL;
+    PyObject *R_obj = NULL;
+    PyObject *thj_obj = NULL;
+    
+
+    //Parse Arguments
+    if(!PyArg_ParseTuple(args, "OOOddddd", &t_obj, &R_obj, &thj_obj, &tobs,
+                         &phi, &theta_obs, &theta_0, &frac))
+    {
+        //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
+        return NULL;
+    }
+    
+    PyArrayObject *t_arr;
+    PyArrayObject *R_arr;
+    PyArrayObject *thj_arr;
+    t_arr = (PyArrayObject *) PyArray_FROM_OTF(t_obj, NPY_DOUBLE,
+                                                NPY_ARRAY_IN_ARRAY);
+    R_arr = (PyArrayObject *) PyArray_FROM_OTF(R_obj, NPY_DOUBLE,
+                                                NPY_ARRAY_IN_ARRAY);
+    thj_arr = (PyArrayObject *) PyArray_FROM_OTF(thj_obj, NPY_DOUBLE,
+                                                NPY_ARRAY_IN_ARRAY);
+    
+    if(t_arr == NULL || R_arr == NULL || thj_arr == NULL)
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Could not read input arrays.");
+        Py_XDECREF(t_arr);
+        Py_XDECREF(R_arr);
+        Py_XDECREF(thj_arr);
+        return NULL;
+    }
+
+    int t_ndim = (int) PyArray_NDIM(t_arr);
+    int R_ndim = (int) PyArray_NDIM(R_arr);
+    int thj_ndim = (int) PyArray_NDIM(thj_arr);
+
+    if(t_ndim != 1 || R_ndim != 1 || thj_ndim != 1)
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Arrays must be 1-D.");
+        Py_DECREF(t_arr);
+        Py_DECREF(R_arr);
+        Py_DECREF(thj_arr);
+        return NULL;
+    }
+
+    int N = (int)PyArray_DIM(t_arr, 0);
+    int NR = (int)PyArray_DIM(R_arr, 0);
+    int Nthj = (int)PyArray_DIM(thj_arr, 0);
+
+    if(NR != N || Nthj != N)
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Arrays must be same size.");
+        Py_DECREF(t_arr);
+        Py_DECREF(R_arr);
+        Py_DECREF(thj_arr);
+        return NULL;
+    }
+
+    double *t = (double *)PyArray_DATA(t_arr);
+    double *R = (double *)PyArray_DATA(R_arr);
+    double *thj = (double *)PyArray_DATA(thj_arr);
+
+    double *mu = (double *)malloc(N * sizeof(double));
+    int i;
+    for(i=0; i<N; i++)
+        mu[i] = (t[i] - tobs) * v_light / R[i];
+
+    double th = find_jet_edge(phi, cos(theta_obs), sin(theta_obs), theta_0,
+                              frac, mu, thj, N);
+
+    free(mu);
+
+    PyObject *ret = Py_BuildValue("d", th);
     
     return ret;
 }
