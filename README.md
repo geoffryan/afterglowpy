@@ -1,6 +1,6 @@
 # Semi-analytic GRB Afterglow models
 
-A Python module to calculate GRB afterglow light curves and spectra. Makes liberal use of [van Eerten & MacFadyen 2010](https://arxiv.org/abs/1006.5125) and [van Eerten 2018](https://arxiv.org/abs/1801.01848).
+A Python module to calculate GRB afterglow light curves and spectra. Makes liberal use of [van Eerten & MacFadyen 2010](https://arxiv.org/abs/1006.5125) and [van Eerten 2018](https://arxiv.org/abs/1801.01848).  This code is under active development.
 
 ## Attribution
 
@@ -8,22 +8,17 @@ If you use this code in a publication, please refer to the package by name and c
 
 ## Installation/Building
 
-To build:
-
-```bash
-$ python setup.py build
-```
 
 To install for development
 
 ```bash
-$ python setup.py develop
+$ python3 setup.py develop
 ```
 
 To install
 
 ```bash
-$ python setup.py install
+$ python3 setup.py install
 ```
 
 ## Using
@@ -43,11 +38,11 @@ For jet-like afterglows (`jetTypes` -2, -1, 0, 1, 2, and 4) `pars` has 14 positi
 - `1 E0` on-axis isotropic equivalent energy in erg
 - `2 thetaC` half-width of the jet core in radians (jetType specific)
 - `3 thetaW` "wing" truncation angle of the jet, in radians
-- `4 b` power for power-law structure, \theta^{-b}
+- `4 b` power for power-law structure, &theta;<sup>-b</sup>
 - `5 L0` Fiducial luminosity for energy injection, in erg/s, typically 0.
 - `6 q` Temporal power-law index for energy injection, typically 0.
 - `7 ts` Fiducial time-scale for energy injection, in seconds, typically 0.
-- `8 n0` Number density of ISM, in cm^{-3}
+- `8 n0` Number density of ISM, in cm<sup>-3</sup>
 - `9 p` Electron distribution power-law index (p>2)
 - `10 epsilon_e` Thermal energy fraction in electrons
 - `11 epsilon_B` Thermal energy fraction in magnetic field
@@ -57,13 +52,13 @@ For jet-like afterglows (`jetTypes` -2, -1, 0, 1, 2, and 4) `pars` has 14 positi
 For cocoon-like afterglows (`jetType` 3) `pars` has 14 positional arguments:
 - `0 umax` Initial maximum outflow 4-velocity
 - `1 umin` Minium outflow 4-velocity
-- `2 Ei` Fiducial energy in velocity distribution, E(>u) = Ei * u^{-k}.
+- `2 Ei` Fiducial energy in velocity distribution, E(>u) = E<sub>i</sub>  u<sup>-k</sup>.
 - `3 k` Power-law index of energy velocity distribution  
 - `4 Mej` Mass of material at `umax' in solar masses
 - `5 L0` Fiducial luminosity for energy injection, in erg/s, typically 0.
 - `6 q` Temporal power-law index for energy injection, typically 0.
 - `7 ts` Fiducial time-scale for energy injection, in seconds, typically 0.
-- `8 n0` Number density of ISM, in cm^{-3}
+- `8 n0` Number density of ISM, in cm<sup>-3</sup>
 - `9 p` Electron distribution power-law index (p>2)
 - `10 epsilon_e` Thermal energy fraction in electrons
 - `11 epsilon_B` Thermal energy fraction in magnetic field

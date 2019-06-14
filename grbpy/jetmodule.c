@@ -146,22 +146,25 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     int tRes = 1000;
     int spread = 1;
     double g0 = -1.0;
+    double theta_h_core_global = 0.0;
     static char *kwlist[] = {"t", "nu", "jetType", "specType", "thetaObs", 
                                 "E0", "thetaCore", "thetaWing", "b",
                                 "L0", "q", "ts",
                                 "n0", "p",
                                 "epsilon_e", "epsilon_B", "ksiN", "dL",
-                                "g0",
+                                "g0", "thetaCoreGlobal",
                                 "tRes", "latRes", "rtol", "mask", "spread",
                                 NULL};
 
     //Parse Arguments
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "OOiidddddddddddddd|diidOi",
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "OOiidddddddddddddd|ddiidOi",
                 kwlist,
                 &t_obj, &nu_obj, &jet_type, &spec_type, &theta_obs, &E_iso_core,
                 &theta_h_core, &theta_h_wing, &b, &L0, &q, &ts,
                 &n_0, &p, &epsilon_E, &epsilon_B, 
-                &ksi_N, &d_L, &g0, &tRes, &latRes, &rtol, &mask_obj, &spread))
+                &ksi_N, &d_L,
+                &g0, &theta_h_core_global,
+                &tRes, &latRes, &rtol, &mask_obj, &spread))
     {
         //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
         return NULL;
@@ -260,7 +263,8 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     // Calculate the flux!
     calc_flux_density(jet_type, spec_type, t, nu, Fnu, N, theta_obs, 
                         E_iso_core, theta_h_core, theta_h_wing, b, L0, q, ts,
-                        n_0, p, epsilon_E, epsilon_B, ksi_N, d_L, g0,
+                        n_0, p, epsilon_E, epsilon_B, ksi_N, d_L, 
+                        g0, theta_h_core_global,
                         tRes, latRes, rtol, mask, masklen, spread);
 #ifdef PROFILE2
     //Profile 2
@@ -335,14 +339,16 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
     int latRes = 5;
     double rtol = 1.0e-4;
     int tRes = 1000;
-    int spread = 1;
+    int spread = 7;
     double g0 = -1.0;
+    double theta_h_core_global = 0.0;
     static char *kwlist[] = {"theta", "phi", "t", "nu", "jetType", "specType",
                                 "thetaObs", 
                                 "E0", "thetaCore", "thetaWing", "b",
                                 "L0", "q", "ts",
                                 "n0", "p",
-                                "epsilon_e", "epsilon_B", "ksiN", "dL", "g0",
+                                "epsilon_e", "epsilon_B", "ksiN", "dL",
+                                "g0", "thetaCoreGlobal",
                                 "tRes", "latRes", "rtol", "mask", "spread",
                                 NULL};
 
@@ -470,7 +476,8 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
     // Calculate the intensity!
     calc_intensity(jet_type, spec_type, theta, phi, t, nu, Inu, N, theta_obs, 
                         E_iso_core, theta_h_core, theta_h_wing, b, L0, q, ts,
-                        n_0, p, epsilon_E, epsilon_B, ksi_N, d_L, g0,
+                        n_0, p, epsilon_E, epsilon_B, ksi_N, d_L,
+                        g0, theta_h_core_global,
                         tRes, latRes, rtol, mask, masklen, spread);
 
     // Clean up!
@@ -667,7 +674,7 @@ static PyObject *jet_shockObs(PyObject *self, PyObject *args)
 
 static PyObject *jet_find_jet_edge(PyObject *self, PyObject *args)
 {
-    double tobs, phi, theta_obs, theta_0, frac;
+    double tobs, phi, theta_obs, theta_0;
     PyObject *t_obj = NULL;
     PyObject *R_obj = NULL;
     PyObject *thj_obj = NULL;
@@ -675,7 +682,7 @@ static PyObject *jet_find_jet_edge(PyObject *self, PyObject *args)
 
     //Parse Arguments
     if(!PyArg_ParseTuple(args, "OOOddddd", &t_obj, &R_obj, &thj_obj, &tobs,
-                         &phi, &theta_obs, &theta_0, &frac))
+                         &phi, &theta_obs, &theta_0))
     {
         //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
         return NULL;
@@ -736,7 +743,7 @@ static PyObject *jet_find_jet_edge(PyObject *self, PyObject *args)
         mu[i] = (t[i] - tobs) * v_light / R[i];
 
     double th = find_jet_edge(phi, cos(theta_obs), sin(theta_obs), theta_0,
-                              frac, mu, thj, N);
+                              mu, thj, N);
 
     free(mu);
 

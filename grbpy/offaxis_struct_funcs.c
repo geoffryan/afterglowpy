@@ -37,7 +37,7 @@ double f_E_powerlaw(double theta, void *params)
     {
         double x = theta / pars->theta_core;
         double b = pars->b;
-        return pars->E_iso_core / pow(sqrt(1 + x*x), b);
+        return pars->E_iso_core / pow(sqrt(1 + x*x/b), b);
     }
     return 0.0;
 }
@@ -88,6 +88,18 @@ double f_E_twocomponent(double theta, void *params)
     }
 
     return pars->E_iso_core * (f0 + f1) / (e0 + e1);
+}
+
+double f_E_exponential(double theta, void *params)
+{
+    struct fluxParams *pars = (struct fluxParams *)params;
+    if(theta <= pars->theta_wing)
+    {
+        double x = theta / pars->theta_core;
+        double b = pars->b;
+        return pars->E_iso_core * exp(-pow(x, b));
+    }
+    return 0.0;
 }
 
 double f_Etot_tophat(void *params)
@@ -232,11 +244,20 @@ void make_mu_table(struct fluxParams *pars)
     double *R_table = pars->R_table;
     double *mu_table = pars->mu_table;
     int table_entries = pars->table_entries;
+    double *t_table_inner = pars->t_table_inner;
+    double *R_table_inner = pars->R_table_inner;
+    double *mu_table_inner = pars->mu_table_inner;
+    int table_entries_inner = pars->table_entries_inner;
 
     int i;
     for (i = 0; i< table_entries; i++)
     {
         mu_table[i] = (t_table[i] - t_obs) / R_table[i] * v_light;
+    }
+    for (i = 0; i< table_entries_inner; i++)
+    {
+        mu_table_inner[i] = (t_table_inner[i] - t_obs)
+                            / R_table_inner[i] * v_light;
     }
 }
 
@@ -323,19 +344,27 @@ void make_R_table(struct fluxParams *pars)
     double Rt0 = pars->Rt0;
     double Rt1 = pars->Rt1;
     int table_entries = (int)(tRes * log10(Rt1/Rt0));
-    
+    double *temp;
+
+    pars->table_entries_inner = pars->table_entries;
     pars->table_entries = table_entries;
 
-    pars->t_table = (double *)realloc(pars->t_table, 
-                                        sizeof(double) * table_entries);
-    pars->R_table = (double *)realloc(pars->R_table, 
-                                        sizeof(double) * table_entries);
-    pars->u_table = (double *)realloc(pars->u_table, 
-                                        sizeof(double) * table_entries);
-    pars->th_table = (double *)realloc(pars->th_table, 
-                                        sizeof(double) * table_entries);
-    pars->mu_table = (double *)realloc(pars->mu_table, 
-                                        sizeof(double) * table_entries);
+    temp = pars->t_table_inner;
+    pars->t_table_inner = pars->t_table;
+    pars->t_table = (double *)realloc(temp, sizeof(double) * table_entries);
+    temp = pars->R_table_inner;
+    pars->R_table_inner = pars->R_table;
+    pars->R_table = (double *)realloc(temp, sizeof(double) * table_entries);
+    temp = pars->u_table_inner;
+    pars->u_table_inner = pars->u_table;
+    pars->u_table = (double *)realloc(temp, sizeof(double) * table_entries);
+    temp = pars->th_table_inner;
+    pars->th_table_inner = pars->th_table;
+    pars->th_table = (double *)realloc(temp, sizeof(double) * table_entries);
+    temp = pars->mu_table_inner;
+    pars->mu_table_inner = pars->mu_table;
+    pars->mu_table = (double *)realloc(temp, sizeof(double) * table_entries);
+
     double *t_table = pars->t_table;
     double *R_table = pars->R_table;
     double *u_table = pars->u_table;
@@ -360,8 +389,16 @@ void make_R_table(struct fluxParams *pars)
     else
         Mej_sph = 0.0;
 
-    double args[10] = {pars->E_iso, Mej_sph, m_p*pars->n_0, 0.0, 0.0, 0.0, 
-                        pars->L0, pars->q, pars->ts, pars->theta_core};
+    double thC = pars->theta_core;
+    if(thC <= 0.0)
+        thC = pars->theta_wing;
+    //thC = 0.08; //th0;
+    double thCg = pars->theta_core_global;
+    if(thCg <= 0.0)
+        thCg = thC;
+
+    double args[12] = {pars->E_iso, Mej_sph, m_p*pars->n_0, 0.0, 0.0, 0.0, 
+                        pars->L0, pars->q, pars->ts, thC, th0, thCg};
     int spread = pars->spread;
     //printf("t0=%.6le R0=%.6le u0=%.6le\n", Rt0, R0, u0);
     //shockInitDecel(Rt0, &R0, &u0, args);
@@ -597,18 +634,28 @@ double phi_integrand(double a_phi, void* params) // outer integral
     double theta_1 = pars->current_theta_cone_hi;
     double theta_0 = pars->current_theta_cone_low;
     double Dtheta = theta_1 - theta_0;
-    int spread = 1;
-    if(pars->th_table != NULL && spread==1)
+    int spreadVersion = 1;
+    if(pars->th_table != NULL && spreadVersion==1)
     {
-        double th_1 = find_jet_edge(a_phi, pars->cto, pars->sto, theta_1,
-                                       1.0, pars->mu_table, pars->th_table,
-                                       pars->table_entries);
+        double th_0, th_1;
+        th_1 = find_jet_edge(a_phi, pars->cto, pars->sto, theta_1,
+                             pars->mu_table, pars->th_table,
+                             pars->table_entries);
+
+        if(0 || pars->table_entries_inner == 0)
+        {
+            double frac = theta_0 / theta_1;
+            th_0 = frac * th_1;
+        }
+        else
+        {
+            th_0 = find_jet_edge(a_phi, pars->cto, pars->sto, theta_0,
+                                 pars->mu_table_inner, pars->th_table_inner,
+                                 pars->table_entries_inner);
+        }
+        /*
         double frac = theta_0 / theta_1;
         double th_0 = frac * th_1;
-        /*
-        double th_0 = find_jet_edge(a_phi, pars->cto, pars->sto, theta_1,
-                                       frac, pars->mu_table, pars->th_table,
-                                       pars->table_entries);
         */
         theta_0 = th_0;
         theta_1 = th_1;
@@ -617,7 +664,7 @@ double phi_integrand(double a_phi, void* params) // outer integral
         if(theta_1 > 0.5*M_PI)
             theta_1 = 0.5*M_PI;
     }
-    if(pars->th_table != NULL && spread==2)
+    if(pars->th_table != NULL && spreadVersion==2)
     {
         // approx mu
         double ct = cos(0.5*(theta_0+theta_1));
@@ -636,13 +683,16 @@ double phi_integrand(double a_phi, void* params) // outer integral
         if(theta_1 > 0.5*M_PI)
             theta_1 = 0.5*M_PI;
     }
-    else if (pars->t_obs > pars->t_NR && spread==3)
+    else if (pars->t_obs > pars->t_NR && spreadVersion==3)
     {
         theta_1 = dmin(0.5 * PI, 
                         pars->theta_h + 0.1 * log( pars->t_obs / pars->t_NR));
         if(theta_0 != 0.0)
             theta_0 = theta_1-Dtheta;
     }
+
+    if(theta_0 >= theta_1)
+        return 0.0;
  
     //printf("# theta integration domain: %e - %e\n", theta_1 - Dtheta, theta_1); fflush(stdout);
  
@@ -665,18 +715,18 @@ double phi_integrand(double a_phi, void* params) // outer integral
 }
 
 double find_jet_edge(double phi, double cto, double sto, double theta0,
-                     double frac, double *a_mu, double *a_thj, int N)
+                     double *a_mu, double *a_thj, int N)
 {
     double cp = cos(phi);
     double mu = cos(theta0)*cto + sin(theta0)*sto*cp;
 
     int ia = searchSorted(mu, a_mu, N);
     
-    if(frac*a_thj[ia] <= theta0 && theta0 <= frac*a_thj[ia+1])
+    if(a_thj[ia] <= theta0 && theta0 <= a_thj[ia+1])
         return theta0;
 
     double tha, thb;
-    if(theta0 < frac*a_thj[ia])
+    if(theta0 < a_thj[ia])
     {
         //The jet is spreading
         tha = theta0;
@@ -695,7 +745,7 @@ double find_jet_edge(double phi, double cto, double sto, double theta0,
         double th = 0.5*(tha+thb);
         mu = cos(th)*cto + sin(th)*sto*cp;
         ia = searchSorted(mu, a_mu, N);
-        if(th < frac*a_thj[ia])
+        if(th < a_thj[ia])
             tha = th;
         else
             thb = th;
@@ -1153,7 +1203,7 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
                             double b, double L0, double q, double ts, 
                             double n_0, double p, double epsilon_E,
                             double epsilon_B, double ksi_N, double d_L,
-                            double g0,
+                            double g0, double theta_h_core_global,
                             int tRes, int latRes, double rtol, double *mask,
                             int nmask, int spread)
 {
@@ -1173,7 +1223,8 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
     struct fluxParams fp;
     setup_fluxParams(&fp, d_L, theta_obs, E_iso_core, theta_h_core,
                         theta_h_wing, b, L0, q, ts,
-                        n_0, p, epsilon_E, epsilon_B, ksi_N, g0, ta, tb, tRes,
+                        n_0, p, epsilon_E, epsilon_B, ksi_N, g0, 
+                        theta_h_core_global, ta, tb, tRes,
                         spec_type, rtol, mask, nmask, spread);
 
     if(jet_type == _tophat)
@@ -1209,6 +1260,11 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
         lc_structCore(t, nu, Fnu, N, E_iso_core, theta_h_core, 
                 theta_h_wing, NULL, NULL, res_cones, &f_E_powerlawCore, &fp);
     }
+    else if(jet_type == _exponential)
+    {
+        lc_structCore(t, nu, Fnu, N, E_iso_core, theta_h_core, 
+                theta_h_wing, NULL, NULL, res_cones, &f_E_exponential, &fp);
+    }
     else if(jet_type == _tophat + 10)
     {
         lc_vec(t, nu, Fnu, N, E_iso_core, theta_h_core, theta_h_core, 
@@ -1234,7 +1290,7 @@ void calc_intensity(int jet_type, int spec_type, double *theta, double *phi,
                             double b, double L0, double q, double ts, 
                             double n_0, double p, double epsilon_E,
                             double epsilon_B, double ksi_N, double d_L,
-                            double g0,
+                            double g0, double theta_h_core_global,
                             int tRes, int latRes, double rtol, double *mask,
                             int nmask, int spread)
 {
@@ -1254,7 +1310,8 @@ void calc_intensity(int jet_type, int spec_type, double *theta, double *phi,
     struct fluxParams fp;
     setup_fluxParams(&fp, d_L, theta_obs, E_iso_core, theta_h_core,
                         theta_h_wing, b, L0, q, ts,
-                        n_0, p, epsilon_E, epsilon_B, ksi_N, g0, ta, tb, tRes,
+                        n_0, p, epsilon_E, epsilon_B, ksi_N, g0, 
+                        theta_h_core_global, ta, tb, tRes,
                         spec_type, rtol, mask, nmask, spread);
 
     if(jet_type == _tophat)
@@ -1301,7 +1358,7 @@ void setup_fluxParams(struct fluxParams *pars,
                         double L0, double q, double ts, 
                         double n_0, double p, double epsilon_E,
                         double epsilon_B, double ksi_N, double g0,
-                        double ta, double tb,
+                        double theta_core_global, double ta, double tb,
                         double tRes, int spec_type, double flux_rtol,
                         double *mask, int nmask, int spread)
 {
@@ -1310,6 +1367,14 @@ void setup_fluxParams(struct fluxParams *pars,
     pars->u_table = NULL;
     pars->th_table = NULL;
     pars->mu_table = NULL;
+    pars->table_entries = 0;
+    pars->t_table_inner = NULL;
+    pars->R_table_inner = NULL;
+    pars->u_table_inner = NULL;
+    pars->th_table_inner = NULL;
+    pars->mu_table_inner = NULL;
+    pars->table_entries_inner = 0;
+
     pars->spec_type = spec_type;
 
     pars->d_L = d_L;
@@ -1320,6 +1385,7 @@ void setup_fluxParams(struct fluxParams *pars,
     pars->b = b;
     pars->E_tot = -1;
     pars->g_core = g0;
+    pars->theta_core_global = theta_core_global;
    
     pars->L0 = L0;
     pars->q = q;
@@ -1461,6 +1527,32 @@ void free_fluxParams(struct fluxParams *pars)
     {
         free(pars->mu_table);
         pars->mu_table = NULL;
+    }
+
+    if(pars->t_table_inner != NULL)
+    {
+        free(pars->t_table_inner);
+        pars->t_table_inner = NULL;
+    }
+    if(pars->R_table_inner != NULL)
+    {
+        free(pars->R_table_inner);
+        pars->R_table_inner = NULL;
+    }
+    if(pars->u_table_inner != NULL)
+    {
+        free(pars->u_table_inner);
+        pars->u_table_inner = NULL;
+    }
+    if(pars->th_table_inner != NULL)
+    {
+        free(pars->th_table_inner);
+        pars->th_table_inner = NULL;
+    }
+    if(pars->mu_table_inner != NULL)
+    {
+        free(pars->mu_table_inner);
+        pars->mu_table_inner = NULL;
     }
 }
 

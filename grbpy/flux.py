@@ -40,6 +40,11 @@ def fluxDensity(t, nu, jetType, specType, *args, **kwargs):
     tz = t / (1+z)
     nuz = nu * (1+z)
 
+    # Default spreading method
+    if 'spread' in kwargs:
+        if kwargs['spread'] is True:
+            kwargs['spread'] = 7
+
     # timeA = time.time()
     if jetType == 3:
         Fnu = cocoon.fluxDensity(tz, nuz, jetType, specType, *args, **kwargs)

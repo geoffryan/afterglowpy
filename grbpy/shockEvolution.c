@@ -361,6 +361,8 @@ void RuThdot3D(double t, double *x, void *argv, double *xdot, int spread)
     double q = args[7];
     double ts = args[8];
     double thC = args[9];
+    double th0 = args[10];
+    double thCg = args[11];
 
     double R = x[0];
     double u = x[1];
@@ -382,42 +384,137 @@ void RuThdot3D(double t, double *x, void *argv, double *xdot, int spread)
     //if(spread && th < 0.5*M_PI && u*3.0*th < 1)
     if(spread)
     {
-        double Q0 = 2.0;
-        double Q = 3.0;
-
-        if(th < 0.5*M_PI && Q0*u*thC < 1)
+        if(spread == 1)
         {
-            double e = u*u/(g+1); // specific internal energy == gamma-1
+            double Q0 = 2.0;
+            double Q = sqrt(2.0)*3.0;
 
-            //Sound speed from trans-relativistic EoS.
-            double cs = v_light * sqrt(e*(2+e)*(5+8*e+4*e*e)
-                                        / (3*(1+e)*(1+e)*(1+2*e)*(3+2*e)));
-            double fac = u*thC*Q < 1.0 ? 1.0 : Q*(1-Q0*u*thC) / (Q-Q0);
-            /*
-            if(fac < 1.0)
+            if(th < 0.5*M_PI && Q0*u*thC < 1)
             {
-                double sharp = 3.0;
-                double f0 = exp(-sharp);
-                fac = (exp(sharp*(fac-1.0))-f0) / (1.0-f0);
+                double e = u*u/(g+1); // specific internal energy == gamma-1
+
+                //Sound speed from trans-relativistic EoS.
+                double cs = v_light * sqrt(e*(2+e)*(5+8*e+4*e*e)
+                                            / (3*(1+e)*(1+e)*(1+2*e)*(3+2*e)));
+                double fac = u*thC*Q < 1.0 ? 1.0 : Q*(1-Q0*u*thC) / (Q-Q0);
+                /*
+                if(fac < 1.0)
+                {
+                    double sharp = 3.0;
+                    double f0 = exp(-sharp);
+                    fac = (exp(sharp*(fac-1.0))-f0) / (1.0-f0);
+                }
+                */
+                //fac = 0.0;
+                dThdt = fac * cs / (R*g);
             }
-            */
-            //fac = 0.0;
-            dThdt = fac * cs / (R*g);
         }
-    }
-    else
-    {
-        if(th < 0.5*M_PI && u*thC < 1)
+        else if(spread == 2)
         {
-            double e = u*u/(g+1); // specific internal energy == gamma-1
+            double Q0 = 2.0;
+            double Q = sqrt(2)*3.0;
 
-            //Sound speed from trans-relativistic EoS.
-            double cs = v_light * sqrt(e*(2+e)*(5+8*e+4*e*e)
-                                        / (3*(1+e)*(1+e)*(1+2*e)*(3+2*e)));
+            if(th < 0.5*M_PI && Q0*u*th0 < 1)
+            {
+                double e = u*u/(g+1); // specific internal energy == gamma-1
 
-            double fac = u*thC*3.0 < 1.0 ? 1.0 : 0.5*(1-u*thC);
-            fac = 0.0;
-            dThdt = fac * cs / (R*g);
+                //Sound speed from trans-relativistic EoS.
+                double cs = v_light * sqrt(e*(2+e)*(5+8*e+4*e*e)
+                                            / (3*(1+e)*(1+e)*(1+2*e)*(3+2*e)));
+                double fac = u*th0*Q < 1.0 ? 1.0 : Q*(1-Q0*u*th0) / (Q-Q0);
+                /*
+                if(fac < 1.0)
+                {
+                    double sharp = 3.0;
+                    double f0 = exp(-sharp);
+                    fac = (exp(sharp*(fac-1.0))-f0) / (1.0-f0);
+                }
+                */
+                //fac = 0.0;
+                dThdt = fac * cs / (R*g);
+            }
+        }
+        else if(spread == 3)
+        {
+            double Q0 = 2.0;
+            double Q = sqrt(2)*3.0;
+
+            if(th < 0.5*M_PI && Q0*u*thCg < 1)
+            {
+                double e = u*u/(g+1); // specific internal energy == gamma-1
+
+                //Sound speed from trans-relativistic EoS.
+                double cs = v_light * sqrt(e*(2+e)*(5+8*e+4*e*e)
+                                            / (3*(1+e)*(1+e)*(1+2*e)*(3+2*e)));
+                double fac = u*thCg*Q < 1.0 ? 1.0 : Q*(1-Q0*u*thCg) / (Q-Q0);
+                /*
+                if(fac < 1.0)
+                {
+                    double sharp = 3.0;
+                    double f0 = exp(-sharp);
+                    fac = (exp(sharp*(fac-1.0))-f0) / (1.0-f0);
+                }
+                */
+                //fac = 0.0;
+                dThdt = fac * cs / (R*g);
+            }
+        }
+        else if(spread == 4)
+        {
+            double bew = 0.5*sqrt((2*u*u+3)/(4*u*u+3))*bes/g;
+            dThdt = bew * v_light / R;
+        }
+        else if(spread == 5)
+        {
+            double Q0 = 2.0;
+            double Q = sqrt(2.0)*3.0;
+
+            if(th < 0.5*M_PI && Q0*u*thC < 1)
+            {
+                double bew = 0.5*sqrt((2*u*u+3)/(4*u*u+3))*bes/g;
+                double fac = u*thC*Q < 1.0 ? 1.0 : Q*(1-Q0*u*thC) / (Q-Q0);
+                dThdt = fac * bew * v_light / R;
+            }
+        }
+        else if(spread == 6)
+        {
+            double Q0 = 2.0;
+            double Q = sqrt(2.0)*3.0;
+
+            if(th < 0.5*M_PI && Q0*u*thCg < 1)
+            {
+                double bew = 0.5*sqrt((2*u*u+3)/(4*u*u+3))*bes/g;
+                double fac = u*thCg*Q < 1.0 ? 1.0 : Q*(1-Q0*u*thCg) / (Q-Q0);
+                dThdt = fac * bew * v_light / R;
+            }
+        }
+        else if(spread == 7)
+        {
+            double Q0 = 2.0;
+            double Q = sqrt(2.0)*3.0;
+
+            if(th < 0.5*M_PI && Q0*u*thC < 1)
+            {
+                double bew = 0.5*sqrt((2*u*u+3)/(4*u*u+3))*bes/g;
+                double fac = u*thC*Q < 1.0 ? 1.0 : Q*(1-Q0*u*thC) / (Q-Q0);
+                if (th0 < thC)
+                    fac *= tan(0.5*th0)/tan(0.5*thC); //th0/thC;
+                dThdt = fac * bew * v_light / R;
+            }
+        }
+        else if(spread == 8)
+        {
+            double Q0 = 2.0;
+            double Q = sqrt(2.0)*3.0;
+
+            if(th < 0.5*M_PI && Q0*u*thCg < 1)
+            {
+                double bew = 0.5*sqrt((2*u*u+3)/(4*u*u+3))*bes/g;
+                double fac = u*thCg*Q < 1.0 ? 1.0 : Q*(1-Q0*u*thCg) / (Q-Q0);
+                if (th0 < thCg)
+                    fac *= tan(0.5*th0)/tan(0.5*thCg); //th0/thC;
+                dThdt = fac * bew * v_light / R;
+            }
         }
     }
 

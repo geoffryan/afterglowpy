@@ -6,12 +6,12 @@ import grbpy as grb
 
 day = 86400.0
 
-jetType = -1
+jetType = 0
 specType = 0
-thV = 0.0
+thV = 0.5
 E0 = 1.0e52
 thC = 0.08
-thW = 0.4
+thW = 0.35
 b = 6
 L0 = 0.0  # 1.0e47
 q = 0.0  # 1.0
@@ -22,21 +22,19 @@ epse = 1.0e-1
 epsB = 1.0e-3
 ksiN = 1.0
 dL = 1.23e26
-g0 = 0.0
 
-Y = np.array([thV, E0, thC, thW, b, L0, q, ts, n0, p, epse, epsB, ksiN, dL,
-              g0])
+Y = np.array([thV, E0, thC, thW, b, L0, q, ts, n0, p, epse, epsB, ksiN, dL])
 
 ta = 1.0e-1 * day
 tb = 1.0e3 * day
-t = np.logspace(np.log10(ta), np.log10(tb), base=10.0, num=100)
+t = np.logspace(np.log10(ta), np.log10(tb), base=10.0, num=300)
 
 nu = np.empty(t.shape)
 nu[:] = 1.0e14
 
 
 print("Calculating")
-Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y, spread=True)
+Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y, spread=True, latRes=5)
 
 print("Writing lc.txt")
 f = open("lc.txt", 'w')
@@ -51,7 +49,7 @@ f.close()
 print("Plotting")
 title = r"$E_0$ = {0:.01f}x$10^{{52}}$erg".format(E0/1.0e52)
 title += r"   $n_0$ = {0:.01f}cm$^{{-3}}$".format(n0)
-title += r"   $\nu$ = $10^{{14}}$Hz".format(n0)
+title += r"   $\nu$ = $10^{{14}}$Hz"
 
 fig, ax = plt.subplots(1, 1)
 """
@@ -60,10 +58,14 @@ for thV in thVs:
     Y[0] = thV
     Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y)
     ax.plot(t/day, Fnu, label=r'$\theta_V$ = {0:.02f} rad'.format(thV))
+Y[0] = thV
+bs = [1.0, 2.0, 4.0, 8.0]
+for b in bs:
+    Y[4] = b
+    Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y)
+    ax.plot(t/day, Fnu, label=r'$b$ = {0:.1f} rad'.format(b))
 ax.legend()
 """
-ax.plot(t/day, Fnu)
-Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y, spread=False)
 ax.plot(t/day, Fnu)
 ax.set_xscale('log')
 ax.set_yscale('log')

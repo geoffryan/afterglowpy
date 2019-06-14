@@ -44,7 +44,8 @@
 #define _powerlaw_core 1 //has a core as well
 #define _Gaussian_core 2 // has a core as well
 #define _powerlaw 4
-#define _twocomponent 5
+#define _exponential 5
+#define _twocomponent 6
 
 //Integration accuracy targets (for non GSL functions)
 #define R_ACC 1.0e-6
@@ -82,6 +83,7 @@ struct fluxParams
     double b;
     double E_tot;
     double g_core;
+    double theta_core_global;
 
     double L0;
     double q;
@@ -112,6 +114,13 @@ struct fluxParams
     double *mu_table;
     int table_entries;
 
+    double *t_table_inner;
+    double *R_table_inner;
+    double *u_table_inner;
+    double *th_table_inner;
+    double *mu_table_inner;
+    int table_entries_inner;
+
     int spec_type;
 
     double (*f_E)(double, void *);
@@ -128,6 +137,7 @@ double f_E_tophat(double theta, void *params);
 double f_E_Gaussian(double theta, void *params);
 double f_E_powerlaw(double theta, void *params);
 double f_E_twocomponent(double theta, void *params);
+double f_E_exponential(double theta, void *params);
 double f_Etot_tophat(void *params);
 double f_Etot_Gaussian(void *params);
 double f_Etot_powerlaw(void *params);
@@ -142,7 +152,7 @@ int searchSorted(double x, double *arr, int N);
 double interpolateLin(int a, int b, double x, double *X, double *Y, int N);
 double interpolateLog(int a, int b, double x, double *X, double *Y, int N);
 double find_jet_edge(double phi, double cto, double sto, double theta0,
-                     double frac, double *a_mu, double *a_thj, int N);
+                     double *a_mu, double *a_thj, int N);
 double theta_integrand(double a_theta, void* params); // inner integral
 double phi_integrand(double a_phi, void* params); // outer integral
 void theta_integrand_vec(double theta, double *Fnu, double *t, double *nu,
@@ -211,7 +221,7 @@ void calc_flux_density(int jet_type, int spec_type,
                             double b, double L0, double q, double ts, 
                             double n_0, double p, double epsilon_E,
                             double epsilon_B, double ksi_N, double d_L,
-                            double g0,
+                            double g0, double theta_h_core_global,
                             int tRes, int latRes, double rtol,
                             double *mask, int nmask, int spread);
 void calc_intensity(int jet_type, int spec_type, double *theta, double *phi,
@@ -221,7 +231,7 @@ void calc_intensity(int jet_type, int spec_type, double *theta, double *phi,
                             double b, double L0, double q, double ts, 
                             double n_0, double p, double epsilon_E,
                             double epsilon_B, double ksi_N, double d_L,
-                            double g0,
+                            double g0, double theta_h_core_global,
                             int tRes, int latRes, double rtol, double *mask,
                             int nmask, int spread);
 
@@ -236,6 +246,7 @@ void setup_fluxParams(struct fluxParams *pars,
                     double epsilon_B, 
                     double ksi_N,
                     double g0,
+                    double theta_h_core_global,
                     double ta, double tb, double tRes,
                     int spec_type, double flux_rtol,
                     double *mask, int nmask, int spread);
