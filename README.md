@@ -6,6 +6,26 @@ A Python module to calculate GRB afterglow light curves and spectra. Makes liber
 
 If you use this code in a publication, please refer to the package by name and cite "Ryan, G., van Eerten, H., Troja, E., and Piro, L. (in prep)". A publication describing the code is forthcoming in the very near future.
 
+## Features
+
+afterglowpy computes synchrotron emission from the forward shock of a relativistic blast wave.  It includes:
+- Fully trans-relativistic shock evolution through a constant density medium.
+- On-the-fly integration over the equal-observer-time slices of the shock surface.
+- Approximate prescription for jet spreading.
+- Arbitrary viewing angles.
+- Angularly structured jets, ie. E(&theta;)
+- Spherical velocity-stratified outflows, ie. E(u)
+- Counter-jet emission.
+
+It has limited support (these should be considered experimental) for:
+- Initial energy injection
+- Inverse comption spectra
+- Spatially-resolved intensity maps
+
+It does not include (yet):
+- External wind medium, ie. n &prop; r<sup>-2</sup>
+- Reverse shock emission
+
 ## Installation/Building
 
 

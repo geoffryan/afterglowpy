@@ -43,7 +43,10 @@ def fluxDensity(t, nu, jetType, specType, *args, **kwargs):
     # Default spreading method
     if 'spread' in kwargs:
         if kwargs['spread'] is True:
-            kwargs['spread'] = 7
+            if jetType == -2 and 'thetaCoreGlobal' in kwargs:
+                kwargs['spread'] = 8
+            else:
+                kwargs['spread'] = 7
 
     # timeA = time.time()
     if jetType == 3:
