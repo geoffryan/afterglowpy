@@ -8,7 +8,7 @@ If you use this code in a publication, please refer to the package by name and c
 
 ## Features
 
-afterglowpy computes synchrotron emission from the forward shock of a relativistic blast wave.  It includes:
+_afterglowpy_ computes synchrotron emission from the forward shock of a relativistic blast wave.  It includes:
 - Fully trans-relativistic shock evolution through a constant density medium.
 - On-the-fly integration over the equal-observer-time slices of the shock surface.
 - Approximate prescription for jet spreading.
@@ -24,6 +24,7 @@ It has limited support (these should be considered experimental) for:
 
 It does not include (yet):
 - External wind medium, ie. n &prop; r<sup>-2</sup>
+- Synchrotron self-absorbtion
 - Reverse shock emission
 
 ## Installation/Building
