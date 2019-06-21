@@ -21,11 +21,14 @@ It has limited support (these should be considered experimental) for:
 - Initial energy injection
 - Inverse comption spectra
 - Spatially-resolved intensity maps
+- Early coasting phase
 
 It does not include (yet):
 - External wind medium, ie. n &prop; r<sup>-2</sup>
 - Synchrotron self-absorbtion
 - Reverse shock emission
+
+_afterglowpy_ has been calibrated to the BoxFit code ([van Eerten, van der Horst, & Macfadyen 2011](https://arxiv.org/abs/1110.5089), available at the [Afterglow Library](https://cosmo.nyu.edu/afterglowlibrary/boxfit2011.html)) and produces similar light curves for top hat jets (within 50% when same parameters are used) both on- and off-axis.  Its jet models by default do not include an initial coasting phase, which may effect predictions for early observations.
 
 ## Installation/Building
 
