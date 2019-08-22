@@ -65,12 +65,20 @@ def fluxDensity(t, nu, jetType, specType, *args, **kwargs):
 def intensity(theta, phi, t, nu, jetType, specType, *args, **kwargs):
 
     if 'z' in kwargs.keys():
-        z = kwargs['z']
+        z = kwargs.pop('z')
     else:
         z = 0.0
 
     tz = t / (1+z)
     nuz = nu * (1+z)
+
+    # Default spreading method
+    if 'spread' in kwargs:
+        if kwargs['spread'] is True:
+            if jetType == -2 and 'thetaCoreGlobal' in kwargs:
+                kwargs['spread'] = 8
+            else:
+                kwargs['spread'] = 7
 
     Inu = np.empty(theta.shape)
     Inu.flat[:] = jet.intensity(theta.flat, phi.flat, tz.flat, nuz.flat,
@@ -78,8 +86,7 @@ def intensity(theta, phi, t, nu, jetType, specType, *args, **kwargs):
 
     # K-correct the intensity
     # I'm only using the flux correction here, which leaves the angular
-    # part of the intensity uncorrected. This function is approximate
-    # anyways, so oh well!
+    # part of the intensity uncorrected.  Best be careful.
 
     Inu *= 1+z
 

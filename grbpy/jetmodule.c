@@ -16,7 +16,9 @@ static char fluxDensity_docstring[] =
 static char emissivity_docstring[] = 
     "Calculate the instantaneous emissivity of a sector of a blastwave.";
 static char intensity_docstring[] = 
-    "Calculate the instantaneous emissivity of a sector of a blastwave.";
+    "Calculate the position dependent intensity of a blastwave.";
+static char shockVals_docstring[] = 
+    "Calculate the shock values of the blastwave.";
 static char shock_docstring[] = 
     "Calculate the evolution of a tophat shock.";
 static char shockObs_docstring[] = 
@@ -29,6 +31,8 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
                                     PyObject *kwargs);
 static PyObject *jet_emissivity(PyObject *self, PyObject *args);
 static PyObject *jet_intensity(PyObject *self, PyObject *args, 
+                                    PyObject *kwargs);
+static PyObject *jet_shockVals(PyObject *self, PyObject *args, 
                                     PyObject *kwargs);
 static PyObject *jet_shock(PyObject *self, PyObject *args);
 static PyObject *jet_shockObs(PyObject *self, PyObject *args);
@@ -51,6 +55,8 @@ static PyMethodDef jetMethods[] = {
     {"emissivity", jet_emissivity, METH_VARARGS, emissivity_docstring},
     {"intensity", (PyCFunction)jet_intensity, METH_VARARGS|METH_KEYWORDS,
         intensity_docstring},
+    {"shockVals", (PyCFunction)jet_shockVals, METH_VARARGS|METH_KEYWORDS,
+        shockVals_docstring},
     {"shock", jet_shock, METH_VARARGS, shock_docstring},
     {"shockObs", jet_shockObs, METH_VARARGS, shockObs_docstring},
     {"find_jet_edge", jet_find_jet_edge, METH_VARARGS, 
@@ -144,27 +150,31 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     int latRes = 5;
     double rtol = 1.0e-4;
     int tRes = 1000;
-    int spread = 1;
+    int spread = 7;
+    int gamma_type = 0;
     double g0 = -1.0;
+    double E_core_global = 0.0;
     double theta_h_core_global = 0.0;
     static char *kwlist[] = {"t", "nu", "jetType", "specType", "thetaObs", 
                                 "E0", "thetaCore", "thetaWing", "b",
                                 "L0", "q", "ts",
                                 "n0", "p",
                                 "epsilon_e", "epsilon_B", "ksiN", "dL",
-                                "g0", "thetaCoreGlobal",
+                                "g0", "E0Global", "thetaCoreGlobal",
                                 "tRes", "latRes", "rtol", "mask", "spread",
+                                "gammaType",
                                 NULL};
 
     //Parse Arguments
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "OOiidddddddddddddd|ddiidOi",
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs,
+                "OOiidddddddddddddd|dddiidOii",
                 kwlist,
                 &t_obj, &nu_obj, &jet_type, &spec_type, &theta_obs, &E_iso_core,
                 &theta_h_core, &theta_h_wing, &b, &L0, &q, &ts,
                 &n_0, &p, &epsilon_E, &epsilon_B, 
                 &ksi_N, &d_L,
-                &g0, &theta_h_core_global,
-                &tRes, &latRes, &rtol, &mask_obj, &spread))
+                &g0, &E_core_global, &theta_h_core_global,
+                &tRes, &latRes, &rtol, &mask_obj, &spread, &gamma_type))
     {
         //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
         return NULL;
@@ -264,8 +274,8 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     calc_flux_density(jet_type, spec_type, t, nu, Fnu, N, theta_obs, 
                         E_iso_core, theta_h_core, theta_h_wing, b, L0, q, ts,
                         n_0, p, epsilon_E, epsilon_B, ksi_N, d_L, 
-                        g0, theta_h_core_global,
-                        tRes, latRes, rtol, mask, masklen, spread);
+                        g0, E_core_global, theta_h_core_global,
+                        tRes, latRes, rtol, mask, masklen, spread, gamma_type);
 #ifdef PROFILE2
     //Profile 2
     profClock2B = clock();
@@ -340,7 +350,9 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
     double rtol = 1.0e-4;
     int tRes = 1000;
     int spread = 7;
+    int gamma_type = 0;
     double g0 = -1.0;
+    double E_core_global = 0.0;
     double theta_h_core_global = 0.0;
     static char *kwlist[] = {"theta", "phi", "t", "nu", "jetType", "specType",
                                 "thetaObs", 
@@ -348,18 +360,21 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
                                 "L0", "q", "ts",
                                 "n0", "p",
                                 "epsilon_e", "epsilon_B", "ksiN", "dL",
-                                "g0", "thetaCoreGlobal",
+                                "g0", "E0Global", "thetaCoreGlobal",
                                 "tRes", "latRes", "rtol", "mask", "spread",
+                                "gammaType",
                                 NULL};
 
     //Parse Arguments
-    if(!PyArg_ParseTupleAndKeywords(args, kwargs, "OOOOiiddddddddddddd|iidOi",
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs,
+                                    "OOOOiidddddddddddddd|dddiidOii",
                 kwlist,
                 &theta_obj, &phi_obj, &t_obj, &nu_obj, &jet_type, &spec_type,
                 &theta_obs, &E_iso_core,
                 &theta_h_core, &theta_h_wing, &b, &L0, &q, &ts,
-                &n_0, &p, &epsilon_E, &epsilon_B, 
-                &ksi_N, &d_L, &tRes, &latRes, &rtol, &mask_obj, &spread))
+                &n_0, &p, &epsilon_E, &epsilon_B, &ksi_N, &d_L,
+                &g0, &E_core_global, &theta_h_core_global,
+                &tRes, &latRes, &rtol, &mask_obj, &spread, &gamma_type))
     {
         //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
         return NULL;
@@ -477,8 +492,8 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
     calc_intensity(jet_type, spec_type, theta, phi, t, nu, Inu, N, theta_obs, 
                         E_iso_core, theta_h_core, theta_h_wing, b, L0, q, ts,
                         n_0, p, epsilon_E, epsilon_B, ksi_N, d_L,
-                        g0, theta_h_core_global,
-                        tRes, latRes, rtol, mask, masklen, spread);
+                        g0, E_core_global, theta_h_core_global,
+                        tRes, latRes, rtol, mask, masklen, spread, gamma_type);
 
     // Clean up!
     Py_DECREF(theta_arr);
@@ -490,6 +505,177 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
 
     //Build output
     PyObject *ret = Py_BuildValue("N", Inu_obj);
+    
+    return ret;
+}
+
+static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    PyObject *theta_obj = NULL;
+    PyObject *phi_obj = NULL;
+    PyObject *tobs_obj = NULL;
+    PyObject *mask_obj = NULL;
+
+    int jet_type;
+    double theta_obs, E_iso_core, theta_h_core, theta_h_wing, b, L0, q, ts,
+           n_0, p, epsilon_E, epsilon_B, ksi_N, d_L;
+
+    int latRes = 5;
+    double rtol = 1.0e-4;
+    int tRes = 1000;
+    int spread = 7;
+    int gamma_type = 0;
+    double g0 = -1.0;
+    double E_core_global = 0.0;
+    double theta_h_core_global = 0.0;
+    static char *kwlist[] = {"theta", "phi", "tobs", "jetType",
+                                "thetaObs", 
+                                "E0", "thetaCore", "thetaWing", "b",
+                                "L0", "q", "ts",
+                                "n0", "p",
+                                "epsilon_e", "epsilon_B", "ksiN", "dL",
+                                "g0", "E0Global", "thetaCoreGlobal",
+                                "tRes", "latRes", "rtol", "mask", "spread",
+                                "gammaType",
+                                NULL};
+
+    //Parse Arguments
+    if(!PyArg_ParseTupleAndKeywords(args, kwargs,
+                                    "OOOidddddddddddddd|dddiidOii",
+                kwlist,
+                &theta_obj, &phi_obj, &tobs_obj, &jet_type,
+                &theta_obs, &E_iso_core,
+                &theta_h_core, &theta_h_wing, &b, &L0, &q, &ts,
+                &n_0, &p, &epsilon_E, &epsilon_B, &ksi_N, &d_L,
+                &g0, &E_core_global, &theta_h_core_global,
+                &tRes, &latRes, &rtol, &mask_obj, &spread, &gamma_type))
+    {
+        //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
+        return NULL;
+    }
+
+    //Grab NUMPY arrays
+    PyArrayObject *theta_arr;
+    PyArrayObject *phi_arr;
+    PyArrayObject *tobs_arr;
+    PyArrayObject *mask_arr = NULL;
+
+    theta_arr = (PyArrayObject *) PyArray_FROM_OTF(theta_obj, NPY_DOUBLE,
+                                                NPY_ARRAY_IN_ARRAY);
+    phi_arr = (PyArrayObject *) PyArray_FROM_OTF(phi_obj, NPY_DOUBLE,
+                                                NPY_ARRAY_IN_ARRAY);
+    tobs_arr = (PyArrayObject *) PyArray_FROM_OTF(tobs_obj, NPY_DOUBLE,
+                                                NPY_ARRAY_IN_ARRAY);
+    if(mask_obj != NULL)
+        mask_arr = (PyArrayObject *) PyArray_FROM_OTF(mask_obj, NPY_DOUBLE,
+                                                NPY_ARRAY_IN_ARRAY);
+
+    if(theta_arr == NULL || phi_arr == NULL || tobs_arr == NULL
+            || (mask_obj != NULL && mask_arr == NULL))
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Could not read input arrays.");
+        Py_XDECREF(theta_arr);
+        Py_XDECREF(phi_arr);
+        Py_XDECREF(tobs_arr);
+        Py_XDECREF(mask_arr);
+        return NULL;
+    }
+
+    int theta_ndim = (int) PyArray_NDIM(theta_arr);
+    int phi_ndim = (int) PyArray_NDIM(phi_arr);
+    int tobs_ndim = (int) PyArray_NDIM(tobs_arr);
+    int mask_ndim = 0;
+    if(mask_obj != NULL)
+        mask_ndim = (int) PyArray_NDIM(mask_arr);
+
+    if(theta_ndim != 1 || phi_ndim != 1 || tobs_ndim != 1
+            || (mask_obj != NULL && mask_ndim != 1))
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Arrays must be 1-D.");
+        Py_DECREF(theta_arr);
+        Py_DECREF(phi_arr);
+        Py_DECREF(tobs_arr);
+        if(mask_obj != NULL)
+            Py_DECREF(mask_arr);
+        return NULL;
+    }
+
+    int N = (int)PyArray_DIM(theta_arr, 0);
+    int Np = (int)PyArray_DIM(phi_arr, 0);
+    int Ntobs = (int)PyArray_DIM(tobs_arr, 0);
+    int Nmask = 0;
+    if(mask_obj != NULL)
+        Nmask = (int)PyArray_DIM(mask_arr, 0);
+
+    if(N!=Np || N!=Ntobs || Np!=Ntobs)
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Arrays must be same size.");
+        Py_DECREF(theta_arr);
+        Py_DECREF(phi_arr);
+        Py_DECREF(tobs_arr);
+        if(mask_obj != NULL)
+            Py_DECREF(mask_arr);
+        return NULL;
+    }
+    if(mask_obj != NULL && Nmask%9 != 0)
+    {
+        PyErr_SetString(PyExc_RuntimeError, 
+                            "Mask length must be multiple of 9.");
+        Py_DECREF(theta_arr);
+        Py_DECREF(phi_arr);
+        Py_DECREF(tobs_arr);
+        if(mask_obj != NULL)
+            Py_DECREF(mask_arr);
+        return NULL;
+    }
+
+    double *theta = (double *)PyArray_DATA(theta_arr);
+    double *phi = (double *)PyArray_DATA(phi_arr);
+    double *tobs = (double *)PyArray_DATA(tobs_arr);
+    double *mask = NULL;
+    if(mask_obj != NULL)
+        mask = (double *)PyArray_DATA(mask_arr);
+    int masklen = Nmask/9;
+
+    //Allocate output array
+
+    npy_intp dims[1] = {N};
+    PyObject *t_obj = PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+    PyObject *R_obj = PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+    PyObject *u_obj = PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+    PyObject *thj_obj = PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+
+    if(t_obj == NULL || R_obj == NULL || u_obj == NULL || thj_obj == NULL)
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Could not make arrays.");
+        Py_DECREF(theta_arr);
+        Py_DECREF(phi_arr);
+        Py_DECREF(tobs_arr);
+        if(mask_obj != NULL)
+            Py_DECREF(mask_arr);
+        return NULL;
+    }
+    double *t = PyArray_DATA((PyArrayObject *) t_obj);
+    double *R = PyArray_DATA((PyArrayObject *) R_obj);
+    double *u = PyArray_DATA((PyArrayObject *) u_obj);
+    double *thj = PyArray_DATA((PyArrayObject *) thj_obj);
+
+    // Calculate the intensity!
+    calc_shockVals(jet_type, theta, phi, tobs, t, R, u, thj, N, theta_obs, 
+                    E_iso_core, theta_h_core, theta_h_wing, b, L0, q, ts,
+                    n_0, p, epsilon_E, epsilon_B, ksi_N, d_L,
+                    g0, E_core_global, theta_h_core_global,
+                    tRes, latRes, rtol, mask, masklen, spread, gamma_type);
+
+    // Clean up!
+    Py_DECREF(theta_arr);
+    Py_DECREF(phi_arr);
+    Py_DECREF(tobs_arr);
+    if(mask_obj != NULL)
+        Py_DECREF(mask_arr);
+
+    //Build output
+    PyObject *ret = Py_BuildValue("NNNN", t_obj, R_obj, u_obj, thj_obj);
     
     return ret;
 }
@@ -614,9 +800,18 @@ static PyObject *jet_shockObs(PyObject *self, PyObject *args)
     pars.u_table = NULL;
     pars.th_table = NULL;
     pars.mu_table = NULL;
+    pars.table_entries = 0;
+    pars.t_table_inner = NULL;
+    pars.R_table_inner = NULL;
+    pars.u_table_inner = NULL;
+    pars.th_table_inner = NULL;
+    pars.mu_table_inner = NULL;
+    pars.table_entries_inner = 0;
     pars.spread = spread;
 
+    printf("set_jet_params\n");
     set_jet_params(&pars, E0, thetah);
+    printf("done\n");
 
     //Allocate output arrays
     int N = pars.table_entries;
