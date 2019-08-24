@@ -4,6 +4,9 @@ import imp
 
 version = imp.load_source('afterglowpy.version', 'version.py')
 
+with open("README.md", "r") as f:
+    long_description = f.read()
+
 inc = [np.get_include()]
 libs = []
 libdirs = []
@@ -25,13 +28,20 @@ shockmodule = Extension('afterglowpy.shock', sources=shocksources,
 setup(
     name='afterglowpy',
     version=version.version,
-    description='GRBAfterglowModels',
+    author="Geoffrey Ryan",
+    author_email="gsryan@umd.edu",
+    description='GRB Afterglow Models',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
+    url='https://github.com/geoffryan/afterglowpy',
     packages=['afterglowpy'],
     ext_modules=[jetmodule, shockmodule],
     classifiers=[
-        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
         "Programming Language :: C",
-        "Development Status :: 3 - Alpha",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",
         "Topic :: Scientific/Engineering :: Astronomy"],
     install_requires=['numpy>=1.10', 'scipy>=0.14'],
