@@ -2,9 +2,7 @@
 # import math
 import numpy as np
 import matplotlib.pyplot as plt
-import grbpy as grb
-
-day = 86400.0
+import afterglowpy as grb
 
 jetType = 4
 specType = 0
@@ -25,8 +23,9 @@ dL = 1.23e26
 
 Y = np.array([thV, E0, thC, thW, b, L0, q, ts, n0, p, epse, epsB, ksiN, dL])
 
-ta = 1.0e-2 * day
-tb = 1.0e3 * day
+ta = 1.0e-2 * grb.day2sec
+
+tb = 1.0e3 * grb.day2sec
 t = np.logspace(np.log10(ta), np.log10(tb), base=10.0, num=300)
 
 nu = np.empty(t.shape)
@@ -54,31 +53,43 @@ thVs = [0.1, 0.5, 1.0, 1.4]
 for thV in thVs:
     Y[0] = thV
     Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y)
-    ax.plot(t/day, Fnu, label=r'$\theta_V$ = {0:.02f} rad'.format(thV))
+    ax.plot(t/grb.day2sec, Fnu, label=r'$\theta_V$ = {0:.02f} rad'.format(thV))
 Y[0] = thV
 bs = [1.0, 2.0, 4.0, 8.0]
 for b in bs:
     Y[4] = b
     Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y)
-    ax.plot(t/day, Fnu, label=r'$b$ = {0:.1f} rad'.format(b))
+    ax.plot(t/grb.day2sec, Fnu, label=r'$b$ = {0:.1f} rad'.format(b))
 ax.legend()
 """
-ax.plot(t/day, Fnu, label=r'$\theta_{{\mathrm{{obs}}}} = {0:.2f}$ rad $\gamma_0 = \infty$'.format(thV))
+ax.plot(t/grb.day2sec, Fnu,
+        label=r'$\theta_{{\mathrm{{obs}}}} = {0:.2f}$ rad $\gamma_0 = \infty$'
+        .format(thV))
 g0 = 1000.0
 Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y, g0, spread=False, latRes=5)
-ax.plot(t/day, Fnu, label=r'$\theta_{{\mathrm{{obs}}}} = {0:.2f}$ rad $\gamma_0 = {1:g}$'.format(thV, g0))
+ax.plot(t/grb.day2sec, Fnu,
+        label=r'$\theta_{{\mathrm{{obs}}}} = {0:.2f}$ rad $\gamma_0 = {1:g}$'
+        .format(thV, g0))
 thV = 0.1
 Y[0] = thV
 Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y, spread=False, latRes=5)
-ax.plot(t/day, Fnu, label=r'$\theta_{{\mathrm{{obs}}}} = {0:.2f}$ rad $\gamma_0 = \infty$'.format(thV))
+ax.plot(t/grb.day2sec, Fnu,
+        label=r'$\theta_{{\mathrm{{obs}}}} = {0:.2f}$ rad $\gamma_0 = \infty$'
+        .format(thV))
 Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y, g0, spread=False, latRes=5)
-ax.plot(t/day, Fnu, label=r'$\theta_{{\mathrm{{obs}}}} = {0:.2f}$ rad $\gamma_0 = {1:g}$'.format(thV, g0))
+ax.plot(t/grb.day2sec, Fnu,
+        label=r'$\theta_{{\mathrm{{obs}}}} = {0:.2f}$ rad $\gamma_0 = {1:g}$'
+        .format(thV, g0))
 thV = 0.5
 Y[0] = thV
 Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y, spread=False, latRes=5)
-ax.plot(t/day, Fnu, label=r'$\theta_{{\mathrm{{obs}}}} = {0:.2f}$ rad $\gamma_0 = \infty$'.format(thV))
+ax.plot(t/grb.day2sec, Fnu,
+        label=r'$\theta_{{\mathrm{{obs}}}} = {0:.2f}$ rad $\gamma_0 = \infty$'
+        .format(thV))
 Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y, g0, spread=False, latRes=5)
-ax.plot(t/day, Fnu, label=r'$\theta_{{\mathrm{{obs}}}} = {0:.2f}$ rad $\gamma_0 = {1:g}$'.format(thV, g0))
+ax.plot(t/grb.day2sec, Fnu,
+        label=r'$\theta_{{\mathrm{{obs}}}} = {0:.2f}$ rad $\gamma_0 = {1:g}$'
+        .format(thV, g0))
 ax.set_xscale('log')
 ax.set_yscale('log')
 ax.set_xlabel(r'$t$ (d)')

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""GRBpy"""
+"""Afterglowpy"""
 from . import shock
 from . import cocoon
 from . import jet

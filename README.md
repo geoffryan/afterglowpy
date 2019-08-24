@@ -49,7 +49,7 @@ $ python3 setup.py install
 
 **This interface will be updated to be more sensible in the VERY near future**
 
-In your python code, import the library with `import grbpy as grb`.  
+In your python code, import the library with `import afterglowpy as grb`.  
 
 The main function of interest is`grb.fluxDensity(t, nu, jetType, specType, *pars, **kwargs)`.  See `tests/plotLC.py` for a simple example.
 
