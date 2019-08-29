@@ -1,8 +1,12 @@
 from setuptools import setup, Extension
 import numpy as np
-import imp
+# import imp
 
-version = imp.load_source('afterglowpy.version', 'version.py')
+# version = imp.load_source('afterglowpy.version', 'afterglowpy/version.py')
+
+version = {}
+with open("afterglowpy/version.py", "r") as f:
+    exec(f.read(), version)
 
 with open("README.md", "r") as f:
     long_description = f.read()
@@ -27,7 +31,7 @@ shockmodule = Extension('afterglowpy.shock', sources=shocksources,
 
 setup(
     name='afterglowpy',
-    version=version.version,
+    version=version['__version__'],
     author="Geoffrey Ryan",
     author_email="gsryan@umd.edu",
     description='GRB Afterglow Models',
