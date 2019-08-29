@@ -33,6 +33,7 @@ setup(
     description='GRB Afterglow Models',
     long_description=long_description,
     long_description_content_type='text/markdown',
+    license='MIT',
     url='https://github.com/geoffryan/afterglowpy',
     packages=['afterglowpy'],
     ext_modules=[jetmodule, shockmodule],
