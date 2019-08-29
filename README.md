@@ -1,6 +1,6 @@
 # Semi-analytic GRB Afterglow models
 
-A Python module to calculate GRB afterglow light curves and spectra. Details of the methods can be found in Ryan et al 2019. Builds on [van Eerten & MacFadyen 2010](https://arxiv.org/abs/1006.5125) and [van Eerten 2018](https://arxiv.org/abs/1801.01848).  This code is under active development.
+A Python 3 module to calculate GRB afterglow light curves and spectra. Details of the methods can be found in Ryan et al 2019. Builds on [van Eerten & MacFadyen 2010](https://arxiv.org/abs/1006.5125) and [van Eerten 2018](https://arxiv.org/abs/1801.01848).  This code is under active development.
 
 ## Attribution
 
