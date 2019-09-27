@@ -9,6 +9,8 @@ You can install *afterglowpy* with pip::
 
     $ pip install afterglowpy
 
+This documentation is still a little thin.  Please read the Quickstart, check out the examples on Github: `<https://github.com/geoffryan/afterglowpy>`_, and contact the author if you have any questions or issues.
+
 Contents
 ^^^^^^^^
 
