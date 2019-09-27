@@ -15,6 +15,8 @@ A light curve from a top-hat jet may be created with::
     import numpy as np
     import afterglowpy as grb
 
+    jetType = -1     # top hat jet
+
     thetaObs = 0.05  # Viewing angle in radians
     E0 = 1.0e53      # Isotropic-equivalent energy in erg
     thetaC = 0.1     # Half-opening angle in radians
@@ -28,7 +30,10 @@ A light curve from a top-hat jet may be created with::
     dL = 1.0e28      # Luminosity distance in cm
     z = 0.55         # redshift
 
+    # Space time points geometrically, from 10^3 s to 10^7 s
     t = np.geomspace(1.0e3, 1.0e7, 300)
+
+    # Calculate flux in a single X-ray band (all times have same frequency)
     nu = np.empty(t.shape)
     nu[:] = 1.0e18
 
@@ -45,4 +50,28 @@ A light curve from a top-hat jet may be created with::
 
 ``Fnu`` is now an array, same size as ``t`` and ``nu``, containing the observed flux in mJy at each time and frequency.
 
+Let's calculate the light curve for a Gaussian jet with the same parameters. A Gaussian jet has an isotropic-energy profile E(theta) = E0 * exp(-0.5*theta^2/thetaC^2).  Now that ``thetaC`` sets the Gaussian width of the jet core, and we need to provide a sensible value for ``thetaW`` to truncate the outer regions of the jet::
 
+    jetType = 0     # Gaussian jet
+
+    # We'll re-use the Y[] array, just change some values in place
+    
+    Y[0] = 0.3       # Larger viewing angle, just for fun
+    Y[3] = 4*thetaC  # Setting thetaW
+
+    # Nothing else to change, so calculate!
+
+    Fnu_G = grb.fluxDensity(t, nu, jetType, 0, *Y, **Z)
+
+A power law structured jet has E(theta) ~ theta^(-b) for theta >> thetaC.  We need to give ``b`` a reasonable value::
+
+    jetType = 4     # power law
+
+    # Set b
+    Y[4] = 6.0      # The rough ballpark from RHD simulations
+
+    # Calculate!
+
+    Fnu_PL = grb.fluxDensity(t, nu, jetType, 0, *Y, **Z)
+
+There you go! Simple X-ray light curves for three different jet models.
