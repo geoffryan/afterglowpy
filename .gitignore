@@ -9,3 +9,5 @@ dist/
 *.json
 *.h5
 *.pdf
+*.txt
+scratch/
