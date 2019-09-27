@@ -52,5 +52,8 @@ setup(
     install_requires=['numpy>=1.10', 'scipy>=0.14'],
     extras_require={
         'docs': ['numpydoc']
-        }
+        },
+    project_urls={
+        "Source Code": "https://github.com/geoffryan/afterglowpy",
+        "Documentation": "https://afterglowpy.readthedocs.io"}
     )
