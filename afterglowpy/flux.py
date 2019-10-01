@@ -347,6 +347,61 @@ def checkThetaPhiTNu(theta, phi, t, nu):
 
 
 def checkJetArgs(jetType, specType, *args, **kwargs):
+
+    for x in args:
+        if not np.isfinite(x):
+            raise ValueError("All parameters must be finite")
+
+    theta_obs = args[0]
+    E0 = args[1]
+    theta_c = args[2]
+    theta_w = args[3]
+    b = args[4]
+    L0 = args[5]
+    t_s = args[7]
+    n0 = args[8]
+    p = args[9]
+    epse = args[10]
+    epsB = args[11]
+    xiN = args[12]
+    dL = args[13]
+
+    # More-or-less universal bounds
+    if theta_obs < 0.0 or theta_obs > 0.5*np.pi:
+        raise ValueError("theta_obs must be in [0.0, pi/2]")
+    if E0 <= 0.0:
+        raise ValueError("E0 must be positive")
+    if theta_c <= 0.0 or theta_c > 0.5*np.pi:
+        raise ValueError("theta_c must be in (0.0, pi/2]")
+    if jetType != -1 and (theta_w <= 0.0 or theta_w > 0.5*np.pi):
+        raise ValueError("theta_w must be in (0.0, pi/2]")
+    if jetType == 4 and b <= 0.0:
+        raise ValueError("b must be positive")
+    if L0 < 0.0:
+        raise ValueError("L0 must be non-negative")
+    if t_s < 0.0:
+        raise ValueError("t_s must be non-negative")
+    if n0 <= 0.0:
+        raise ValueError("n0 must be positive")
+    if specType != 2 and p <= 2.0:
+        raise ValueError("p must be in (2, inf)")
+    if epse <= 0.0 or epse > 1.0:
+        raise ValueError("epsilon_e must be in (0, 1]")
+    if epsB <= 0.0 or epsB > 1.0:
+        raise ValueError("epsilon_B must be in (0, 1]")
+    if xiN <= 0.0 or xiN > 1.0:
+        raise ValueError("xi_N must be in (0, 1]")
+    if dL <= 0.0:
+        raise ValueError("dL must be positive")
+
+    if 'z' in kwargs:
+        if kwargs['z'] < 0.0:
+            raise ValueError("z must be non-negative")
+
+    # Specific bounds
+    if jetType == -2 and theta_c > theta_w:
+        raise ValueError("theta_w must be larger than theta_c for cone model")
+
     return
 
 

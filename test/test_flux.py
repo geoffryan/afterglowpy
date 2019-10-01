@@ -216,6 +216,145 @@ class TestFlux(unittest.TestCase):
         self.assertRaises(ValueError, flux.checkThetaPhiTNu,
                           3.0, a2_45, a2_45, a1_4)
 
+    def test_checkJetArgs(self):
+
+        EPS = 1.0e-8
+        Y0 = np.array([0.05, 1.0e53, 0.1, 0.4, 4, 0, 0, 0, 1.0, 2.2, 0.1,
+                       0.01, 0.99, 1.0e28])
+        Z0 = {'z': 0.5}
+
+        Y = Y0.copy()
+        Z = {}
+        for k in Z0:
+            Z[k] = Z0[k]
+
+        models = [-2, -1, 0, 1, 2, 4]
+        s = 0
+
+        for m in models:
+            self.assertIsNone(flux.checkJetArgs(m, s, *Y0, **Z))
+
+            # theta_obs
+            Y[0] = 0.0
+            self.assertIsNone(flux.checkJetArgs(m, s, *Y, **Z))
+            Y[0] = -0.1
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[0] = 0.5*np.pi + EPS
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[0] = Y0[0]
+
+            # E0
+            Y[1] = 0.0
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[1] = -1.0
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[1] = Y0[1]
+
+            # theta_C
+            Y[2] = 0.0
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[2] = -0.1
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[2] = 0.5*np.pi + EPS
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[2] = Y0[2]
+
+            # theta_W
+            if m != -1:
+                Y[3] = 0.0
+                self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+                Y[3] = -0.1
+                self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+                Y[3] = 0.5*np.pi + EPS
+                self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+                Y[3] = Y0[3]
+
+            # b
+            if m == 4:
+                Y[4] = 0.0
+                self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+                Y[4] = -1.0
+                self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+                Y[4] = Y0[4]
+
+            # L0
+            Y[5] = -1.0
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[5] = Y0[5]
+
+            # t_s
+            Y[7] = -1.0
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[7] = Y0[7]
+
+            # n0
+            Y[8] = 0.0
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[8] = -1.0
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[8] = Y0[8]
+
+            # p
+            Y[9] = 0.0
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[9] = 2.0
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[9] = 1.0
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[9] = -1.0
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[9] = Y0[9]
+
+            # eps_e
+            Y[10] = 1.0
+            self.assertIsNone(flux.checkJetArgs(m, s, *Y, **Z))
+            Y[10] = 1.0 + EPS
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[10] = 0.0
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[10] = -1.0
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[10] = Y0[10]
+
+            # eps_B
+            Y[11] = 1.0
+            self.assertIsNone(flux.checkJetArgs(m, s, *Y, **Z))
+            Y[11] = 1.0 + EPS
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[11] = 0.0
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[11] = -1.0
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[11] = Y0[11]
+
+            # xi_N
+            Y[12] = 1.0
+            self.assertIsNone(flux.checkJetArgs(m, s, *Y, **Z))
+            Y[12] = 1.0 + EPS
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[12] = 0.0
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[12] = -1.0
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[12] = Y0[12]
+
+            # dL
+            Y[13] = 0.0
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[13] = -1.0
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Y[13] = Y0[13]
+
+            # z
+            Z['z'] = -1.0
+            self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+            Z['z'] = Z0['z']
+
+        # specific for cone
+        m = -2
+        Y[3] = 0.5*Y[2]
+        self.assertRaises(ValueError, flux.checkJetArgs, m, s, *Y, **Z)
+
 
 if __name__ == "__main__":
     unittest.main()
