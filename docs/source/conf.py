@@ -10,10 +10,12 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
 
+
+import os
+import sys
+sys.path.insert(0, os.path.abspath('..'))
+from afterglowpy import __version__
 
 # -- Project information -----------------------------------------------------
 
@@ -22,7 +24,8 @@ copyright = '2019, Geoffrey Ryan'
 author = 'Geoffrey Ryan'
 
 # The full version, including alpha/beta/rc tags
-release = '0.6.3'
+release = __version__
+version = __version__
 
 
 # -- General configuration ---------------------------------------------------
@@ -30,7 +33,7 @@ release = '0.6.3'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc', 'recommonmark']
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.napoleon']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

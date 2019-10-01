@@ -14,9 +14,9 @@ def fluxDensity(t, nu, jetType, specType, *args, **kwargs):
 
     Parameters
     ----------
-    t: array_like
+    t: array_like or scalar
         Time since burst in observer frame, measured in seconds.
-    nu: array_like
+    nu: array_like or scalar
         Frequency of flux in observer frame, measured in Hz, same size as t.
     jetType: int
         Code for type of jet. Options are: -2 cone, -1 top hat, 0 Gaussian,
@@ -81,8 +81,23 @@ def fluxDensity(t, nu, jetType, specType, *args, **kwargs):
     -------
 
     The flux density F_nu in the observer frame, same shape as t and nu.
+
+    Raises
+    ------
+
+    ValueError
+        If t, nu are the wrong shape or arguments take illegal values.
     """
 
+    # Check Arguments, will raise ValueError if args are bad
+    t, nu = checkTNu(t, nu)
+
+    if jetType == 3:
+        checkCocoonArgs(jetType, specType, *args, **kwargs)
+    else:
+        checkJetArgs(jetType, specType, *args, **kwargs)
+
+    # arguments are good, full steam ahead!
     if 'z' in kwargs.keys():
         z = kwargs.pop('z')
     else:
@@ -100,10 +115,15 @@ def fluxDensity(t, nu, jetType, specType, *args, **kwargs):
                 kwargs['spread'] = 7
 
     # timeA = time.time()
+
+    Fnu = np.empty(tz.shape)
+
     if jetType == 3:
-        Fnu = cocoon.fluxDensity(tz, nuz, jetType, specType, *args, **kwargs)
+        Fnu.flat[:] = cocoon.fluxDensity(tz.flat, nuz.flat, jetType, specType,
+                                         *args, **kwargs)
     else:
-        Fnu = jet.fluxDensity(tz, nuz, jetType, specType, *args, **kwargs)
+        Fnu.flat[:] = jet.fluxDensity(tz.flat, nuz.flat, jetType, specType,
+                                      *args, **kwargs)
     # timeB = time.time()
     # print("Eval took: {0:f} s".format(timeB - timeA))
 
@@ -126,17 +146,18 @@ def intensity(theta, phi, t, nu, jetType, specType, *args, **kwargs):
 
     Parameters
     ----------
-    theta: array_like
-        Polar angle from jet axis in radians.
-    phi: array_like
+    theta: array_like or scalar
+        Polar angle from jet axis in radians. Scalar, or array of same shape
+        as phi, t, and nu.
+    phi: array_like or scalar
         Azimuthal angle around jet axis in radians. Observer is at phi = 0.
-        Same size as theta.
-    t: array_like
-        Time since burst in observer frame, measured in seconds. Same size as
-        theta.
-    nu: array_like
-        Frequency of flux in observer frame, measured in Hz, same size as
-        theta.
+        Scalar, or array of same shape as theta, t, and nu.
+    t: array_like or scalar
+        Time since burst in observer frame, measured in seconds. Scalar, or
+        array of same shape as theta, phi, and nu.
+    nu: array_like or scalar
+        Frequency of flux in observer frame, measured in Hz. Scalar, or array
+        of same shape as theta, phi, and t.
     jetType: int
         Code for type of jet. Options are: -2 cone, -1 top hat, 0 Gaussian,
         3 quasi-spherical refreshed shock, 4 Power law.
@@ -200,7 +221,24 @@ def intensity(theta, phi, t, nu, jetType, specType, *args, **kwargs):
     -------
 
     The flux density F_nu in the observer frame, same shape as t and nu.
+
+    Raises
+    ------
+
+    ValueError
+        If theta, phi, t, nu are the wrong shape or arguments take illegal
+        values.
     """
+
+    # Check Arguments, will raise ValueError if args are bad
+    t, nu = checkThetaPhiTNu(theta, phi, t, nu)
+
+    if jetType == 3:
+        checkCocoonArgs(jetType, specType, *args, **kwargs)
+    else:
+        checkJetArgs(jetType, specType, *args, **kwargs)
+
+    # arguments are good, full steam ahead!
 
     if 'z' in kwargs.keys():
         z = kwargs.pop('z')
@@ -229,3 +267,88 @@ def intensity(theta, phi, t, nu, jetType, specType, *args, **kwargs):
     Inu *= 1+z
 
     return Inu
+
+
+def checkTNu(t, nu):
+    # Make sure t and nu are array_like or castable to an array.
+    t = np.atleast_1d(t)
+    nu = np.atleast_1d(nu)
+
+    # Check shapes, if scalars make into right size array
+    if t.shape != nu.shape:
+        if t.shape == (1, ):
+            T = t[0]
+            t = np.empty(nu.shape)
+            t[:] = T
+        elif nu.shape == (1, ):
+            NU = nu[0]
+            nu = np.empty(t.shape)
+            nu[:] = NU
+        else:
+            raise ValueError("t and nu must be same shape or scalars")
+
+    return t, nu
+
+
+def checkThetaPhiTNu(theta, phi, t, nu):
+    # Make sure args are array_like or castable to an array.
+    theta = np.atleast_1d(theta)
+    phi = np.atleast_1d(phi)
+    t = np.atleast_1d(t)
+    nu = np.atleast_1d(nu)
+
+    shape = (1, )
+    if shape != theta.shape:
+        shape = theta.shape
+    elif shape != phi.shape:
+        shape = phi.shape
+    elif shape != t.shape:
+        shape = t.shape
+    else:
+        shape = nu.shape
+
+    if theta.shape != shape:
+        if theta.shape == (1, ):
+            TH = theta[0]
+            theta = np.empty(shape)
+            theta[:] = TH
+        else:
+            msg = "theta must be scalar or same shape as phi, t, nu"
+            raise ValueError(msg)
+
+    if phi.shape != shape:
+        if phi.shape == (1, ):
+            PH = phi[0]
+            phi = np.empty(shape)
+            phi[:] = PH
+        else:
+            msg = "phi must be scalar or same shape as theta, t, nu"
+            raise ValueError(msg)
+
+    if t.shape != shape:
+        if t.shape == (1, ):
+            T = t[0]
+            t = np.empty(shape)
+            t[:] = T
+        else:
+            msg = "t must be scalar or same shape as theta, phi, nu"
+            raise ValueError(msg)
+
+    if nu.shape != shape:
+        if nu.shape == (1, ):
+            NU = nu[0]
+            nu = np.empty(shape)
+            nu[:] = NU
+        else:
+            msg = "nu must be scalar or same shape as theta, phi, t"
+            raise ValueError(msg)
+
+    return theta, phi, t, nu
+
+
+def checkJetArgs(jetType, specType, *args, **kwargs):
+    return
+
+
+def checkCocoonArgs(jetType, specType, *args, **kwargs):
+    return
