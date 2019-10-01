@@ -21,24 +21,22 @@ dL = 1.23e26
 
 Y = np.array([thV, E0, thC, thW, b, L0, q, ts, n0, p, epse, epsB, ksiN, dL])
 
-T = 1.0 * grb.day2sec  # spectrum at 1 day
 
 nua = 1.0e6   # Frequencies in Hz
 nub = 1.0e20  # Frequencies in Hz
 
+t = 1.0 * grb.day2sec  # spectrum at 1 day
 nu = np.geomspace(nua, nub, num=100)
-t = np.empty(nu.shape)
-t[:] = T
 
 print("Calculating")
 Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y)
 
 print("Writing spec.txt")
 f = open("spec.txt", 'w')
-f.write("# t " + str(t[0]) + ' (s)\n')
+f.write("# t " + str(t) + ' (s)\n')
 f.write("# jetType " + str(jetType) + " specType " + str(specType)+"\n")
 f.write("# " + " ".join([str(y) for y in Y]) + "\n")
-for i in range(len(t)):
+for i in range(len(nu)):
     f.write("{0:.6e} {1:.6e}\n".format(nu[i], Fnu[i]))
 f.close()
 

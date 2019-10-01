@@ -25,23 +25,19 @@ ta = 1.0e-1 * grb.day2sec
 tb = 1.0e3 * grb.day2sec
 
 t = np.geomspace(ta, tb, num=100)
-
-nu = np.empty(t.shape)
-nu[:] = 2.0e17
-
+nu = 2.0e17
 
 print("Calculating")
 Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y, spread=False, latRes=5)
 
 print("Writing lc.txt")
 f = open("lc.txt", 'w')
-f.write("# nu " + str(nu[0]) + '\n')
+f.write("# nu " + str(nu) + '\n')
 f.write("# jetType " + str(jetType) + " specType " + str(specType)+"\n")
 f.write("# " + " ".join([str(y) for y in Y]) + "\n")
 for i in range(len(t)):
     f.write("{0:.6e} {1:.6e}\n".format(t[i], Fnu[i]))
 f.close()
-
 
 print("Plotting")
 fig, ax = plt.subplots(1, 1)

@@ -22,13 +22,9 @@ ta = 1.0e-1 * grb.day2sec
 tb = 1.0e3 * grb.day2sec
 t = np.geomspace(ta, tb, num=100)
 
-nuR = np.empty(t.shape)
-nuO = np.empty(t.shape)
-nuX = np.empty(t.shape)
-
-nuR[:] = 6.0e9
-nuO[:] = 1.0e14
-nuX[:] = 1.0e18
+nuR = 6.0e9
+nuO = 1.0e14
+nuX = 1.0e18
 
 print("Calc Radio")
 FnuR = grb.fluxDensity(t, nuR, jetType, specType, *Y)
@@ -52,6 +48,6 @@ ax.set_ylabel(r'$F_\nu$ (mJy)')
 ax.legend()
 fig.tight_layout()
 
-print("Saving lc.png")
-fig.savefig("lc.png")
+print("Saving lc_multi.png")
+fig.savefig("lc_multi.png")
 plt.close(fig)
