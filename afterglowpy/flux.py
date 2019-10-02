@@ -385,6 +385,8 @@ def checkJetArgs(jetType, specType, *args, **kwargs):
         raise ValueError("n0 must be positive")
     if specType != 2 and p <= 2.0:
         raise ValueError("p must be in (2, inf)")
+    if specType == 2 and p <= 1.0:
+        raise ValueError("p must be in (1, inf)")
     if epse <= 0.0 or epse > 1.0:
         raise ValueError("epsilon_e must be in (0, 1]")
     if epsB <= 0.0 or epsB > 1.0:
@@ -398,7 +400,7 @@ def checkJetArgs(jetType, specType, *args, **kwargs):
         if kwargs['z'] < 0.0:
             raise ValueError("z must be non-negative")
 
-    # Specific bounds
+    # Model Specific bounds
     if jetType == -2 and theta_c > theta_w:
         raise ValueError("theta_w must be larger than theta_c for cone model")
 
@@ -406,4 +408,51 @@ def checkJetArgs(jetType, specType, *args, **kwargs):
 
 
 def checkCocoonArgs(jetType, specType, *args, **kwargs):
+
+    for x in args:
+        if not np.isfinite(x):
+            raise ValueError("All parameters must be finite")
+
+    u_max = args[0]
+    u_min = args[1]
+    Ei = args[2]
+    Mej_solar = args[4]
+    L0 = args[5]
+    t_s = args[7]
+    n0 = args[8]
+    p = args[9]
+    epse = args[10]
+    epsB = args[11]
+    xiN = args[12]
+    dL = args[13]
+
+    if u_max <= 0.0:
+        raise ValueError("u_max must be positive")
+    if u_min <= 0.0:
+        raise ValueError("u_min must be positive")
+    if Ei <= 0.0:
+        raise ValueError("Ei must be positive")
+    if Mej_solar <= 0.0:
+        raise ValueError("Mej_solar must be positive")
+    if L0 < 0.0:
+        raise ValueError("L0 must be non-negative")
+    if t_s < 0.0:
+        raise ValueError("t_s must be non-negative")
+    if n0 <= 0.0:
+        raise ValueError("n0 must be positive")
+    if specType != 2 and p <= 2.0:
+        raise ValueError("p must be in (2, inf)")
+    if epse <= 0.0 or epse > 1.0:
+        raise ValueError("epsilon_e must be in (0, 1]")
+    if epsB <= 0.0 or epsB > 1.0:
+        raise ValueError("epsilon_B must be in (0, 1]")
+    if xiN <= 0.0 or xiN > 1.0:
+        raise ValueError("xi_N must be in (0, 1]")
+    if dL <= 0.0:
+        raise ValueError("dL must be positive")
+
+    if 'z' in kwargs:
+        if kwargs['z'] < 0.0:
+            raise ValueError("z must be non-negative")
+
     return
