@@ -231,7 +231,7 @@ def intensity(theta, phi, t, nu, jetType, specType, *args, **kwargs):
     """
 
     # Check Arguments, will raise ValueError if args are bad
-    t, nu = checkThetaPhiTNu(theta, phi, t, nu)
+    theta, phi, t, nu = checkThetaPhiTNu(theta, phi, t, nu)
 
     if jetType == 3:
         checkCocoonArgs(jetType, specType, *args, **kwargs)
