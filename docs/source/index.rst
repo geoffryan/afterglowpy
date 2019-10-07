@@ -11,6 +11,11 @@ You can install *afterglowpy* with pip::
 
 This documentation is still a little thin.  Please read the Quickstart, check out the examples on Github: `<https://github.com/geoffryan/afterglowpy>`_, and contact the author if you have any questions or issues.
 
+Attribution
++++++++++++
+
+If you use *afterglowpy* in your work, please refer to the package by name and cite the paper `Ryan et al. 2019 <https://arxiv.org/abs/1909.11691>`_.
+
 Contents
 ^^^^^^^^
 
@@ -18,7 +23,7 @@ Contents
    :maxdepth: 2
 
    quickstart.rst
-
+   api.rst
 
 
 Indices and tables

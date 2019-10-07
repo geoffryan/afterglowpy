@@ -1,6 +1,5 @@
 from . import cocoon
 from . import jet
-# import time
 import numpy as np
 
 
@@ -79,8 +78,8 @@ def fluxDensity(t, nu, jetType, specType, *args, **kwargs):
 
     Returns
     -------
-
-    The flux density F_nu in the observer frame, same shape as t and nu.
+    Fnu: array
+        The flux density F_nu in the observer frame, same shape as t and nu.
 
     Raises
     ------
@@ -219,8 +218,9 @@ def intensity(theta, phi, t, nu, jetType, specType, *args, **kwargs):
 
     Returns
     -------
-
-    The flux density F_nu in the observer frame, same shape as t and nu.
+    Inu : array
+        The specific intensity I_nu in the observer frame, same shape as
+        theta, phi, t, and nu.
 
     Raises
     ------
