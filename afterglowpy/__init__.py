@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 """
-======================================
-GRB Afterglow Light Curves And Spectra
-======================================
+===========
+afterglowpy
+===========
 
-Top-level module for ``afterglowpy``, computes light curves and spectra of
+Top-level module for *afterglowpy*, computes light curves and spectra of
 Gamma-ray burst (GRB) afterglows.
 
 This module provides the primary user-facing functions provided by afterglowpy,
@@ -19,8 +19,8 @@ light curves, spectra, and intensity maps, and are unconcerned with the
 underlying algorithm, these are all you need.
 
 =============== ============================================================
-``fluxDensity`` Compute the flux density F_nu of a GRB afterglow.
-``intensity``   Compute the specific intensity I_nu of a GRB afterglow.
+*fluxDensity*   Compute the flux density F_nu of a GRB afterglow.
+*intensity*     Compute the specific intensity I_nu of a GRB afterglow.
 =============== ============================================================
 
 Sub-Modules
