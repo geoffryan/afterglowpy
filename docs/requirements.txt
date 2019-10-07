@@ -1,2 +1,4 @@
 Sphinx>=2.2
+numpy
+scipy
 afterglowpy
