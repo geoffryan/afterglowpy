@@ -23,7 +23,7 @@ Contents
    :maxdepth: 2
 
    quickstart.rst
-   api.rst
+   modules.rst
 
 
 Indices and tables
