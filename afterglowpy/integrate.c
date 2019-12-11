@@ -106,6 +106,9 @@ double romb(double (*f)(double, void *), double xa, double xb, int N, double ato
         err = (R[KMAX-1] - R[0]) / (fpm - 1);
         R[0] = R[KMAX-1];
 
+        //printf("      k%d: I=%.6le err=%.6le frac=%.3le\n", k, R[0], err, 
+        //        fabs(err) / (atol + rtol*fabs(R[0])));
+
         if(fabs(err) < atol + rtol*fabs(R[0]))
             break;
 

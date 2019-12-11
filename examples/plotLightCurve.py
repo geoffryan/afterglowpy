@@ -2,11 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import afterglowpy as grb
 
-jetType = 4
+jetType = -1
 specType = 0
-thV = 0.4
+thV = 0.0
 E0 = 1.0e52
-thC = 0.1
+thC = 0.2
 thW = 0.6
 b = 6
 L0 = 0.0
@@ -15,20 +15,21 @@ ts = 0.0
 n0 = 1.0e-3
 p = 2.15
 epse = 1.0e-1
-epsB = 1.0e-3
+epsB = 1.0e-2
 ksiN = 1.0
 dL = 1.23e26
 
 Y = np.array([thV, E0, thC, thW, b, L0, q, ts, n0, p, epse, epsB, ksiN, dL])
 
-ta = 1.0e-1 * grb.day2sec
-tb = 1.0e3 * grb.day2sec
+ta = 1.0e-3 * grb.day2sec
+tb = 1.0e2 * grb.day2sec
 
-t = np.geomspace(ta, tb, num=100)
-nu = 2.0e17
+t = np.geomspace(ta, tb, num=200)
+nu = 2.0e14
 
 print("Calculating")
-Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y, spread=False, latRes=5)
+Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y, spread=False, latRes=5,
+                      g0=100)
 
 print("Writing lc.txt")
 f = open("lc.txt", 'w')

@@ -710,7 +710,8 @@ double phi_integrand(double a_phi, void* params) // outer integral
         printf("bad result:%.3le t_obs=%.3le theta_lo=%.3lf theta_hi=%.3lf theta_log=%.3lf phi=%.3lf\n",
               result, pars->t_obs, theta_0, theta_1, pars->theta_h + 0.1 * log( pars->t_obs / pars->t_NR), pars->phi);
   
-    //return result
+    //printf("   a_phi: %.6lf (%.6le)\n", a_phi, result);
+
     return result;
 }
 
@@ -849,8 +850,14 @@ double flux(struct fluxParams *pars, double atol) // determine flux for a given 
   //pars->theta_atol = 0.0;
   //double I0 = phi_integrand(0.0, pars);
   //pars->theta_atol = 1.0e-6 * I0;
-  result = 2 * Fcoeff * romb(&phi_integrand, phi_0, phi_1, 1000, 
+  
+  double phi_a = phi_0 + 0.5*(phi_1-phi_0);
+
+  result = 2 * Fcoeff * romb(&phi_integrand, phi_0, phi_a, 1000, 
                                             atol/(2*Fcoeff), PHI_ACC, pars);
+  result += 2 * Fcoeff * romb(&phi_integrand, phi_a, phi_1, 1000, 
+                                            atol/(2*Fcoeff)+result, PHI_ACC, 
+                                            pars);
   //result = 2 * Fcoeff * PI * phi_integrand(0.0, pars);
 #endif
 
@@ -909,6 +916,9 @@ void lc_struct(double *t, double *nu, double *F, int Nt,
         theta_cone_low = i * Dtheta;
         theta_h = theta_cone_hi;
 
+        //printf("cone %d: th_lo=%.6lf th_hi=%.6lf, E=%.6le\n", i,
+        //        theta_cone_low, theta_cone_hi, E_iso);
+
         if(theta_c_arr != NULL)
             theta_c_arr[i] = theta_c;
         if(E_iso_arr != NULL)
@@ -917,9 +927,12 @@ void lc_struct(double *t, double *nu, double *F, int Nt,
         set_jet_params(pars, E_iso, theta_h);
 
         for(j=0; j<Nt; j++)
+        {
+            //printf("tobs = %.6le\n", t[j]);
             F[j] += flux_cone(t[j], nu[j], -1, -1, theta_cone_low,
                                 theta_cone_hi, F[j]*pars->flux_rtol/res_cones,
                                 pars);
+        }
     }
 }
 
@@ -1020,6 +1033,8 @@ double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
     if(F2 != F2 || F2 < 0.0)
         printf("bad F2:%.3lg t_obs=%.3le theta_lo=%.3lf theta_hi=%.3lf\n",
                 F2, t_obs, theta_cone_low, theta_cone_hi);
+
+    //printf(" Fcone = %.6le\n", Fboth);
 
     return Fboth;
 }

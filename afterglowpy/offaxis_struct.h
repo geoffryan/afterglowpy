@@ -86,6 +86,10 @@ struct fluxParams
     double E_core_global;
     double theta_core_global;
 
+    int envType;
+    double As;
+    double Rwind;
+
     double L0;
     double q;
     double ts;

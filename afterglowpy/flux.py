@@ -3,7 +3,36 @@ from . import jet
 import numpy as np
 
 
-def fluxDensity(t, nu, jetType, specType, *args, **kwargs):
+JET_DEFAULT = {
+    "thetaObs":         0.0,
+    "E0":               1.0e53,
+    "thetaCore":        0.1,
+    "thetaWing":        0.4,
+    "b":                4.0,
+    "L0":               0.0,
+    "q":                0.0,
+    "ts":               0.0,
+    "n0":               1.0,
+    "p":                2.2,
+    "epsilon_e":        0.1,
+    "epsilon_B":        0.01,
+    "ksiN":             1.0,
+    "dL":               1.0e27,
+    "g0":               1.0e3,
+    "E0Global":         1.0e53,
+    "thetaCoreGlobal":  0.1,
+    "tRes":             1000,
+    "latRes":           5,
+    "rtol":             1.0e-4,
+    "mask":             None,
+    "spread":           7,
+    "gammaType":        0
+    }
+
+JET_KEYS = list(JET_DEFAULT.keys())
+
+
+def fluxDensity(t, nu, jetType=-1, specType=0, **kwargs):
     """
     Compute the flux density F_nu of a GRB afterglow.
 
@@ -19,44 +48,49 @@ def fluxDensity(t, nu, jetType, specType, *args, **kwargs):
         Frequency of flux in observer frame, measured in Hz, same size as t.
     jetType: int
         Code for type of jet. Options are: -2 cone, -1 top hat, 0 Gaussian,
-        3 quasi-spherical refreshed shock, 4 Power law.
+        3 quasi-spherical refreshed shock, 4 Power law. Default: -1
     specType: int
         Code for type of spectrum.  Options are: 0 broken power law
-        (Ryan+ 2019), 1 broken power law + inverse Compton.
+        (Ryan+ 2019), 1 broken power law + inverse Compton. Default: 0
     thetaObs: float
         Viewing angle in radians. umax, maximum 4-velocity of outflow, if
-        jetType = 3.
+        jetType = 3. Default: 0.0.
     E0: float
         Isotropic-equivalent energy along the jet axis in ergs. umin, minimum
-        4-velocity of outflow, if jetType = 3.
+        4-velocity of outflow, if jetType = 3. Default: 1.0e53.
     thetaCore: float
         Half opening angle of jet core in radians. Ei, normalization of
-        outflow's energy distribution in ergs, if jetType = 3.
+        outflow's energy distribution in ergs, if jetType = 3. Default 0.1.
     thetaWing: float
         Truncation angle of the jet in radians. k, power law index of
-        outflow's energy distribution, if jetType = 3.
+        outflow's energy distribution, if jetType = 3. Default 0.4.
     b: float
         Power law index of jet angular energy distribution, only used if
         jetType = 4. Mej_solar, mass of material at u_max in solar masses,
-        if jetType = 3.
+        if jetType = 3.  Default: 4.
     L0: float
-        Luminosity of energy injection, in erg/s.
+        Luminosity of energy injection, in erg/s.  Default 0.0.
     q: float
         Power law index of energy injection: L = L0 (t/t0)^{-q}, t0 = 1 ks.
+        Default 0.0.
     ts: float
-        Time energy injection ends in burster frame, in seconds.
+        Time energy injection ends in burster frame, in seconds. Default 0.0.
     n0: float
         Number density of protons in circumburst medium in cm^{-3}.
+        Default 1.0.
     p: float
         Power law index of relativistic electron energy distribution, p > 2.
+        Default 2.2.
     epsilon_e: float
         Fraction of thermal energy in relativistic electrons, epsilon_e < 1.
+        Default 0.1.
     epsilon_B: float
         Fraction of thermal energy in magnetic field, epsilon_B < 1.
+        Default 0.01.
     ksiN: float
-        Fraction of electrons that get accelerated, ksiN < 1.
+        Fraction of electrons that get accelerated, ksiN < 1. Default 1.0.
     dL: float
-        Luminosity distance to burst, in cm.
+        Luminosity distance to burst, in cm. Default 1.0e27.
     g0: float, optional
         Initial Lorentz factor of outflow along jet axis, defaults to inf.
     z: redshift, optional
@@ -92,9 +126,9 @@ def fluxDensity(t, nu, jetType, specType, *args, **kwargs):
     t, nu = checkTNu(t, nu)
 
     if jetType == 3:
-        checkCocoonArgs(jetType, specType, *args, **kwargs)
+        checkCocoonArgs(jetType, specType, **kwargs)
     else:
-        checkJetArgs(jetType, specType, *args, **kwargs)
+        checkJetArgs(jetType, specType, **kwargs)
 
     # arguments are good, full steam ahead!
     if 'z' in kwargs.keys():
@@ -119,10 +153,10 @@ def fluxDensity(t, nu, jetType, specType, *args, **kwargs):
 
     if jetType == 3:
         Fnu.flat[:] = cocoon.fluxDensity(tz.flat, nuz.flat, jetType, specType,
-                                         *args, **kwargs)
+                                         **kwargs)
     else:
         Fnu.flat[:] = jet.fluxDensity(tz.flat, nuz.flat, jetType, specType,
-                                      *args, **kwargs)
+                                      **kwargs)
     # timeB = time.time()
     # print("Eval took: {0:f} s".format(timeB - timeA))
 
@@ -132,7 +166,7 @@ def fluxDensity(t, nu, jetType, specType, *args, **kwargs):
     return Fnu
 
 
-def intensity(theta, phi, t, nu, jetType, specType, *args, **kwargs):
+def intensity(theta, phi, t, nu, jetType=-1, specType=0, **kwargs):
     """
     Compute the specific intensity I_nu of a GRB afterglow.
 
@@ -234,9 +268,9 @@ def intensity(theta, phi, t, nu, jetType, specType, *args, **kwargs):
     theta, phi, t, nu = checkThetaPhiTNu(theta, phi, t, nu)
 
     if jetType == 3:
-        checkCocoonArgs(jetType, specType, *args, **kwargs)
+        checkCocoonArgs(jetType, specType, **kwargs)
     else:
-        checkJetArgs(jetType, specType, *args, **kwargs)
+        checkJetArgs(jetType, specType, **kwargs)
 
     # arguments are good, full steam ahead!
 
@@ -258,7 +292,7 @@ def intensity(theta, phi, t, nu, jetType, specType, *args, **kwargs):
 
     Inu = np.empty(theta.shape)
     Inu.flat[:] = jet.intensity(theta.flat, phi.flat, tz.flat, nuz.flat,
-                                jetType, specType, *args, **kwargs)
+                                jetType, specType, **kwargs)
 
     # K-correct the intensity
     # I'm only using the flux correction here, which leaves the angular
@@ -346,7 +380,7 @@ def checkThetaPhiTNu(theta, phi, t, nu):
     return theta, phi, t, nu
 
 
-def checkJetArgs(jetType, specType, *args, **kwargs):
+def checkJetArgs(jetType, specType, **kwargs):
 
     for x in args:
         if not np.isfinite(x):
