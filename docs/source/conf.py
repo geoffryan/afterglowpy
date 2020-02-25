@@ -15,7 +15,7 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
-from afterglowpy import __version__
+from afterglowpy.version import __version__
 
 # -- Project information -----------------------------------------------------
 
