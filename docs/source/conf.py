@@ -14,8 +14,8 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../..'))
-from afterglowpy.version import __version__
+# sys.path.insert(0, os.path.abspath('../..'))
+# from afterglowpy.version import __version__
 
 # -- Project information -----------------------------------------------------
 
@@ -24,8 +24,11 @@ copyright = '2019, Geoffrey Ryan'
 author = 'Geoffrey Ryan'
 
 # The full version, including alpha/beta/rc tags
-release = __version__
-version = __version__
+
+with open("../../afterglowpy/version.py", "r") as f:
+    exec(f.read())
+    release = __version__
+    version = __version__
 
 
 # -- General configuration ---------------------------------------------------
