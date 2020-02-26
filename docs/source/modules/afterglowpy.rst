@@ -14,3 +14,4 @@ Submodules
    afterglowpy.shock
    afterglowpy.jet
    afterglowpy.cocoon
+   afterglowpy.flux
