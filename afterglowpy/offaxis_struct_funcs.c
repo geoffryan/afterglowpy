@@ -594,6 +594,7 @@ double theta_integrand(double a_theta, void* params) // inner integral
                 pars->epsilon_E, pars->epsilon_B, pars->ksi_N, pars->spec_type);
         printf("               Rt0=%.3le Rt1=%.3le E_iso=%.3le L0=%.3le ts=%.3le\n",
                 pars->Rt0, pars->Rt1, pars->E_iso, pars->L0, pars->ts);
+        abort();
     }
 
     int i;
@@ -707,8 +708,11 @@ double phi_integrand(double a_phi, void* params) // outer integral
                         pars->theta_atol, THETA_ACC, params);
 #endif
     if(result != result || result < 0.0)
+    {
         printf("bad result:%.3le t_obs=%.3le theta_lo=%.3lf theta_hi=%.3lf theta_log=%.3lf phi=%.3lf\n",
               result, pars->t_obs, theta_0, theta_1, pars->theta_h + 0.1 * log( pars->t_obs / pars->t_NR), pars->phi);
+        abort();
+    }
   
     //printf("   a_phi: %.6lf (%.6le)\n", a_phi, result);
 
@@ -1017,22 +1021,28 @@ double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
     F1 = flux(pars, atol);
     
     //Counter-jet
-    /*
+    
     theta_obs_cur = 180*deg2rad - theta_obs;
     set_obs_params(pars, t_obs, nu_obs, theta_obs_cur, 
                     theta_cone_hi, theta_cone_low);
     F2 = flux(pars, atol);
-    */
-    F2 = 0.0;
+    
+    //F2 = 0.0;
     Fboth = F1 + F2;
 
 
     if(F1 != F1 || F1 < 0.0)
+    {
         printf("bad F1:%.3lg t_obs=%.3le theta_lo=%.3lf theta_hi=%.3lf\n",
                 F1, t_obs, theta_cone_low, theta_cone_hi);
+        abort();
+    }
     if(F2 != F2 || F2 < 0.0)
+    {
         printf("bad F2:%.3lg t_obs=%.3le theta_lo=%.3lf theta_hi=%.3lf\n",
                 F2, t_obs, theta_cone_low, theta_cone_hi);
+        abort();
+    }
 
     //printf(" Fcone = %.6le\n", Fboth);
 
