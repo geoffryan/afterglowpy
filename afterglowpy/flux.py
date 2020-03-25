@@ -105,7 +105,7 @@ def fluxDensity(t, nu, jetType, specType, *args, **kwargs):
     ValueError
         If t, nu are the wrong shape or arguments take illegal values.
     """
-
+    
     # Check Arguments, will raise ValueError if args are bad
     t, nu = checkTNu(t, nu)
 
@@ -125,7 +125,7 @@ def fluxDensity(t, nu, jetType, specType, *args, **kwargs):
 
     # Default spreading method
     if 'spread' in kwargs:
-        if kwargs['spread'] is True:
+        if kwargs['spread'] == True:
             if jetType == -2 and 'thetaCoreGlobal' in kwargs:
                 kwargs['spread'] = 8
             else:

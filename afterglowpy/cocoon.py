@@ -55,6 +55,8 @@ def fluxDensity(t, nu, jetType, specType, umax, umin, Ei, k, Mej_solar, L0, q,
                 ts, n0, p, epsE, epsB, ksiN, dL, tRes=1000, latRes=0,
                 rtol=1.0e-3):
 
+    t = np.array(t)
+
     rho0 = mp * n0
     Mej = Mej_solar * Msun
     u0 = umax
