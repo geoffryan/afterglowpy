@@ -93,7 +93,24 @@ def fluxDensity(t, nu, jetType=-1, specType=0, **kwargs):
         Luminosity distance to burst, in cm. Default 1.0e27.
     g0: float, optional
         Initial Lorentz factor of outflow along jet axis, defaults to inf.
-    z: redshift, optional
+    LR: float, optional
+        Additional constant source-frame radio luminosity to add to the jet
+        component.  Applied uniformly for nu < 300 GHz. L_nu
+        normalized with 10 GHz bandwidth: L_nu = L / 10 GHz.
+        Non-negative, erg/s.
+    LO: float, optional
+        Additional constant source-frame optical luminosity to add to the jet
+        component.  Applied uniformly for 300 GHz < nu < 0.1 keV (~2.4e16 Hz).
+        L_nu normalized with 2324.78 A bandwidth (FWHM of F606W):
+        L_nu = L * 2324.78 A / c. Non-negative, erg/s.
+    LX: float, optional
+        Additional constant source-frame X-ray luminosity to add to the jet
+        component.  Applied uniformly for nu > 0.1 keV (~2.4e16 Hz).
+        L_nu normalized with 0.3 keV - 10 keV bandwidth: L_nu = L / 9.7 keV.
+        Non-negative, erg/s.
+    tAdd: float, optional
+        Time at which additional luminosities begin, in seconds.
+    z: float, optional
         Redshift of burst, defaults to 0.
 
     Other Parameters
@@ -121,7 +138,7 @@ def fluxDensity(t, nu, jetType=-1, specType=0, **kwargs):
     ValueError
         If t, nu are the wrong shape or arguments take illegal values.
     """
-
+    
     # Check Arguments, will raise ValueError if args are bad
     t, nu = checkTNu(t, nu)
 
@@ -141,11 +158,32 @@ def fluxDensity(t, nu, jetType=-1, specType=0, **kwargs):
 
     # Default spreading method
     if 'spread' in kwargs:
-        if kwargs['spread'] is True:
+        if kwargs['spread'] == True:
             if jetType == -2 and 'thetaCoreGlobal' in kwargs:
                 kwargs['spread'] = 8
             else:
                 kwargs['spread'] = 7
+
+    # Intercept background luminosities
+    LR = 0.0
+    LO = 0.0
+    LX = 0.0
+    tAdd = 0.0
+    if jetType != 3 and len(args) >= 19:
+        LR = args[15]
+        LO = args[16]
+        LX = args[17]
+        tAdd = args[18]
+        args = args[:15] + args[19:]
+
+    if 'LR' in kwargs.keys():
+        LR = kwargs.pop('LR')
+    if 'LO' in kwargs.keys():
+        LO = kwargs.pop('LO')
+    if 'LX' in kwargs.keys():
+        LX = kwargs.pop('LX')
+    if 'tAdd' in kwargs.keys():
+        tAdd = kwargs.pop('tAdd')
 
     # timeA = time.time()
 
@@ -159,6 +197,26 @@ def fluxDensity(t, nu, jetType=-1, specType=0, **kwargs):
                                       **kwargs)
     # timeB = time.time()
     # print("Eval took: {0:f} s".format(timeB - timeA))
+
+    
+    # Adding background luminosities.
+    dL = args[13]
+    L_to_flux = cocoon.cgs2mJy / (4*np.pi*dL*dL)
+
+
+    if LR > 0.0:
+        rad = (nuz < 3.0e11) & (tz > tAdd)  # radio < 300 GHz
+        Lnu = LR / 1.0e10  # 10 GHz bandwidth
+        Fnu[rad] += Lnu*L_to_flux
+    if LO > 0.0:
+        # 300GHz<opt<100eV
+        opt = (nuz >= 3.0e11) & (nuz < 100*cocoon.eV2Hz) & (tz > tAdd)
+        Lnu = LO * 2.32478e-5 / cocoon.c # 2324.78 A bandwidth
+        Fnu[opt] += Lnu*L_to_flux
+    if LX > 0.0:
+        xry = (nuz >= 100*cocoon.eV2Hz) & (tz > tAdd)  # xray > 100eV
+        Lnu = LX / (9.7e3 * cocoon.eV2Hz)  # 9.7 keV bandwidth
+        Fnu[xry] += Lnu*L_to_flux
 
     # K-correct the flux
     Fnu *= 1+z
@@ -430,9 +488,32 @@ def checkJetArgs(jetType, specType, **kwargs):
     if dL <= 0.0:
         raise ValueError("dL must be positive")
 
+    if len(args) >= 18:
+        LR = args[15]
+        LO = args[16]
+        LX = args[17]
+        if LR < 0.0:
+            raise ValueError("LR must be non-negative")
+        if LO < 0.0:
+            raise ValueError("LO must be non-negative")
+        if LX < 0.0:
+            raise ValueError("LX must be non-negative")
+
     if 'z' in kwargs:
         if kwargs['z'] < 0.0:
             raise ValueError("z must be non-negative")
+
+    if 'LR' in kwargs:
+        if kwargs['LR'] < 0.0:
+            raise ValueError("LR must be non-negative")
+
+    if 'LO' in kwargs:
+        if kwargs['LO'] < 0.0:
+            raise ValueError("LO must be non-negative")
+
+    if 'LX' in kwargs:
+        if kwargs['LX'] < 0.0:
+            raise ValueError("LX must be non-negative")
 
     # Model Specific bounds
     if jetType == -2 and theta_c > theta_w:

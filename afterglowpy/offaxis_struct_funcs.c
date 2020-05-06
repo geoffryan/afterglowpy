@@ -1021,13 +1021,14 @@ double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
     F1 = flux(pars, atol);
     
     //Counter-jet
-    
+    /*
     theta_obs_cur = 180*deg2rad - theta_obs;
     set_obs_params(pars, t_obs, nu_obs, theta_obs_cur, 
                     theta_cone_hi, theta_cone_low);
     F2 = flux(pars, atol);
+    */
+    F2 = 0.0;
     
-    //F2 = 0.0;
     Fboth = F1 + F2;
 
 
