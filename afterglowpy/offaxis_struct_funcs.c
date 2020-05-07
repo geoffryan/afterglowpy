@@ -594,6 +594,7 @@ double theta_integrand(double a_theta, void* params) // inner integral
                 pars->epsilon_E, pars->epsilon_B, pars->ksi_N, pars->spec_type);
         printf("               Rt0=%.3le Rt1=%.3le E_iso=%.3le L0=%.3le ts=%.3le\n",
                 pars->Rt0, pars->Rt1, pars->E_iso, pars->L0, pars->ts);
+        abort();
     }
 
     int i;
@@ -707,16 +708,40 @@ double phi_integrand(double a_phi, void* params) // outer integral
                         pars->theta_atol, THETA_ACC, params);
 #endif
     if(result != result || result < 0.0)
+    {
         printf("bad result:%.3le t_obs=%.3le theta_lo=%.3lf theta_hi=%.3lf theta_log=%.3lf phi=%.3lf\n",
               result, pars->t_obs, theta_0, theta_1, pars->theta_h + 0.1 * log( pars->t_obs / pars->t_NR), pars->phi);
+        abort();
+    }
   
-    //return result
+    //printf("   a_phi: %.6lf (%.6le)\n", a_phi, result);
+
     return result;
 }
 
 double find_jet_edge(double phi, double cto, double sto, double theta0,
                      double *a_mu, double *a_thj, int N)
 {
+    /*
+     *
+     * Return the (outer) edge of the jet section for a particular obs.
+     *
+     * phi: double
+     *      phi-coordinate of jet along which to search
+     * cto: double
+     *      cos(theta_obs) cosine of observer angle
+     * sto: double
+     *      sin(theta_obs) sine of observer angle
+     * theta0: double
+     *      
+     * a_mu: double array
+     *      time-ordered array of mu values for this observation.
+     *      mu = c * (t_em - t_obs) / R(t_em)
+     *         = cos(th_obs)*cos(theta) + sin(theta_obs)*sin(theta)*cos(phi)
+     * a_thj: double array
+     *      time ordered array of jet-edge values.
+     */
+    
     double cp = cos(phi);
     double mu = cos(theta0)*cto + sin(theta0)*sto*cp;
 
@@ -849,8 +874,14 @@ double flux(struct fluxParams *pars, double atol) // determine flux for a given 
   //pars->theta_atol = 0.0;
   //double I0 = phi_integrand(0.0, pars);
   //pars->theta_atol = 1.0e-6 * I0;
-  result = 2 * Fcoeff * romb(&phi_integrand, phi_0, phi_1, 1000, 
+  
+  double phi_a = phi_0 + 0.5*(phi_1-phi_0);
+
+  result = 2 * Fcoeff * romb(&phi_integrand, phi_0, phi_a, 1000, 
                                             atol/(2*Fcoeff), PHI_ACC, pars);
+  result += 2 * Fcoeff * romb(&phi_integrand, phi_a, phi_1, 1000, 
+                                            atol/(2*Fcoeff)+result, PHI_ACC, 
+                                            pars);
   //result = 2 * Fcoeff * PI * phi_integrand(0.0, pars);
 #endif
 
@@ -909,17 +940,26 @@ void lc_struct(double *t, double *nu, double *F, int Nt,
         theta_cone_low = i * Dtheta;
         theta_h = theta_cone_hi;
 
+        //printf("cone %d: th_lo=%.6lf th_hi=%.6lf, E=%.6le\n", i,
+        //        theta_cone_low, theta_cone_hi, E_iso);
+
         if(theta_c_arr != NULL)
             theta_c_arr[i] = theta_c;
         if(E_iso_arr != NULL)
             E_iso_arr[i] = E_iso;
 
+        if(E_iso <= 0.0)
+            continue;
+
         set_jet_params(pars, E_iso, theta_h);
 
         for(j=0; j<Nt; j++)
+        {
+            //printf("tobs = %.6le\n", t[j]);
             F[j] += flux_cone(t[j], nu[j], -1, -1, theta_cone_low,
                                 theta_cone_hi, F[j]*pars->flux_rtol/res_cones,
                                 pars);
+        }
     }
 }
 
@@ -952,6 +992,9 @@ void lc_structCore(double *t, double *nu, double *F, int Nt,
             theta_c_arr[i] = theta_c;
         if(E_iso_arr != NULL)
             E_iso_arr[i] = E_iso;
+
+        if(E_iso <= 0.0)
+            continue;
 
         set_jet_params(pars, E_iso, theta_h);
 
@@ -1004,22 +1047,31 @@ double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
     F1 = flux(pars, atol);
     
     //Counter-jet
-    /* 
+    /*
     theta_obs_cur = 180*deg2rad - theta_obs;
     set_obs_params(pars, t_obs, nu_obs, theta_obs_cur, 
                     theta_cone_hi, theta_cone_low);
     F2 = flux(pars, atol);
     */
     F2 = 0.0;
+    
     Fboth = F1 + F2;
 
 
     if(F1 != F1 || F1 < 0.0)
+    {
         printf("bad F1:%.3lg t_obs=%.3le theta_lo=%.3lf theta_hi=%.3lf\n",
                 F1, t_obs, theta_cone_low, theta_cone_hi);
+        abort();
+    }
     if(F2 != F2 || F2 < 0.0)
+    {
         printf("bad F2:%.3lg t_obs=%.3le theta_lo=%.3lf theta_hi=%.3lf\n",
                 F2, t_obs, theta_cone_low, theta_cone_hi);
+        abort();
+    }
+
+    //printf(" Fcone = %.6le\n", Fboth);
 
     return Fboth;
 }
@@ -1120,8 +1172,10 @@ void intensity_cone(double *theta, double *phi, double *t, double *nu,
     double theta_cone_low = theta_h_core;
 
     set_jet_params(pars, E_iso_core, theta_h_wing);
-    set_obs_params(pars, t[0], nu[0], theta_obs, theta_cone_hi, theta_cone_low);
+    set_obs_params(pars, t[0], nu[0], theta_obs,
+                   theta_cone_hi, theta_cone_low);
     make_mu_table(pars);
+    double tobs = t[0];
 
     for(j=0; j<N; j++)
     {
@@ -1131,6 +1185,14 @@ void intensity_cone(double *theta, double *phi, double *t, double *nu,
         if(I[j] > 0.0 || th < theta_cone_low)
             continue;
 
+        set_obs_params(pars, t[j], nu[j], theta_obs,
+                       theta_cone_hi, theta_cone_low);
+        if(tobs != t[j])
+        {
+            make_mu_table(pars);
+            tobs = t[j];
+        }
+
         double th_a, th_b;
         th_b = find_jet_edge(ph, pars->cto, pars->sto, theta_cone_hi,
                              pars->mu_table, pars->th_table,
@@ -1138,7 +1200,7 @@ void intensity_cone(double *theta, double *phi, double *t, double *nu,
         if(pars->table_entries_inner == 0)
             th_a = (theta_cone_low / theta_cone_hi) * th_b;
         else
-            th_a = find_jet_edge(ph, pars->cto, pars->sto, theta_cone_hi,
+            th_a = find_jet_edge(ph, pars->cto, pars->sto, theta_cone_low,
                                  pars->mu_table_inner, 
                                  pars->th_table_inner,
                                  pars->table_entries_inner);
@@ -1184,9 +1246,13 @@ void intensity_struct(double *theta, double *phi, double *t, double *nu,
         theta_h = theta_cone_hi;
 
         set_jet_params(pars, E_iso, theta_h);
+
         set_obs_params(pars, t[0], nu[0], theta_obs, theta_cone_hi, 
-                        theta_cone_low);
+                       theta_cone_low);
         make_mu_table(pars);
+        double tobs = t[0];
+
+        //printf("Cone: %d of %d\n", i, res_cones);
 
         for(j=0; j<N; j++)
         {
@@ -1196,6 +1262,15 @@ void intensity_struct(double *theta, double *phi, double *t, double *nu,
             if(I[j] > 0.0 || th < theta_cone_low)
                 continue;
 
+
+            set_obs_params(pars, t[j], nu[j], theta_obs, theta_cone_hi, 
+                            theta_cone_low);
+            if(tobs != t[j])
+            {
+                make_mu_table(pars);
+                tobs = t[j];
+            }
+
             double th_a, th_b;
             th_b = find_jet_edge(ph, pars->cto, pars->sto, theta_cone_hi,
                                  pars->mu_table, pars->th_table,
@@ -1203,7 +1278,7 @@ void intensity_struct(double *theta, double *phi, double *t, double *nu,
             if(pars->table_entries_inner == 0)
                 th_a = (theta_cone_low / theta_cone_hi) * th_b;
             else
-                th_a = find_jet_edge(ph, pars->cto, pars->sto, theta_cone_hi,
+                th_a = find_jet_edge(ph, pars->cto, pars->sto, theta_cone_low,
                                      pars->mu_table_inner, 
                                      pars->th_table_inner,
                                      pars->table_entries_inner);
@@ -1253,6 +1328,7 @@ void intensity_structCore(double *theta, double *phi, double *t, double *nu,
         set_obs_params(pars, t[0], nu[0], theta_obs, theta_cone_hi, 
                         theta_cone_low);
         make_mu_table(pars);
+        double tobs = t[0];
         
         for(j=0; j<N; j++)
         {
@@ -1262,6 +1338,14 @@ void intensity_structCore(double *theta, double *phi, double *t, double *nu,
             if(I[j] > 0.0 || th < theta_cone_low)
                 continue;
 
+            set_obs_params(pars, t[j], nu[j], theta_obs, theta_cone_hi, 
+                            theta_cone_low);
+            if(tobs != t[j])
+            {
+                make_mu_table(pars);
+                tobs = t[j];
+            }
+
             double th_a, th_b;
             th_b = find_jet_edge(ph, pars->cto, pars->sto, theta_cone_hi,
                                  pars->mu_table, pars->th_table,
@@ -1269,7 +1353,7 @@ void intensity_structCore(double *theta, double *phi, double *t, double *nu,
             if(pars->table_entries_inner == 0)
                 th_a = (theta_cone_low / theta_cone_hi) * th_b;
             else
-                th_a = find_jet_edge(ph, pars->cto, pars->sto, theta_cone_hi,
+                th_a = find_jet_edge(ph, pars->cto, pars->sto, theta_cone_low,
                                      pars->mu_table_inner, 
                                      pars->th_table_inner,
                                      pars->table_entries_inner);
@@ -1306,9 +1390,10 @@ void shockVals_cone(double *theta, double *phi, double *tobs,
     double theta_cone_low = theta_h_core;
 
     set_jet_params(pars, E_iso_core, theta_h_wing);
-    set_obs_params(pars, tobs[0], 1.0, theta_obs,
-                   theta_cone_hi, theta_cone_low);
+    set_obs_params(pars, tobs[0], 1.0, theta_obs, theta_cone_hi, 
+                    theta_cone_low);
     make_mu_table(pars);
+    double tobs_cur = t[0];
 
     for(j=0; j<N; j++)
     {
@@ -1318,6 +1403,14 @@ void shockVals_cone(double *theta, double *phi, double *tobs,
         if(t[j] > 0.0 || th < theta_cone_low)
             continue;
 
+        set_obs_params(pars, tobs[j], 1.0, theta_obs,
+                       theta_cone_hi, theta_cone_low);
+        if(tobs_cur != tobs[j])
+        {
+            make_mu_table(pars);
+            tobs_cur = tobs[j];
+        }
+
         double th_a, th_b;
         th_b = find_jet_edge(ph, pars->cto, pars->sto, theta_cone_hi,
                              pars->mu_table, pars->th_table,
@@ -1325,7 +1418,7 @@ void shockVals_cone(double *theta, double *phi, double *tobs,
         if(pars->table_entries_inner == 0)
             th_a = (theta_cone_low / theta_cone_hi) * th_b;
         else
-            th_a = find_jet_edge(ph, pars->cto, pars->sto, theta_cone_hi,
+            th_a = find_jet_edge(ph, pars->cto, pars->sto, theta_cone_low,
                                  pars->mu_table_inner, 
                                  pars->th_table_inner,
                                  pars->table_entries_inner);
@@ -1376,6 +1469,7 @@ void shockVals_struct(double *theta, double *phi, double *tobs,
         set_obs_params(pars, tobs[0], 1.0, theta_obs, theta_cone_hi, 
                         theta_cone_low);
         make_mu_table(pars);
+        double tobs_cur = t[0];
 
         for(j=0; j<N; j++)
         {
@@ -1385,6 +1479,14 @@ void shockVals_struct(double *theta, double *phi, double *tobs,
             if(t[j] > 0.0 || th < theta_cone_low)
                 continue;
 
+            set_obs_params(pars, tobs[j], 1.0, theta_obs, theta_cone_hi, 
+                            theta_cone_low);
+            if(tobs_cur != tobs[j])
+            {
+                make_mu_table(pars);
+                tobs_cur = tobs[j];
+            }
+
             double th_a, th_b;
             th_b = find_jet_edge(ph, pars->cto, pars->sto, theta_cone_hi,
                                  pars->mu_table, pars->th_table,
@@ -1392,7 +1494,7 @@ void shockVals_struct(double *theta, double *phi, double *tobs,
             if(pars->table_entries_inner == 0)
                 th_a = (theta_cone_low / theta_cone_hi) * th_b;
             else
-                th_a = find_jet_edge(ph, pars->cto, pars->sto, theta_cone_hi,
+                th_a = find_jet_edge(ph, pars->cto, pars->sto, theta_cone_low,
                                      pars->mu_table_inner, 
                                      pars->th_table_inner,
                                      pars->table_entries_inner);
@@ -1439,6 +1541,7 @@ void shockVals_structCore(double *theta, double *phi, double *tobs,
         set_obs_params(pars, tobs[0], 1.0, theta_obs, theta_cone_hi, 
                         theta_cone_low);
         make_mu_table(pars);
+        double tobs_cur = tobs[0];
         
         for(j=0; j<N; j++)
         {
@@ -1448,6 +1551,14 @@ void shockVals_structCore(double *theta, double *phi, double *tobs,
             if(t[j] > 0.0 || th < theta_cone_low)
                 continue;
 
+            set_obs_params(pars, tobs[j], 1.0, theta_obs, theta_cone_hi, 
+                            theta_cone_low);
+            if(tobs_cur != tobs[j])
+            {
+                make_mu_table(pars);
+                tobs_cur = tobs[j];
+            }
+
             double th_a, th_b;
             th_b = find_jet_edge(ph, pars->cto, pars->sto, theta_cone_hi,
                                  pars->mu_table, pars->th_table,
@@ -1455,7 +1566,7 @@ void shockVals_structCore(double *theta, double *phi, double *tobs,
             if(pars->table_entries_inner == 0)
                 th_a = (theta_cone_low / theta_cone_hi) * th_b;
             else
-                th_a = find_jet_edge(ph, pars->cto, pars->sto, theta_cone_hi,
+                th_a = find_jet_edge(ph, pars->cto, pars->sto, theta_cone_low,
                                      pars->mu_table_inner, 
                                      pars->th_table_inner,
                                      pars->table_entries_inner);
