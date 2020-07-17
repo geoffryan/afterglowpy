@@ -115,6 +115,17 @@ void initjet(void)
 
     //Load numpy stuff!
     import_array();
+
+    PyModule_AddIntConstant(module, "Cone", _cone);
+    PyModule_AddIntConstant(module, "TopHat", _tophat);
+    PyModule_AddIntConstant(module, "Gaussian", _Gaussian);
+    PyModule_AddIntConstant(module, "PowerLaw", _powerlaw);
+    PyModule_AddIntConstant(module, "PowerLawCore", _powerlaw_core);
+    PyModule_AddIntConstant(module, "GaussianCore", _Gaussian_core);
+    PyModule_AddIntConstant(module, "Exponential", _exponential);
+    PyModule_AddIntConstant(module, "TwoComponent", _twocomponent);
+    PyModule_AddIntConstant(module, "Spherical", _spherical);
+
 #if PY_MAJOR_VERSION >= 3
     return module;
 #endif

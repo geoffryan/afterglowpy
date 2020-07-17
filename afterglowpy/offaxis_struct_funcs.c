@@ -482,7 +482,7 @@ double emissivity(double nu, double R, double sinTheta, double mu, double te,
                 double dX = -f/df;
                 X += dX;
                 if(fabs(dX) < 1.0e-4*X)
-                break;
+                    break;
             }
         }
 
