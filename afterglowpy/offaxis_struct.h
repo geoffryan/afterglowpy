@@ -43,6 +43,7 @@
 #define _Gaussian 0
 #define _powerlaw_core 1 //has a core as well
 #define _Gaussian_core 2 // has a core as well
+#define _spherical 3
 #define _powerlaw 4
 #define _exponential 5
 #define _twocomponent 6
