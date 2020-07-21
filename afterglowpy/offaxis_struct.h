@@ -163,9 +163,6 @@ double find_jet_edge(double phi, double cto, double sto, double theta0,
                      double *a_mu, double *a_thj, int N);
 double theta_integrand(double a_theta, void* params); // inner integral
 double phi_integrand(double a_phi, void* params); // outer integral
-void theta_integrand_vec(double theta, double *Fnu, double *t, double *nu,
-                            int Nt, void* params);
-double phi_integrand_vec(double phi, void* params);
 double emissivity(double nu, double R, double sinTheta, double mu, double te,
                     double u, double us, double n0, double p, double epse,
                     double epsB, double ksiN, int specType); //emissivity of
@@ -238,10 +235,6 @@ void lc_GaussianCore(double *t, double *nu, double *F, int Nt,
                         double theta_h_core, double theta_h_wing,
                         double *theta_c_arr, double *E_iso_arr,
                         int res_cones, struct fluxParams *pars);
-void lc_vec(double *t, double *nu, double *Fnu, int Nt, double E_iso_core,
-            double theta_core, double theta_wing, int Ntheta, 
-            double (*f_E)(double, void *), double (*f_Etot)(void *), 
-            struct fluxParams *pars);
 
 void calc_flux_density(int jet_type, int spec_type, 
                             double *t, double *nu, double *Fnu, int N,

@@ -782,63 +782,6 @@ double find_jet_edge(double phi, double cto, double sto, double theta0,
     return tha;
 }
 
-double phi_integrand_vec(double phi, void *params)
-{
-    struct fluxParams *pars = (struct fluxParams *) params;
-    
-    double cp = cos(phi); 
-    double mu = cp * (pars->st) * (pars->sto) + (pars->ct) * (pars->cto);
-
-    int ia = searchSorted(mu, pars->mu_table, pars->table_entries);
-    int ib = ia+1;
-    double t_e = interpolateLin(ia, ib, mu, pars->mu_table, pars->t_table, 
-                                pars->table_entries);
-    t_e = check_t_e(t_e, mu, pars->t_obs, pars->mu_table, pars->table_entries);
-    
-    double R = interpolateLog(ia, ib, t_e, pars->t_table, pars->R_table, 
-                            pars->table_entries);
-
-    //printf("%e, %e, %e # tobs, R, t_e\n", t_obs, t_e, R);
-    double us2 = get_lfacbetashocksqrd(t_e, pars->C_BMsqrd, 
-                                                    pars->C_STsqrd);
-    double u2 = get_lfacbetasqrd(t_e, pars->C_BMsqrd, pars->C_STsqrd);
-    
-    double dFnu =  emissivity(pars->nu_obs, R, pars->st, mu, t_e, sqrt(u2), 
-                                sqrt(us2), pars->n_0, pars->p, pars->epsilon_E,
-                                pars->epsilon_B, pars->ksi_N, pars->spec_type);
-
-    return dFnu;
-}
-
-void theta_integrand_vec(double theta, double *Fnu, double *t, double *nu,
-                            int Nt, void *params)
-{
-    struct fluxParams *pars = (struct fluxParams *)params;
-
-    double E = pars->f_E(theta, params);
-    set_jet_params(pars, E, theta);
-
-    pars->theta = theta;
-    pars->ct = cos(theta);
-    pars->st = sin(theta);
-
-    int i;
-    for(i=0; i<Nt; i++)
-    {
-        double theta_obs = pars->theta_obs;
-        set_obs_params(pars, t[i], nu[i], theta_obs, theta, theta);
-        make_mu_table(pars);
-        double F1 = 2.0 * romb(&phi_integrand_vec, 0.0, PI, 1000, 0, PHI_ACC,
-                                                params);
-
-        //Counter-jet
-        theta_obs = PI - pars->theta_obs;
-        set_obs_params(pars, t[i], nu[i], theta_obs, theta, theta);
-        double F2 = 2.0 * romb(&phi_integrand_vec, 0.0, PI, 1000, 0, PHI_ACC,
-                                                params);
-        Fnu[i] = F1 + F2;
-    }
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1003,26 +946,6 @@ void lc_structCore(double *t, double *nu, double *F, int Nt,
                                 theta_cone_hi, F[j]*pars->flux_rtol/res_cones,
                                 pars);
     }
-}
-
-void lc_vec(double *t, double *nu, double *Fnu, int Nt, double E_iso_core,
-            double theta_core, double theta_wing, int Ntheta, 
-            double (*f_E)(double, void *), double (*f_Etot)(void *),
-            struct fluxParams *pars)
-{
-    pars->E_iso_core = E_iso_core;
-    pars->theta_core = theta_core;
-    pars->theta_wing = theta_wing;
-    pars->f_E = f_E;
-    pars->E_tot = f_Etot(pars);
-    simp_v2(&theta_integrand_vec, Fnu, t, nu, Nt, 0.0, theta_wing, Ntheta,
-                                    pars);
-    double d_L = pars->d_L;
-    double Fcoeff = cgs2mJy / (4*PI * d_L*d_L);
-    
-    int i;
-    for(i=0; i<Nt; i++)
-        Fnu[i] *= Fcoeff;
 }
 
 double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
@@ -1628,21 +1551,6 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
     {
         lc_structCore(t, nu, Fnu, N, E_iso_core, theta_h_core, 
                 theta_h_wing, NULL, NULL, res_cones, &f_E_exponential, fp);
-    }
-    else if(jet_type == _tophat + 10)
-    {
-        lc_vec(t, nu, Fnu, N, E_iso_core, theta_h_core, theta_h_core, 
-                res_cones, &f_E_tophat, &f_Etot_tophat, fp);
-    }
-    else if(jet_type == _Gaussian + 10)
-    {
-        lc_vec(t, nu, Fnu, N, E_iso_core, theta_h_core, theta_h_wing, 
-                res_cones, &f_E_Gaussian, &f_Etot_Gaussian, fp);
-    }
-    else if(jet_type == _powerlaw + 10)
-    {
-        lc_vec(t, nu, Fnu, N, E_iso_core, theta_h_core, theta_h_wing, 
-                res_cones, &f_E_powerlaw, &f_Etot_powerlaw, fp);
     }
 }
 
