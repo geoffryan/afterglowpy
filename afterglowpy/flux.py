@@ -32,7 +32,12 @@ JET_DEFAULT = {
 JET_KEYS = list(JET_DEFAULT.keys())
 
 
-def fluxDensity(t, nu, jetType=-1, specType=0, **kwargs):
+def fluxDensity(t, nu, jetType=-1, specType=0,
+                thetaObs=0.0, E0=1.0e53, thetaCore=0.1, thetaWing=0.4,
+                b=4.0, L0=0.0, q=0.0, ts=0.0, n0=1.0, p=2.2, epsilon_e=0.1,
+                epsilon_B=0.01, ksiN=1.0, dL=1.0e27, g0=-1.0, LR=0.0, LO=0.0,
+                LX=0.0, tAdd=0.0, z=0.0,
+                **kwargs):
     """
     Compute the flux density F_nu of a GRB afterglow.
 
@@ -51,7 +56,7 @@ def fluxDensity(t, nu, jetType=-1, specType=0, **kwargs):
         3 quasi-spherical refreshed shock, 4 Power law. Default: -1
     specType: int
         Code for type of spectrum.  Options are: 0 broken power law
-        (Ryan+ 2019), 1 broken power law + inverse Compton. Default: 0
+        (Ryan+ 2019), 1 broken power law w/ inverse Compton cooling. Default: 0
     thetaObs: float
         Viewing angle in radians. umax, maximum 4-velocity of outflow, if
         jetType = 3. Default: 0.0.
@@ -138,18 +143,29 @@ def fluxDensity(t, nu, jetType=-1, specType=0, **kwargs):
     ValueError
         If t, nu are the wrong shape or arguments take illegal values.
     """
+
+    # Package all the arguments together.
+    # This would be easier if we could just use **kwargs alone, but 
+    # we need to keep the ordering of the arguments for people who use
+    # the positional interface
+
+    argsDict = kwargs.copy()
+    for key, val in locals().items():
+        if (key != 'kwargs' and key != 't' and key != 'nu'
+                and key != 'argsDict'):
+            argsDict[key] = val
     
     # Check Arguments, will raise ValueError if args are bad
     t, nu = checkTNu(t, nu)
 
-    if jetType == 3:
-        checkCocoonArgs(jetType, specType, **kwargs)
+    if jetType == jet.Spherical:
+        checkCocoonArgs(**argsDict)
     else:
-        checkJetArgs(jetType, specType, **kwargs)
+        checkJetArgs(**argsDict)
 
     # arguments are good, full steam ahead!
-    if 'z' in kwargs.keys():
-        z = kwargs.pop('z')
+    if 'z' in argsDict.keys():
+        z = argsDict.pop('z')
     else:
         z = 0.0
 
@@ -157,50 +173,37 @@ def fluxDensity(t, nu, jetType=-1, specType=0, **kwargs):
     nuz = nu * (1+z)
 
     # Default spreading method
-    if 'spread' in kwargs:
-        if kwargs['spread'] == True:
-            if jetType == -2 and 'thetaCoreGlobal' in kwargs:
-                kwargs['spread'] = 8
+    if 'spread' in argsDict:
+        if argsDict['spread'] == True:
+            if jetType == -2 and 'thetaCoreGlobal' in argsDict:
+                argsDict['spread'] = 8
             else:
-                kwargs['spread'] = 7
+                argsDict['spread'] = 7
 
     # Intercept background luminosities
-    LR = 0.0
-    LO = 0.0
-    LX = 0.0
-    tAdd = 0.0
-    if jetType != 3 and len(args) >= 19:
-        LR = args[15]
-        LO = args[16]
-        LX = args[17]
-        tAdd = args[18]
-        args = args[:15] + args[19:]
 
-    if 'LR' in kwargs.keys():
-        LR = kwargs.pop('LR')
-    if 'LO' in kwargs.keys():
-        LO = kwargs.pop('LO')
-    if 'LX' in kwargs.keys():
-        LX = kwargs.pop('LX')
-    if 'tAdd' in kwargs.keys():
-        tAdd = kwargs.pop('tAdd')
+    if 'LR' in argsDict.keys():
+        argsDict.pop('LR')
+    if 'LO' in argsDict.keys():
+        argsDict.pop('LO')
+    if 'LX' in argsDict.keys():
+        argsDict.pop('LX')
+    if 'tAdd' in argsDict.keys():
+        argsDict.pop('tAdd')
 
     # timeA = time.time()
 
     Fnu = np.empty(tz.shape)
 
-    if jetType == 3:
-        Fnu.flat[:] = cocoon.fluxDensity(tz.flat, nuz.flat, jetType, specType,
-                                         **kwargs)
+    if jetType == jet.Spherical:
+        Fnu.flat[:] = cocoon.fluxDensity(tz.flat, nuz.flat, **argsDict)
     else:
-        Fnu.flat[:] = jet.fluxDensity(tz.flat, nuz.flat, jetType, specType,
-                                      **kwargs)
+        Fnu.flat[:] = jet.fluxDensity(tz.flat, nuz.flat, **argsDict)
     # timeB = time.time()
     # print("Eval took: {0:f} s".format(timeB - timeA))
 
     
     # Adding background luminosities.
-    dL = args[13]
     L_to_flux = cocoon.cgs2mJy / (4*np.pi*dL*dL)
 
 
@@ -224,7 +227,12 @@ def fluxDensity(t, nu, jetType=-1, specType=0, **kwargs):
     return Fnu
 
 
-def intensity(theta, phi, t, nu, jetType=-1, specType=0, **kwargs):
+def intensity(theta, phi, t, nu, jetType=-1, specType=0,
+              thetaObs=0.0, E0=1.0e53, thetaCore=0.1, thetaWing=0.4,
+              b=4.0, L0=0.0, q=0.0, ts=0.0, n0=1.0, p=2.2, epsilon_e=0.1,
+              epsilon_B=0.01, ksiN=1.0, dL=1.0e27, g0=-1.0, LR=0.0, LO=0.0,
+              LX=0.0, tAdd=0.0, z=0.0,
+              **kwargs):
     """
     Compute the specific intensity I_nu of a GRB afterglow.
 
@@ -321,19 +329,26 @@ def intensity(theta, phi, t, nu, jetType=-1, specType=0, **kwargs):
         If theta, phi, t, nu are the wrong shape or arguments take illegal
         values.
     """
+    
+    argsDict = kwargs.copy()
+    for key, val in locals().items():
+        if (key != 'kwargs' and key != 't' and key != 'nu'
+                and key != 'theta' and key != 'phi'
+                and key != 'argsDict'):
+            argsDict[key] = val
 
     # Check Arguments, will raise ValueError if args are bad
     theta, phi, t, nu = checkThetaPhiTNu(theta, phi, t, nu)
 
-    if jetType == 3:
-        checkCocoonArgs(jetType, specType, **kwargs)
+    if jetType == jet.Spherical:
+        checkCocoonArgs(**argsDict)
     else:
-        checkJetArgs(jetType, specType, **kwargs)
+        checkJetArgs(**argsDict)
 
     # arguments are good, full steam ahead!
 
-    if 'z' in kwargs.keys():
-        z = kwargs.pop('z')
+    if 'z' in argsDict.keys():
+        z = argsDict.pop('z')
     else:
         z = 0.0
 
@@ -341,16 +356,16 @@ def intensity(theta, phi, t, nu, jetType=-1, specType=0, **kwargs):
     nuz = nu * (1+z)
 
     # Default spreading method
-    if 'spread' in kwargs:
-        if kwargs['spread'] is True:
-            if jetType == -2 and 'thetaCoreGlobal' in kwargs:
-                kwargs['spread'] = 8
+    if 'spread' in argsDict:
+        if argsDict['spread'] is True:
+            if jetType == -2 and 'thetaCoreGlobal' in argsDict:
+                argsDict['spread'] = 8
             else:
-                kwargs['spread'] = 7
+                argsDict['spread'] = 7
 
     Inu = np.empty(theta.shape)
     Inu.flat[:] = jet.intensity(theta.flat, phi.flat, tz.flat, nuz.flat,
-                                jetType, specType, **kwargs)
+                                **argsDict)
 
     # K-correct the intensity
     # I'm only using the flux correction here, which leaves the angular
@@ -438,25 +453,25 @@ def checkThetaPhiTNu(theta, phi, t, nu):
     return theta, phi, t, nu
 
 
-def checkJetArgs(jetType, specType, **kwargs):
+def checkJetArgs(**argsDict):
 
-    for x in args:
+    for _, x in argsDict.items():
         if not np.isfinite(x):
             raise ValueError("All parameters must be finite")
 
-    theta_obs = args[0]
-    E0 = args[1]
-    theta_c = args[2]
-    theta_w = args[3]
-    b = args[4]
-    L0 = args[5]
-    t_s = args[7]
-    n0 = args[8]
-    p = args[9]
-    epse = args[10]
-    epsB = args[11]
-    xiN = args[12]
-    dL = args[13]
+
+    jetType = argsDict['jetType']
+    specType = argsDict['specType']
+
+    theta_obs = argsDict['thetaObs']
+    E0 = argsDict['E0']
+    theta_c = argsDict['thetaCore']
+    n0 = argsDict['n0']
+    p = argsDict['p']
+    epse = argsDict['epsilon_e']
+    epsB = argsDict['epsilon_B']
+    xiN = argsDict['ksiN']
+    dL = argsDict['dL']
 
     # More-or-less universal bounds
     if theta_obs < 0.0 or theta_obs > 0.5*np.pi:
@@ -465,14 +480,6 @@ def checkJetArgs(jetType, specType, **kwargs):
         raise ValueError("E0 must be positive")
     if theta_c <= 0.0 or theta_c > 0.5*np.pi:
         raise ValueError("theta_c must be in (0.0, pi/2]")
-    if jetType != -1 and (theta_w <= 0.0 or theta_w > 0.5*np.pi):
-        raise ValueError("theta_w must be in (0.0, pi/2]")
-    if jetType == 4 and b <= 0.0:
-        raise ValueError("b must be positive")
-    if L0 < 0.0:
-        raise ValueError("L0 must be non-negative")
-    if t_s < 0.0:
-        raise ValueError("t_s must be non-negative")
     if n0 <= 0.0:
         raise ValueError("n0 must be positive")
     if specType != 2 and p <= 2.0:
@@ -488,75 +495,91 @@ def checkJetArgs(jetType, specType, **kwargs):
     if dL <= 0.0:
         raise ValueError("dL must be positive")
 
-    if len(args) >= 18:
-        LR = args[15]
-        LO = args[16]
-        LX = args[17]
+    # Bounds on optional parameters
+
+    if jetType != jet.TopHat:
+        if 'thetaWing' not in argsDict:
+            raise KeyError('This jet type requires thetaWing')
+        else:
+            theta_w = argsDict['thetaWing']
+            if (theta_w <= 0.0 or theta_w > 0.5*np.pi):
+                raise ValueError("thetaWing must be in (0.0, pi/2]")
+
+    if jetType == jet.PowerLaw or jetType == jet.PowerLawCore:
+        if 'b' not in argsDict:
+            raise KeyError('This jet type requires b')
+        else:
+            b = argsDict['b']
+            if (b <= 0.0):
+                raise ValueError("b must be positive")
+
+    # Energy Injection
+    if 'L0' in argsDict:
+        L0 = argsDict['L0']
+        if L0 < 0.0:
+            raise ValueError("L0 must be non-negative")
+    if 'ts' in argsDict:
+        ts = argsDict['ts']
+        if ts < 0.0:
+            raise ValueError("ts must be non-negative")
+
+    # Additional Luminosity
+    if 'LR' in argsDict:
+        LR = argsDict['LR']
         if LR < 0.0:
             raise ValueError("LR must be non-negative")
+    if 'LO' in argsDict:
+        LO = argsDict['LO']
         if LO < 0.0:
             raise ValueError("LO must be non-negative")
+    if 'LX' in argsDict:
+        LX = argsDict['LX']
         if LX < 0.0:
             raise ValueError("LX must be non-negative")
 
-    if 'z' in kwargs:
-        if kwargs['z'] < 0.0:
+    if 'z' in argsDict:
+        if argsDict['z'] < 0.0:
             raise ValueError("z must be non-negative")
 
-    if 'LR' in kwargs:
-        if kwargs['LR'] < 0.0:
-            raise ValueError("LR must be non-negative")
-
-    if 'LO' in kwargs:
-        if kwargs['LO'] < 0.0:
-            raise ValueError("LO must be non-negative")
-
-    if 'LX' in kwargs:
-        if kwargs['LX'] < 0.0:
-            raise ValueError("LX must be non-negative")
-
     # Model Specific bounds
-    if jetType == -2 and theta_c > theta_w:
-        raise ValueError("theta_w must be larger than theta_c for cone model")
+    if jetType == jet.Cone and argsDict['thetaCore'] > argsDict['thetaWing']:
+        raise ValueError("thetaWing must be larger than thetaCore"
+                         "for cone model")
 
     return
 
 
-def checkCocoonArgs(jetType, specType, *args, **kwargs):
+def checkCocoonArgs(**argsDict):
 
-    for x in args:
+    for _, x in args.items():
         if not np.isfinite(x):
             raise ValueError("All parameters must be finite")
 
-    u_max = args[0]
-    u_min = args[1]
-    Ei = args[2]
-    Mej_solar = args[4]
-    L0 = args[5]
-    t_s = args[7]
-    n0 = args[8]
-    p = args[9]
-    epse = args[10]
-    epsB = args[11]
-    xiN = args[12]
-    dL = args[13]
+    u_max = argsDict['uMax']
+    u_min = args['uMin']
+    Er = args['Er']
+    MFast = args['MFast']
+    n0 = argsDict['n0']
+    p = argsDict['p']
+    epse = argsDict['epsilon_e']
+    epsB = argsDict['epsilon_B']
+    xiN = argsDict['ksiN']
+    dL = argsDict['dL']
 
     if u_max <= 0.0:
         raise ValueError("u_max must be positive")
     if u_min <= 0.0:
         raise ValueError("u_min must be positive")
-    if Ei <= 0.0:
-        raise ValueError("Ei must be positive")
-    if Mej_solar <= 0.0:
-        raise ValueError("Mej_solar must be positive")
-    if L0 < 0.0:
-        raise ValueError("L0 must be non-negative")
-    if t_s < 0.0:
-        raise ValueError("t_s must be non-negative")
+    if Er <= 0.0:
+        raise ValueError("Er must be positive")
+    if MFast <= 0.0:
+        raise ValueError("MFast must be positive")
     if n0 <= 0.0:
         raise ValueError("n0 must be positive")
     if specType != 2 and p <= 2.0:
         raise ValueError("p must be in (2, inf)")
+    if specType == 2 and p <= 1.0:
+        raise ValueError("p must be in (1, inf)")
     if epse <= 0.0 or epse > 1.0:
         raise ValueError("epsilon_e must be in (0, 1]")
     if epsB <= 0.0 or epsB > 1.0:
@@ -566,8 +589,32 @@ def checkCocoonArgs(jetType, specType, *args, **kwargs):
     if dL <= 0.0:
         raise ValueError("dL must be positive")
 
-    if 'z' in kwargs:
-        if kwargs['z'] < 0.0:
+    if 'z' in argsDict:
+        if argsDict['z'] < 0.0:
             raise ValueError("z must be non-negative")
+
+    # Energy Injection
+    if 'L0' in argsDict:
+        L0 = argsDict['L0']
+        if L0 < 0.0:
+            raise ValueError("L0 must be non-negative")
+    if 'ts' in argsDict:
+        ts = argsDict['ts']
+        if ts < 0.0:
+            raise ValueError("ts must be non-negative")
+
+    # Additional Luminosity
+    if 'LR' in argsDict:
+        LR = argsDict['LR']
+        if LR < 0.0:
+            raise ValueError("LR must be non-negative")
+    if 'LO' in argsDict:
+        LO = argsDict['LO']
+        if LO < 0.0:
+            raise ValueError("LO must be non-negative")
+    if 'LX' in argsDict:
+        LX = argsDict['LX']
+        if LX < 0.0:
+            raise ValueError("LX must be non-negative")
 
     return

@@ -154,9 +154,22 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     profClock1A = clock();
 #endif
 
-    int jet_type, spec_type;
-    double theta_obs, E_iso_core, theta_h_core, theta_h_wing, b, L0, q, ts, 
-           n_0, p, epsilon_E, epsilon_B, ksi_N, d_L;
+    int jet_type = 0;
+    int spec_type = 0;
+    double theta_obs = 0.0;
+    double E_iso_core = 1.0e53;
+    double theta_h_core = 0.1;
+    double theta_h_wing = 0.4;
+    double b = 0.0;
+    double L0 = 0.0;
+    double q = 0.0;
+    double ts = 0.0; 
+    double n_0 = 1.0;
+    double p = 2.2;
+    double epsilon_E = 0.1;
+    double epsilon_B = 0.01;
+    double ksi_N = 1.0; 
+    double d_L = 1.0e27;
 
     int latRes = 5;
     double rtol = 1.0e-4;
@@ -170,7 +183,7 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
                                 "E0", "thetaCore", "thetaWing", "b",
                                 "L0", "q", "ts",
                                 "n0", "p",
-                                "epsilon_e", "epsilon_B", "ksiN", "d_L",
+                                "epsilon_e", "epsilon_B", "ksiN", "dL",
                                 "g0", "E0Global", "thetaCoreGlobal",
                                 "tRes", "latRes", "rtol", "mask", "spread",
                                 "gammaType",
@@ -178,7 +191,7 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
 
     //Parse Arguments
     if(!PyArg_ParseTupleAndKeywords(args, kwargs,
-                "OOiidddddddddddddd|dddiidOii",
+                "OO|iidddddddddddddddddiidOii",
                 kwlist,
                 &t_obj, &nu_obj, &jet_type, &spec_type, &theta_obs, &E_iso_core,
                 &theta_h_core, &theta_h_wing, &b, &L0, &q, &ts,

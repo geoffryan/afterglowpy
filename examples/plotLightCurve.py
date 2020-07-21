@@ -4,9 +4,9 @@ import afterglowpy as grb
 
 jetType = -1
 specType = 0
-thV = 0.0
+thV = 0.08
 E0 = 1.0e52
-thC = 0.2
+thC = 0.06
 thW = 0.6
 b = 6
 L0 = 0.0
@@ -21,6 +21,12 @@ dL = 1.23e26
 
 Y = np.array([thV, E0, thC, thW, b, L0, q, ts, n0, p, epse, epsB, ksiN, dL])
 
+Z0 = {'thetaObs': thV, 'E0': E0, 'thetaCore': thC, 'n0': n0, 'p': p,
+      'epsilon_e': epse, 'epsilon_B': epsB, 'ksiN': ksiN, 'dL': dL}
+Z1 = {'thetaObs': thV, 'E0': E0, 'thetaCore': thC, 'thetaWing': thW,
+      'b': b, 'n0': n0, 'p': p,
+      'epsilon_e': epse, 'epsilon_B': epsB, 'ksiN': ksiN, 'dL': dL}
+
 ta = 1.0e-3 * grb.day2sec
 tb = 1.0e2 * grb.day2sec
 
@@ -29,6 +35,15 @@ nu = 2.0e14
 
 print("Calculating")
 Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y, spread=False, latRes=5,
+                      g0=100)
+print("Calculating")
+Fnu0 = grb.fluxDensity(t, nu, jetType, specType, **Z0, spread=False, latRes=5,
+                      g0=100)
+print("Calculating")
+Fnu1 = grb.fluxDensity(t, nu, jetType, specType, **Z1, spread=False, latRes=5,
+                      g0=100)
+print("Calculating")
+Fnu00 = grb.fluxDensity(t, nu, spread=False, latRes=5,
                       g0=100)
 
 print("Writing lc.txt")
@@ -44,6 +59,9 @@ print("Plotting")
 fig, ax = plt.subplots(1, 1)
 
 ax.plot(t/grb.day2sec, Fnu)
+ax.plot(t/grb.day2sec, Fnu00)
+ax.plot(t/grb.day2sec, Fnu0)
+ax.plot(t/grb.day2sec, Fnu1)
 
 ax.set_xscale('log')
 ax.set_yscale('log')
