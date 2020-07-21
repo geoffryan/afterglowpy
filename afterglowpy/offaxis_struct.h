@@ -101,6 +101,7 @@ struct fluxParams
     double theta_atol;
     double flux_rtol;
     double tRes;
+    int latRes;
     int spread;
 
     double Rt0;
@@ -241,40 +242,16 @@ void lc_vec(double *t, double *nu, double *Fnu, int Nt, double E_iso_core,
             double theta_core, double theta_wing, int Ntheta, 
             double (*f_E)(double, void *), double (*f_Etot)(void *), 
             struct fluxParams *pars);
+
 void calc_flux_density(int jet_type, int spec_type, 
                             double *t, double *nu, double *Fnu, int N,
-                            double theta_obs, double E_iso_core,
-                            double theta_h_core, double theta_h_wing, 
-                            double b, double L0, double q, double ts, 
-                            double n_0, double p, double epsilon_E,
-                            double epsilon_B, double ksi_N, double d_L,
-                            double g0, double E_core_global,
-                            double theta_h_core_global,
-                            int tRes, int latRes, double rtol,
-                            double *mask, int nmask, int spread,
-                            int gamma_type);
+                            struct fluxParams *fp);
 void calc_intensity(int jet_type, int spec_type, double *theta, double *phi,
                             double *t, double *nu, double *Inu, int N,
-                            double theta_obs, double E_iso_core,
-                            double theta_h_core, double theta_h_wing, 
-                            double b, double L0, double q, double ts, 
-                            double n_0, double p, double epsilon_E,
-                            double epsilon_B, double ksi_N, double d_L,
-                            double g0, double E_core_global,
-                            double theta_h_core_global,
-                            int tRes, int latRes, double rtol, double *mask,
-                            int nmask, int spread, int gamma_type);
+                            struct fluxParams *fp);
 void calc_shockVals(int jet_type, double *theta, double *phi, double *tobs,
                             double *t, double *R, double *u, double *thj, int N,
-                            double theta_obs, double E_iso_core,
-                            double theta_h_core, double theta_h_wing, 
-                            double b, double L0, double q, double ts, 
-                            double n_0, double p, double epsilon_E,
-                            double epsilon_B, double ksi_N, double d_L,
-                            double g0, double E_core_global,
-                            double theta_h_core_global,
-                            int tRes, int latRes, double rtol, double *mask,
-                            int nmask, int spread, int gamma_type);
+                            struct fluxParams *fp);
 
 void setup_fluxParams(struct fluxParams *pars,
                     double d_L,
@@ -290,6 +267,7 @@ void setup_fluxParams(struct fluxParams *pars,
                     double E_core_global,
                     double theta_h_core_global,
                     double ta, double tb, double tRes,
+                    int latRes,
                     int spec_type, double flux_rtol,
                     double *mask, int nmask, int spread, int gammaType);
 void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h);

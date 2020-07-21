@@ -294,12 +294,33 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     profClock2A = clock();
 #endif
 
+    //Set Up The Parameters!
+    
+    double ta = t[0];
+    double tb = t[0];
+    int i;
+    for(i=0; i<N; i++)
+    {
+        if(t[i] < ta)
+            ta = t[i];
+        else if(t[i] > tb)
+            tb = t[i];
+    }
+    
+    struct fluxParams fp;
+    setup_fluxParams(&fp, d_L, theta_obs, E_iso_core, theta_h_core,
+                        theta_h_wing, b, L0, q, ts,
+                        n_0, p, epsilon_E, epsilon_B, ksi_N, g0, 
+                        E_core_global, theta_h_core_global, ta, tb, tRes,
+                        latRes,
+                        spec_type, rtol, mask, masklen, spread, gamma_type);
+
     // Calculate the flux!
-    calc_flux_density(jet_type, spec_type, t, nu, Fnu, N, theta_obs, 
-                        E_iso_core, theta_h_core, theta_h_wing, b, L0, q, ts,
-                        n_0, p, epsilon_E, epsilon_B, ksi_N, d_L, 
-                        g0, E_core_global, theta_h_core_global,
-                        tRes, latRes, rtol, mask, masklen, spread, gamma_type);
+    calc_flux_density(jet_type, spec_type, t, nu, Fnu, N, &fp);
+
+    //Free the parameters!
+    free_fluxParams(&fp);
+
 #ifdef PROFILE2
     //Profile 2
     profClock2B = clock();
@@ -366,9 +387,22 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
     PyObject *nu_obj = NULL;
     PyObject *mask_obj = NULL;
 
-    int jet_type, spec_type;
-    double theta_obs, E_iso_core, theta_h_core, theta_h_wing, b, L0, q, ts,
-           n_0, p, epsilon_E, epsilon_B, ksi_N, d_L;
+    int jet_type = 0;
+    int spec_type = 0;
+    double theta_obs = 0.0;
+    double E_iso_core = 1.0e53;
+    double theta_h_core = 0.1;
+    double theta_h_wing = 0.4;
+    double b = 0.0;
+    double L0 = 0.0;
+    double q = 0.0;
+    double ts = 0.0; 
+    double n_0 = 1.0;
+    double p = 2.2;
+    double epsilon_E = 0.1;
+    double epsilon_B = 0.01;
+    double ksi_N = 1.0; 
+    double d_L = 1.0e27;
 
     int latRes = 5;
     double rtol = 1.0e-4;
@@ -391,7 +425,7 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
 
     //Parse Arguments
     if(!PyArg_ParseTupleAndKeywords(args, kwargs,
-                                    "OOOOiidddddddddddddd|dddiidOii",
+                                    "OOOO|iidddddddddddddddddiidOii",
                 kwlist,
                 &theta_obj, &phi_obj, &t_obj, &nu_obj, &jet_type, &spec_type,
                 &theta_obs, &E_iso_core,
@@ -511,13 +545,33 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
         return NULL;
     }
     double *Inu = PyArray_DATA((PyArrayObject *) Inu_obj);
+    
+    //Set Up The Parameters!
+    
+    double ta = t[0];
+    double tb = t[0];
+    int i;
+    for(i=0; i<N; i++)
+    {
+        if(t[i] < ta)
+            ta = t[i];
+        else if(t[i] > tb)
+            tb = t[i];
+    }
+    
+    struct fluxParams fp;
+    setup_fluxParams(&fp, d_L, theta_obs, E_iso_core, theta_h_core,
+                        theta_h_wing, b, L0, q, ts,
+                        n_0, p, epsilon_E, epsilon_B, ksi_N, g0, 
+                        E_core_global, theta_h_core_global, ta, tb, tRes,
+                        latRes,
+                        spec_type, rtol, mask, masklen, spread, gamma_type);
 
     // Calculate the intensity!
-    calc_intensity(jet_type, spec_type, theta, phi, t, nu, Inu, N, theta_obs, 
-                        E_iso_core, theta_h_core, theta_h_wing, b, L0, q, ts,
-                        n_0, p, epsilon_E, epsilon_B, ksi_N, d_L,
-                        g0, E_core_global, theta_h_core_global,
-                        tRes, latRes, rtol, mask, masklen, spread, gamma_type);
+    calc_intensity(jet_type, spec_type, theta, phi, t, nu, Inu, N, &fp);
+    
+    // Free the parameters!
+    free_fluxParams(&fp);
 
     // Clean up!
     Py_DECREF(theta_arr);
@@ -540,9 +594,21 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
     PyObject *tobs_obj = NULL;
     PyObject *mask_obj = NULL;
 
-    int jet_type;
-    double theta_obs, E_iso_core, theta_h_core, theta_h_wing, b, L0, q, ts,
-           n_0, p, epsilon_E, epsilon_B, ksi_N, d_L;
+    int jet_type = 0;
+    double theta_obs = 0.0;
+    double E_iso_core = 1.0e53;
+    double theta_h_core = 0.1;
+    double theta_h_wing = 0.4;
+    double b = 0.0;
+    double L0 = 0.0;
+    double q = 0.0;
+    double ts = 0.0; 
+    double n_0 = 1.0;
+    double p = 2.2;
+    double epsilon_E = 0.1;
+    double epsilon_B = 0.01;
+    double ksi_N = 1.0; 
+    double d_L = 1.0e27;
 
     int latRes = 5;
     double rtol = 1.0e-4;
@@ -565,7 +631,7 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
 
     //Parse Arguments
     if(!PyArg_ParseTupleAndKeywords(args, kwargs,
-                                    "OOOidddddddddddddd|dddiidOii",
+                                    "OOO|idddddddddddddddddiidOii",
                 kwlist,
                 &theta_obj, &phi_obj, &tobs_obj, &jet_type,
                 &theta_obs, &E_iso_core,
@@ -684,12 +750,31 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
     double *u = PyArray_DATA((PyArrayObject *) u_obj);
     double *thj = PyArray_DATA((PyArrayObject *) thj_obj);
 
+    // Set Up The Parameters
+    double ta = t[0];
+    double tb = t[0];
+    int i;
+    for(i=0; i<N; i++)
+    {
+        if(t[i] < ta)
+            ta = t[i];
+        else if(t[i] > tb)
+            tb = t[i];
+    }
+
+    struct fluxParams fp;
+    setup_fluxParams(&fp, d_L, theta_obs, E_iso_core, theta_h_core,
+                        theta_h_wing, b, L0, q, ts,
+                        n_0, p, epsilon_E, epsilon_B, ksi_N, g0, 
+                        E_core_global, theta_h_core_global, ta, tb, tRes,
+                        latRes,
+                        0, rtol, mask, masklen, spread, gamma_type);
+
     // Calculate the intensity!
-    calc_shockVals(jet_type, theta, phi, tobs, t, R, u, thj, N, theta_obs, 
-                    E_iso_core, theta_h_core, theta_h_wing, b, L0, q, ts,
-                    n_0, p, epsilon_E, epsilon_B, ksi_N, d_L,
-                    g0, E_core_global, theta_h_core_global,
-                    tRes, latRes, rtol, mask, masklen, spread, gamma_type);
+    calc_shockVals(jet_type, theta, phi, tobs, t, R, u, thj, N, &fp);
+    
+    //Free the parameters
+    free_fluxParams(&fp);
 
     // Clean up!
     Py_DECREF(theta_arr);

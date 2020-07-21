@@ -1581,228 +1581,164 @@ void shockVals_structCore(double *theta, double *phi, double *tobs,
 }
 
 void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
-                            double *Fnu, int N,
-                            double theta_obs, double E_iso_core,
-                            double theta_h_core, double theta_h_wing, 
-                            double b, double L0, double q, double ts, 
-                            double n_0, double p, double epsilon_E,
-                            double epsilon_B, double ksi_N, double d_L,
-                            double g0, double E_core_global,
-                            double theta_h_core_global,
-                            int tRes, int latRes, double rtol, double *mask,
-                            int nmask, int spread, int gamma_type)
+                            double *Fnu, int N, struct fluxParams *fp)
 {
-    double ta = t[0];
-    double tb = t[0];
-    int i;
-    for(i=0; i<N; i++)
-    {
-        if(t[i] < ta)
-            ta = t[i];
-        else if(t[i] > tb)
-            tb = t[i];
-    }
+    int latRes = fp->latRes;
+    double E_iso_core = fp->E_iso_core;
+    double theta_h_core = fp->theta_core;
+    double theta_h_wing = fp->theta_wing;
 
     int res_cones = (int) (latRes*theta_h_wing / theta_h_core);
 
-    struct fluxParams fp;
-    setup_fluxParams(&fp, d_L, theta_obs, E_iso_core, theta_h_core,
-                        theta_h_wing, b, L0, q, ts,
-                        n_0, p, epsilon_E, epsilon_B, ksi_N, g0, 
-                        E_core_global, theta_h_core_global, ta, tb, tRes,
-                        spec_type, rtol, mask, nmask, spread, gamma_type);
 
     if(jet_type == _tophat)
     {
-        lc_tophat(t, nu, Fnu, N, E_iso_core, theta_h_core, &fp);
+        lc_tophat(t, nu, Fnu, N, E_iso_core, theta_h_core, fp);
     }
     else if(jet_type == _cone)
     {
-        lc_cone(t, nu, Fnu, N, E_iso_core, theta_h_core, theta_h_wing, &fp);
+        lc_cone(t, nu, Fnu, N, E_iso_core, theta_h_core, theta_h_wing, fp);
     }
     else if(jet_type == _Gaussian)
     {
         lc_struct(t, nu, Fnu, N, E_iso_core, theta_h_core, 
-                theta_h_wing, NULL, NULL, res_cones, &f_E_Gaussian, &fp);
+                theta_h_wing, NULL, NULL, res_cones, &f_E_Gaussian, fp);
     }
     else if(jet_type == _powerlaw)
     {
         lc_struct(t, nu, Fnu, N, E_iso_core, theta_h_core, 
-                theta_h_wing, NULL, NULL, res_cones, &f_E_powerlaw, &fp);
+                theta_h_wing, NULL, NULL, res_cones, &f_E_powerlaw, fp);
     }
     else if(jet_type == _twocomponent)
     {
         lc_struct(t, nu, Fnu, N, E_iso_core, theta_h_core, 
-                theta_h_wing, NULL, NULL, res_cones, &f_E_twocomponent, &fp);
+                theta_h_wing, NULL, NULL, res_cones, &f_E_twocomponent, fp);
     }
     else if(jet_type == _Gaussian_core)
     {
         lc_structCore(t, nu, Fnu, N, E_iso_core, theta_h_core, 
-                theta_h_wing, NULL, NULL, res_cones, &f_E_GaussianCore, &fp);
+                theta_h_wing, NULL, NULL, res_cones, &f_E_GaussianCore, fp);
     }
     else if(jet_type == _powerlaw_core)
     {
         lc_structCore(t, nu, Fnu, N, E_iso_core, theta_h_core, 
-                theta_h_wing, NULL, NULL, res_cones, &f_E_powerlawCore, &fp);
+                theta_h_wing, NULL, NULL, res_cones, &f_E_powerlawCore, fp);
     }
     else if(jet_type == _exponential)
     {
         lc_structCore(t, nu, Fnu, N, E_iso_core, theta_h_core, 
-                theta_h_wing, NULL, NULL, res_cones, &f_E_exponential, &fp);
+                theta_h_wing, NULL, NULL, res_cones, &f_E_exponential, fp);
     }
     else if(jet_type == _tophat + 10)
     {
         lc_vec(t, nu, Fnu, N, E_iso_core, theta_h_core, theta_h_core, 
-                res_cones, &f_E_tophat, &f_Etot_tophat, &fp);
+                res_cones, &f_E_tophat, &f_Etot_tophat, fp);
     }
     else if(jet_type == _Gaussian + 10)
     {
         lc_vec(t, nu, Fnu, N, E_iso_core, theta_h_core, theta_h_wing, 
-                res_cones, &f_E_Gaussian, &f_Etot_Gaussian, &fp);
+                res_cones, &f_E_Gaussian, &f_Etot_Gaussian, fp);
     }
     else if(jet_type == _powerlaw + 10)
     {
         lc_vec(t, nu, Fnu, N, E_iso_core, theta_h_core, theta_h_wing, 
-                res_cones, &f_E_powerlaw, &f_Etot_powerlaw, &fp);
+                res_cones, &f_E_powerlaw, &f_Etot_powerlaw, fp);
     }
-    free_fluxParams(&fp);
 }
 
 void calc_intensity(int jet_type, int spec_type, double *theta, double *phi,
                             double *t, double *nu, double *Inu, int N,
-                            double theta_obs, double E_iso_core,
-                            double theta_h_core, double theta_h_wing, 
-                            double b, double L0, double q, double ts, 
-                            double n_0, double p, double epsilon_E,
-                            double epsilon_B, double ksi_N, double d_L,
-                            double g0, double E_core_global,
-                            double theta_h_core_global,
-                            int tRes, int latRes, double rtol, double *mask,
-                            int nmask, int spread, int gamma_type)
+                            struct fluxParams *fp)
 {
-    double ta = t[0];
-    double tb = t[0];
-    int i;
-    for(i=0; i<N; i++)
-    {
-        if(t[i] < ta)
-            ta = t[i];
-        else if(t[i] > tb)
-            tb = t[i];
-    }
+    int latRes = fp->latRes;
+    double E_iso_core = fp->E_iso_core;
+    double theta_h_core = fp->theta_core;
+    double theta_h_wing = fp->theta_wing;
 
     int res_cones = (int) (latRes*theta_h_wing / theta_h_core);
 
-    struct fluxParams fp;
-    setup_fluxParams(&fp, d_L, theta_obs, E_iso_core, theta_h_core,
-                        theta_h_wing, b, L0, q, ts,
-                        n_0, p, epsilon_E, epsilon_B, ksi_N, g0, 
-                        E_core_global, theta_h_core_global, ta, tb, tRes,
-                        spec_type, rtol, mask, nmask, spread, gamma_type);
 
     if(jet_type == _tophat)
     {
         intensity_cone(theta, phi, t, nu, Inu, N, E_iso_core, 0.0, theta_h_core,
-                            &fp);
+                            fp);
     }
     else if(jet_type == _cone)
     {
         intensity_cone(theta, phi, t, nu, Inu, N, E_iso_core, theta_h_core,
-                        theta_h_wing, &fp);
+                        theta_h_wing, fp);
     }
     else if(jet_type == _Gaussian)
     {
         intensity_struct(theta, phi, t, nu, Inu, N, E_iso_core, theta_h_core, 
-                theta_h_wing, res_cones, &f_E_Gaussian, &fp);
+                theta_h_wing, res_cones, &f_E_Gaussian, fp);
     }
     else if(jet_type == _powerlaw)
     {
         intensity_struct(theta, phi, t, nu, Inu, N, E_iso_core, theta_h_core, 
-                theta_h_wing, res_cones, &f_E_powerlaw, &fp);
+                theta_h_wing, res_cones, &f_E_powerlaw, fp);
     }
     else if(jet_type == _Gaussian_core)
     {
         intensity_structCore(theta, phi, t, nu, Inu, N, E_iso_core, 
                             theta_h_core, theta_h_wing, res_cones,
-                            &f_E_GaussianCore, &fp);
+                            &f_E_GaussianCore, fp);
     }
     else if(jet_type == _powerlaw_core)
     {
         intensity_structCore(theta, phi, t, nu, Inu, N, E_iso_core, 
                                 theta_h_core, theta_h_wing, res_cones, 
-                                &f_E_powerlawCore, &fp);
+                                &f_E_powerlawCore, fp);
     }
-    free_fluxParams(&fp);
 
 }
 
 void calc_shockVals(int jet_type, double *theta, double *phi, double *tobs,
                     double *t, double *R, double *u, double *thj, int N,
-                    double theta_obs, double E_iso_core,
-                    double theta_h_core, double theta_h_wing, 
-                    double b, double L0, double q, double ts, 
-                    double n_0, double p, double epsilon_E,
-                    double epsilon_B, double ksi_N, double d_L,
-                    double g0, double E_core_global,
-                    double theta_h_core_global,
-                    int tRes, int latRes, double rtol, double *mask,
-                    int nmask, int spread, int gamma_type)
+                    struct fluxParams *fp)
 {
-    double ta = tobs[0];
-    double tb = tobs[0];
-    int i;
-    for(i=0; i<N; i++)
-    {
-        if(tobs[i] < ta)
-            ta = tobs[i];
-        else if(tobs[i] > tb)
-            tb = tobs[i];
-    }
+    int latRes = fp->latRes;
+    double E_iso_core = fp->E_iso_core;
+    double theta_h_core = fp->theta_core;
+    double theta_h_wing = fp->theta_wing;
 
     int res_cones = (int) (latRes*theta_h_wing / theta_h_core);
 
-    struct fluxParams fp;
-    setup_fluxParams(&fp, d_L, theta_obs, E_iso_core, theta_h_core,
-                        theta_h_wing, b, L0, q, ts,
-                        n_0, p, epsilon_E, epsilon_B, ksi_N, g0, 
-                        E_core_global, theta_h_core_global, ta, tb, tRes,
-                        0, rtol, mask, nmask, spread, gamma_type);
 
     if(jet_type == _tophat)
     {
         shockVals_cone(theta, phi, tobs, t, R, u, thj, N, E_iso_core, 0.0,
-                        theta_h_core, &fp);
+                        theta_h_core, fp);
     }
     else if(jet_type == _cone)
     {
         shockVals_cone(theta, phi, tobs, t, R, u, thj, N, E_iso_core,
-                        theta_h_core, theta_h_wing, &fp);
+                        theta_h_core, theta_h_wing, fp);
     }
     else if(jet_type == _Gaussian)
     {
         shockVals_struct(theta, phi, tobs, t, R, u, thj, N, E_iso_core,
                          theta_h_core, theta_h_wing, res_cones, &f_E_Gaussian,
-                         &fp);
+                         fp);
     }
     else if(jet_type == _powerlaw)
     {
         shockVals_struct(theta, phi, tobs, t, R, u, thj, N, E_iso_core,
                          theta_h_core, theta_h_wing, res_cones, &f_E_powerlaw,
-                         &fp);
+                         fp);
     }
     else if(jet_type == _Gaussian_core)
     {
         shockVals_structCore(theta, phi, tobs, t, R, u, thj, N, E_iso_core,
                              theta_h_core, theta_h_wing, res_cones,
-                             &f_E_GaussianCore, &fp);
+                             &f_E_GaussianCore, fp);
     }
     else if(jet_type == _powerlaw_core)
     {
         shockVals_structCore(theta, phi, tobs, t, R, u, thj, N, E_iso_core,
                              theta_h_core, theta_h_wing, res_cones,
-                             &f_E_powerlawCore, &fp);
+                             &f_E_powerlawCore, fp);
     }
-    free_fluxParams(&fp);
 
 }
 ///////////////////////////////////////////////////////////////////////////////
@@ -1816,7 +1752,8 @@ void setup_fluxParams(struct fluxParams *pars,
                         double epsilon_B, double ksi_N, double g0,
                         double E_core_global, double theta_core_global, 
                         double ta, double tb,
-                        double tRes, int spec_type, double flux_rtol,
+                        double tRes, 
+                        int latRes, int spec_type, double flux_rtol,
                         double *mask, int nmask, int spread, int gamma_type)
 {
     pars->t_table = NULL;
