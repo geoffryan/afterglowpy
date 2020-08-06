@@ -48,6 +48,11 @@
 #define _exponential 5
 #define _twocomponent 6
 
+#define IC_COOLING_FLAG 1
+#define EPS_E_BAR_FLAG  2
+#define SSA_SMOOTH_FLAG 4
+#define SSA_SHARP_FLAG  8
+
 //Integration accuracy targets (for non GSL functions)
 #define R_ACC 1.0e-6
 #define THETA_ACC 1.0e-6
@@ -161,9 +166,9 @@ double interpolateLin(int a, int b, double x, double *X, double *Y, int N);
 double interpolateLog(int a, int b, double x, double *X, double *Y, int N);
 double find_jet_edge(double phi, double cto, double sto, double theta0,
                      double *a_mu, double *a_thj, int N);
-double theta_integrand(double a_theta, void* params); // inner integral
+double costheta_integrand(double a_theta, void* params); // inner integral
 double phi_integrand(double a_phi, void* params); // outer integral
-double emissivity(double nu, double R, double sinTheta, double mu, double te,
+double emissivity(double nu, double R, double mu, double te,
                     double u, double us, double n0, double p, double epse,
                     double epsB, double ksiN, int specType); //emissivity of
                                                              // a zone.

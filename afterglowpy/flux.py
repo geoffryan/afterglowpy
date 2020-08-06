@@ -362,6 +362,17 @@ def intensity(theta, phi, t, nu, jetType=-1, specType=0,
                 argsDict['spread'] = 8
             else:
                 argsDict['spread'] = 7
+    
+    # Intercept background luminosities
+
+    if 'LR' in argsDict.keys():
+        argsDict.pop('LR')
+    if 'LO' in argsDict.keys():
+        argsDict.pop('LO')
+    if 'LX' in argsDict.keys():
+        argsDict.pop('LX')
+    if 'tAdd' in argsDict.keys():
+        argsDict.pop('tAdd')
 
     Inu = np.empty(theta.shape)
     Inu.flat[:] = jet.intensity(theta.flat, phi.flat, tz.flat, nuz.flat,

@@ -422,7 +422,7 @@ void make_R_table(struct fluxParams *pars)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-double emissivity(double nu, double R, double sinTheta, double mu, double te,
+double emissivity(double nu, double R, double mu, double te,
                     double u, double us, double n0, double p, double epse,
                     double epsB, double ksiN, int specType)
 {
@@ -431,30 +431,36 @@ double emissivity(double nu, double R, double sinTheta, double mu, double te,
         //shock is ~ at sound speed of warm ISM. Won't shock, approach invalid.
         return 0.0;
     }
-    if(sinTheta == 0.0 || R == 0.0)
+    if(R == 0.0)
         return 0.0;
 
     // set remaining fluid quantities
     double g = sqrt(1+u*u);
     double beta = u/g;
-    double betas = us / sqrt(1+us*us);
+    double betaS = us / sqrt(1+us*us);
     double nprime = 4.0 * n0 * g; // comoving number density
     double e_th = u*u/(g+1) * nprime * m_p * v_light * v_light;
     double B = sqrt(epsB * 8.0 * PI * e_th);
     double a = (1.0 - mu * beta); // beaming factor
-    double ashock = (1.0 - mu * betas); // shock velocity beaming factor
+    double ashock = (1.0 - mu * betaS); // shock velocity beaming factor
     double DR = R / (12.0 * g*g * ashock);
     if (DR < 0.0) DR *= -1.0; // DR is function of the absolute value of mu
 
 
+    double epsebar;
+    if(specType & EPS_E_BAR_FLAG)
+        epsebar = epse;
+    else
+        epsebar = (2.0-p) / (1.0-p) * epse;
+
+
     // set local emissivity 
     double nuprime = nu * g * a; // comoving observer frequency
-    double g_m = (2.0 - p) / (1.0 - p) * epse * e_th / (
-                            ksiN * nprime * m_e * v_light * v_light);
+    double g_m = epsebar * e_th / (ksiN * nprime * m_e * v_light * v_light);
     double g_c = 6 * PI * m_e * g * v_light / (sigma_T * B * B * te);
 
     //Inverse Compton adjustment of lfac_c
-    if(specType == 1)
+    if(specType & IC_COOLING_FLAG)
     {
         double gr = g_c / g_m;
         double y = beta * epse/epsB;
@@ -520,24 +526,102 @@ double emissivity(double nu, double R, double sinTheta, double mu, double te,
 
 
     if(em != em || em < 0.0)
-        printf("bad em:%.3le te=%.3le sinTheta=%.3lf mu=%.3lf\n",
-                em, te, sinTheta, mu);
+        printf("bad em:%.3le te=%.3le mu=%.3lf\n",
+                em, te, mu);
     if(freq != freq || freq < 0.0)
-        printf("bad freq at:%.3le te=%.3le sinTheta=%.3lf mu=%.3lf\n",
-                freq, te, sinTheta, mu);
+        printf("bad freq at:%.3le te=%.3le mu=%.3lf\n",
+                freq, te, mu);
 
-    return R * R * sinTheta * DR * em * freq / (g*g * a*a);
+    double em_lab = em * freq / (g*g * a*a);
+
+    // Self-Absorption
+    if(specType & (SSA_SMOOTH_FLAG | SSA_SHARP_FLAG))
+    {
+        // Co-moving frame absorption coefficient
+        double abs_com_P = sqrt(3) * e_e*e_e*e_e * (p-1)*(p+2)*nprime*B
+                            / (16*M_PI * m_e*m_e*v_light*v_light
+                                * g_m * nuprime*nuprime);
+        double abs_com_freq;
+        if(nuprime < nu_m)
+            abs_com_freq = pow(nuprime / nu_m, 1.0/3.0);
+        else
+            abs_com_freq = pow(nuprime / nu_m, -0.5*p);
+
+        // Lab frame absorption coefficient
+        double abs = abs_com_P * abs_com_freq * a*g;
+
+        // (Signed) Optical depth through this shell.
+        // if negative, face is oriented away from observer.
+        double dtau;
+        if(mu == betaS)
+            dtau = 1.0e100; // HUGE VAL, just in case
+        else
+            dtau = abs * DR * (1 - mu*betaS) / (mu - betaS);
+
+
+        // Now that we know the optical depth, we apply it in a way
+        // according to the given specType
+
+        if((specType & SSA_SMOOTH_FLAG) && (specType & SSA_SHARP_FLAG))
+        {
+            //Special case: use the optically thick limit *everywhere*
+            if(dtau <= 0.0)
+                em_lab = 0.0;
+            else
+                em_lab /= dtau;
+        }
+        else if(specType & SSA_SMOOTH_FLAG)
+        {
+            // Apply self-absorption "properly"
+            //
+            // correction factor to emissivity from absorption
+            // ( 1 - e^(-tau) ) / tau  (on front face)
+            //
+            // back face has extra factor ~ e^-betaS/(mu-betaS)
+            //
+            // for now ignoring shadowing by the front face.
+            double abs_fac;
+            if(dtau == 0.0)
+                abs_fac = 1.0;
+            else if(dtau > 0.0)
+                abs_fac = -expm1(-dtau) / dtau;
+            else
+                abs_fac = expm1(dtau) / dtau * exp(
+                            abs * DR * betaS*mu / (mu - betaS));
+
+            em_lab *= abs_fac;
+        }
+        else if(specType & SSA_SHARP_FLAG)
+        {
+            // Apply self-absorption "simply".  
+            //
+            // Compute flux in optically thick limit,
+            // use in final result if less than optically thin calculation.
+            //
+            // e.g. use tau->infty limit if tau > 1.0
+
+            // "Forward" face
+            if(dtau > 1.0)
+                em_lab /= dtau;
+            
+            // "Back" face --> assume shadowed by front
+            else if(dtau < -1.0)
+                em_lab = 0.0;
+        }
+    }
+
+    return R * R * DR * em_lab;
 }
 
-double theta_integrand(double a_theta, void* params) // inner integral
+double costheta_integrand(double act, void* params) // inner integral
 {
     struct fluxParams *pars = (struct fluxParams *) params;
     
     //double cp = cos(pars->phi); 
     //double cto = cos(pars->theta_obs_cur);
     //double sto = sin(pars->theta_obs_cur);
-    double ast = sin(a_theta);
-    double act = cos(a_theta);
+    double a_theta = acos(act);
+    double ast = sqrt(1.0 - act*act);
     double mu = ast * (pars->cp) * (pars->sto) + act * (pars->cto);
 
     int ia = searchSorted(mu, pars->mu_table, pars->table_entries);
@@ -580,7 +664,7 @@ double theta_integrand(double a_theta, void* params) // inner integral
         u = sqrt(u2);
     }
     
-    double dFnu =  emissivity(pars->nu_obs, R, ast, mu, t_e, u, us,
+    double dFnu =  emissivity(pars->nu_obs, R, mu, t_e, u, us,
                                 pars->n_0, pars->p, pars->epsilon_E,
                                 pars->epsilon_B, pars->ksi_N, pars->spec_type);
 
@@ -624,7 +708,7 @@ double phi_integrand(double a_phi, void* params) // outer integral
     // set up integration routine
 #ifdef USEGSL
     gsl_integration_workspace * w = gsl_integration_workspace_alloc (1000);
-    gsl_function F; F.function = &theta_integrand; F.params = params;
+    gsl_function F; F.function = &costheta_integrand; F.params = params;
     double error;
 #endif
 
@@ -704,8 +788,38 @@ double phi_integrand(double a_phi, void* params) // outer integral
   // free integration routine memory
     gsl_integration_workspace_free(w);
 #else
-    result = romb(&theta_integrand, theta_0, theta_1, 1000, 
+
+    double ct1 = cos(theta_1);
+    double ct0 = cos(theta_0);
+
+    result = romb(&costheta_integrand, ct1, ct0, 1000,
                         pars->theta_atol, THETA_ACC, params);
+   
+    /*
+    if(result == 0.0)
+    {
+        double cta = 0.5*(ct1 + ct0);
+        result = romb(&costheta_integrand, ct1, cta, 1000,
+                        pars->theta_atol, THETA_ACC, params);
+        result += romb(&costheta_integrand, cta, ct0, 1000,
+                        pars->theta_atol, THETA_ACC, params);
+    }
+    if(result == 0.0)
+    {
+        double cta = 0.25*ct1 + 0.75*ct0;
+        double ctb = 0.50*ct1 + 0.50*ct0;
+        double ctc = 0.75*ct1 + 0.25*ct0;
+        result = romb(&costheta_integrand, ct1, cta, 1000,
+                        pars->theta_atol, THETA_ACC, params);
+        result += romb(&costheta_integrand, cta, ctb, 1000,
+                        pars->theta_atol, THETA_ACC, params);
+        result += romb(&costheta_integrand, ctb, ctc, 1000,
+                        pars->theta_atol, THETA_ACC, params);
+        result += romb(&costheta_integrand, ctc, ct0, 1000,
+                        pars->theta_atol, THETA_ACC, params);
+    }
+    */
+
 #endif
     if(result != result || result < 0.0)
     {
@@ -876,6 +990,8 @@ void lc_struct(double *t, double *nu, double *F, int Nt,
 
     for(i=0; i<res_cones; i++)
     {
+        printf("cone %d of %d\n", i, res_cones);
+
         theta_c = (i+0.5) * Dtheta;
         E_iso = f_E(theta_c, pars);
 
@@ -1032,7 +1148,7 @@ double intensity(double theta, double phi, double tobs, double nuobs,
                                 pars->u_table, pars->table_entries);
     double us = shockVel(u);
 
-    I = emissivity(pars->nu_obs, R, 1.0, mu, t_e, u, us, pars->n_0,
+    I = emissivity(pars->nu_obs, R, mu, t_e, u, us, pars->n_0,
                         pars->p, pars->epsilon_E, pars->epsilon_B, 
                         pars->ksi_N, pars->spec_type);
 
@@ -1704,6 +1820,7 @@ void setup_fluxParams(struct fluxParams *pars,
     pars->ta = ta;
     pars->tb = tb;
     pars->tRes = tRes;
+    pars->latRes = latRes;
     pars->flux_rtol = flux_rtol;
 
     pars->mask = mask;

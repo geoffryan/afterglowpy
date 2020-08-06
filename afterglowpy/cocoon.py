@@ -24,9 +24,9 @@ Hz2eV = 4.13566553853599e-15
 eV2Hz = 1.0/Hz2eV
 
 
-def dP(theta, amu, ate, au, ar, nu, n0, p, epsE, epsB, ksiN, specType):
+def dP(costheta, amu, ate, au, ar, nu, n0, p, epsE, epsB, ksiN, specType):
 
-    mu = math.cos(theta)
+    mu = costheta
     ib = np.searchsorted(amu, mu)
     N = amu.shape[0]
     if ib <= 0:
@@ -45,7 +45,7 @@ def dP(theta, amu, ate, au, ar, nu, n0, p, epsE, epsB, ksiN, specType):
 
     us = 4*u*g / math.sqrt(8*u*u+9)
 
-    em = jet.emissivity(nu, r, math.sin(theta), mu, te, u, us, n0, p, epsE,
+    em = jet.emissivity(nu, r, mu, te, u, us, n0, p, epsE,
                         epsB, ksiN, specType)
 
     return 2*np.pi * em
@@ -89,7 +89,7 @@ def fluxDensity(t, nu, jetType, specType, umax, umin, Ei, k, Mej_solar, L0, q,
 
         args = (amu, ate, au, ar, nu[i], n0, p, epsE, epsB, ksiN, specType)
 
-        res = integrate.quad(dP, 0.0, np.pi, args, full_output=1, wopts=wopts,
+        res = integrate.quad(dP, 0.0, 1.0, args, full_output=1, wopts=wopts,
                              epsrel=rtol)
         P[i] = res[0]
 

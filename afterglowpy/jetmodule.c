@@ -358,11 +358,11 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
 static PyObject *jet_emissivity(PyObject *self, PyObject *args)
 {
     int spec_type = 0;
-    double nu, R, sinTheta, mu, te, u, us, n0, p, epse, epsB, ksiN;
+    double nu, R, mu, te, u, us, n0, p, epse, epsB, ksiN;
 
 
     //Parse Arguments
-    if(!PyArg_ParseTuple(args, "dddddddddddd|i", &nu, &R, &sinTheta, &mu, &te,
+    if(!PyArg_ParseTuple(args, "ddddddddddd|i", &nu, &R, &mu, &te,
                             &u, &us, &n0, &p, &epse, &epsB, &ksiN, &spec_type))
     {
         //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
@@ -370,7 +370,7 @@ static PyObject *jet_emissivity(PyObject *self, PyObject *args)
     }
 
     // Calculate it!
-    double em = emissivity(nu, R, sinTheta, mu, te, u, us, n0, p, epse, epsB, 
+    double em = emissivity(nu, R, mu, te, u, us, n0, p, epse, epsB, 
                             ksiN, spec_type);
 
     //Build output

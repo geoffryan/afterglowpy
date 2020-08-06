@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import afterglowpy as grb
 
-jetType = 4
-specType = 0
+jetType = -1
+specType = 8
 thV = 0.4
 E0 = 1.0e52
 thC = 0.1
@@ -22,7 +22,7 @@ dL = 1.23e26
 Y = np.array([thV, E0, thC, thW, b, L0, q, ts, n0, p, epse, epsB, ksiN, dL])
 
 
-nua = 1.0e6   # Frequencies in Hz
+nua = 1.0e0   # Frequencies in Hz
 nub = 1.0e20  # Frequencies in Hz
 
 t = 1.0 * grb.day2sec  # spectrum at 1 day
