@@ -990,8 +990,6 @@ void lc_struct(double *t, double *nu, double *F, int Nt,
 
     for(i=0; i<res_cones; i++)
     {
-        printf("cone %d of %d\n", i, res_cones);
-
         theta_c = (i+0.5) * Dtheta;
         E_iso = f_E(theta_c, pars);
 
@@ -1180,7 +1178,6 @@ void shockVals(double theta, double phi, double tobs,
                                 pars->table_entries);
     if(t_e < 0.0)
         printf("WTFWTF\n");
-
 
     *t = t_e;
     *R = interpolateLog(ia, ib, t_e, pars->t_table,

@@ -751,15 +751,15 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
     double *thj = PyArray_DATA((PyArrayObject *) thj_obj);
 
     // Set Up The Parameters
-    double ta = t[0];
-    double tb = t[0];
+    double ta = tobs[0];
+    double tb = tobs[0];
     int i;
     for(i=0; i<N; i++)
     {
-        if(t[i] < ta)
-            ta = t[i];
-        else if(t[i] > tb)
-            tb = t[i];
+        if(tobs[i] < ta)
+            ta = tobs[i];
+        else if(tobs[i] > tb)
+            tb = tobs[i];
     }
 
     struct fluxParams fp;
