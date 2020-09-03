@@ -165,9 +165,6 @@ double f_Etot_tophat(void *params);
 double f_Etot_Gaussian(void *params);
 double f_Etot_powerlaw(void *params);
 
-double get_lfacbetashocksqrd(double a_t_e, double C_BMsqrd, double C_STsqrd);
-double get_lfacbetasqrd(double a_t_e, double C_BMsqrd, double C_STsqrd);
-double Rintegrand(double a_t_e, void* params);
 void make_R_table(struct fluxParams *pars);
 void make_mu_table(struct fluxParams *pars);
 double check_t_e(double t_e, double mu, double t_obs, double *mu_table, int N);
