@@ -145,21 +145,6 @@ double f_Etot_powerlaw(void *params)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-double get_lfacbetashocksqrd(double a_t_e, double C_BMsqrd, double C_STsqrd)
-{
-    return C_BMsqrd / (a_t_e*a_t_e*a_t_e) + C_STsqrd * pow(a_t_e, -6.0/5.0);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-double get_lfacbetasqrd(double a_t_e, double C_BMsqrd, double C_STsqrd)
-{
-    return 0.5 * C_BMsqrd / (a_t_e*a_t_e*a_t_e) + 9.0 / 16.0 * C_STsqrd * 
-        pow(a_t_e, -6.0/5.0);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
 double check_t_e(double t_e, double mu, double t_obs, double *mu_table, int N)
 {
     if(mu > mu_table[N-1])
@@ -222,17 +207,6 @@ double interpolateLog(int a, int b, double x, double *X, double *Y, int N)
 
     return ya * pow(yb/ya, log(x/xa)/log(xb/xa));
 }
-///////////////////////////////////////////////////////////////////////////////
-
-double Rintegrand(double a_t_e, void* params)
-{
-    double C_BMsqrd = ((double *) params)[0];
-    double C_STsqrd = ((double *) params)[1];
-    double us2 = get_lfacbetashocksqrd(a_t_e, C_BMsqrd, C_STsqrd);
-    if(!isfinite(us2))
-        return v_light;
-    return v_light * sqrt(us2 / (1.0 + us2));
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -258,63 +232,6 @@ void make_mu_table(struct fluxParams *pars)
     {
         mu_table_inner[i] = (t_table_inner[i] - t_obs)
                             / R_table_inner[i] * v_light;
-    }
-}
-
-void make_R_tableInterp(struct fluxParams *pars)
-{
-    int tRes = pars->tRes;
-    double Rt0 = pars->Rt0;
-    double Rt1 = pars->Rt1;
-    int table_entries = (int)(tRes * log10(Rt1/Rt0));
-    
-    pars->table_entries = table_entries;
-
-    pars->t_table = (double *)realloc(pars->t_table, 
-                                        sizeof(double) * table_entries);
-    pars->R_table = (double *)realloc(pars->R_table, 
-                                        sizeof(double) * table_entries);
-    pars->mu_table = (double *)realloc(pars->mu_table, 
-                                        sizeof(double) * table_entries);
-    double *t_table = pars->t_table;
-    double *R_table = pars->R_table;
-
-    double DR, R;
-    double t;
-    double tp = 0.0; // time for previous table entry
-    double Rp = 0.0; // R value of previous table entry
-    int i;
-
-    // prepare integration function
-    double Rpar[2] = {pars->C_BMsqrd, pars->C_STsqrd};
-
-    // set up R table. Each entry is equal to previous plus additional distance
-    double fac0 = pow(Rt1/Rt0, 1.0/(table_entries-1.0));
-    double fac = 1.0;
-    for (i=0; i < table_entries-1; i++)
-    {
-        //t = Rt0 * pow( Rt1 / Rt0, (double) i / (double) (table_entries - 1.0));
-        t = Rt0 * fac;
-        fac *= fac0;
-        DR = romb(&Rintegrand, tp, t, 1000, 0, R_ACC, Rpar, NULL, NULL, 0);
-        R = Rp + DR;
-        t_table[i] = t; R_table[i] = R;
-        Rp = R; tp = t;
-    }
-    t = Rt1;
-    DR = romb(&Rintegrand, tp, t, 1000, 0, R_ACC, Rpar, NULL, NULL, 0);
-    R = Rp + DR;
-    t_table[table_entries-1] = t;
-    R_table[table_entries-1] = R;
-    Rp = R; tp = t;
-
-    if(R_table[0] != R_table[0])
-    {
-        printf("Rintegration Error: R[0]=%.3e  (fac0=%.3e)\n", 
-                                    R_table[0], fac0);
-        printf("    t=%.3e Rdot=%.3e t=%.3e Rdot=%.3e\n",
-                    0.0,Rintegrand(0.0,Rpar), t_table[0], 
-                    Rintegrand(t_table[0],Rpar));
     }
 }
 
@@ -357,10 +274,7 @@ void make_R_table(struct fluxParams *pars)
     for(i=1; i<table_entries; i++)
         t_table[i] = t_table[i-1] * fac;
 
-    double Rpar[2] = {pars->C_BMsqrd, pars->C_STsqrd};
-    double R0 = romb(&Rintegrand, 0.0, Rt0, 1000, 0, R_ACC, Rpar,
-                     NULL, NULL, 0);
-    double u0 = sqrt(get_lfacbetasqrd(Rt0, pars->C_BMsqrd, pars->C_STsqrd));
+
     double th0 = pars->theta_h;
     double fom = 2*sin(0.5*th0)*sin(0.5*th0); //Fraction of solid angle in jet.
 
@@ -381,7 +295,7 @@ void make_R_table(struct fluxParams *pars)
     double args[12] = {pars->E_iso, Mej_sph, m_p*pars->n_0, 0.0, 0.0, 0.0, 
                         pars->L0, pars->q, pars->ts, thC, th0, thCg};
     int spread = pars->spread;
-    //printf("t0=%.6le R0=%.6le u0=%.6le\n", Rt0, R0, u0);
+    double R0, u0;
     //shockInitDecel(Rt0, &R0, &u0, args);
     shockInitFind(Rt0, &R0, &u0, pars->tRes/10, args);
     //printf("t0=%.6le R0=%.6le u0=%.6le\n", Rt0, R0, u0);
@@ -393,11 +307,10 @@ void make_R_table(struct fluxParams *pars)
 
     if(R_table[0] != R_table[0])
     {
-        printf("Rintegration Error: R[0]=%.3e  (fac=%.3e)\n", 
+        printf("Shock integration Error: R[0]=%.3e  (fac=%.3e)\n", 
                                     R_table[0], fac);
-        printf("    t=%.3e Rdot=%.3e t=%.3e Rdot=%.3e\n",
-                    0.0,Rintegrand(0.0,Rpar), t_table[0], 
-                    Rintegrand(t_table[0],Rpar));
+        printf("    t0=%.3e R0=%.3e u0=%.3e th0=%.3e\n",
+                    Rt0, R0, u0, th0);
     }
 }
 
@@ -598,6 +511,15 @@ double emissivity(double nu, double R, double mu, double te,
 
 double costheta_integrand(double aomct, void* params) // inner integral
 {
+    /*
+     * This is the integrand for the inner integral, over theta.
+     * The integral is actually performed over 1-cos(theta), 
+     * which eliminates the geometrical sin(theta) factor the standard volume
+     * element and retains numerical accuracy near theta=0.
+     *
+     * It is good to know that 1 - cos(theta) = 2*sin(theta/2)^2
+     */
+
     struct fluxParams *pars = (struct fluxParams *) params;
     
     //double cp = cos(pars->phi); 
@@ -638,19 +560,9 @@ double costheta_integrand(double aomct, void* params) // inner integral
                             pars->table_entries);
 
     double us, u;
-    if(pars->u_table != NULL)
-    {
-        u = interpolateLog(ia, ib, t_e, pars->t_table, pars->u_table,
-                                        pars->table_entries);
-        us = shockVel(u);
-    }
-    else
-    {
-        double us2 = get_lfacbetashocksqrd(t_e, pars->C_BMsqrd, pars->C_STsqrd);
-        double u2 = get_lfacbetasqrd(t_e, pars->C_BMsqrd, pars->C_STsqrd);
-        us = sqrt(us2);
-        u = sqrt(u2);
-    }
+    u = interpolateLog(ia, ib, t_e, pars->t_table, pars->u_table,
+                                    pars->table_entries);
+    us = shockVel(u);
     
     double dFnu =  emissivity(pars->nu_obs, R, mu, t_e, u, us,
                                 pars->n_0, pars->p, pars->epsilon_E,
@@ -689,6 +601,13 @@ double costheta_integrand(double aomct, void* params) // inner integral
 
 double phi_integrand(double a_phi, void* params) // outer integral
 {
+    /*
+     * This is the integrand for the (outer) phi integral. This is the
+     * inner integral over ~theta.  For stability and smoothness, the
+     * integral is performed over 1-cos(theta) instead of over theta 
+     * itself.  It is good to know that 1 - cos(theta) = 2 * sin(theta/2)^2
+     */
+
     double result;
 
     struct fluxParams *pars = (struct fluxParams *) params;
@@ -710,7 +629,7 @@ double phi_integrand(double a_phi, void* params) // outer integral
                              pars->mu_table, pars->th_table,
                              pars->table_entries);
 
-        if(0 || pars->table_entries_inner == 0)
+        if(pars->table_entries_inner == 0)
         {
             double frac = theta_0 / theta_1;
             th_0 = frac * th_1;
@@ -764,30 +683,20 @@ double phi_integrand(double a_phi, void* params) // outer integral
  
     //printf("# theta integration domain: %e - %e\n", theta_1 - Dtheta, theta_1); fflush(stdout);
  
-    // For a given phi, integrate over theta
-
-    //double ct1 = cos(theta_1);
-    //double ct0 = cos(theta_0);
-    
-    double theta_a = theta_0 + 1.0e-2 * (theta_1 - theta_0);
-    double theta_b = theta_0 + 1.0e-1 * (theta_1 - theta_0);
+    // For a given phi, integrate over 1 - cos(theta)
 
     double sht0 = sin(0.5*theta_0);
     double sht1 = sin(0.5*theta_1);
-    double shta = sin(0.5*theta_a);
-    double shtb = sin(0.5*theta_b);
     double omct0 = 2 * sht0*sht0;
     double omct1 = 2 * sht1*sht1;
-    double omcta = 2 * shta*shta;
-    double omctb = 2 * shtb*shtb;
 
     int Neval = 0;
     double err = 0;
 
-    result = romb(&costheta_integrand, omct0, omct1, 1000000,
-                    pars->theta_atol, THETA_ACC, params, &Neval, &err, 1);
-    printf("phi = %.3lf:  res=%.6lg  err=%.3lg  Neval=%d  tol=%.3g\n",
-            a_phi, result, err, Neval, pars->theta_atol + THETA_ACC*result);
+    result = romb(&costheta_integrand, omct0, omct1, 1000,
+                    pars->theta_atol, THETA_ACC, params, &Neval, &err, 0);
+    //printf("phi = %.3lf:  res=%.6lg  err=%.3lg  Neval=%d  tol=%.3g\n",
+    //        a_phi, result, err, Neval, pars->theta_atol + THETA_ACC*result);
 
     if(result != result || result < 0.0)
     {

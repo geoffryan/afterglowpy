@@ -125,6 +125,11 @@ void initjet(void)
     PyModule_AddIntConstant(module, "Exponential", _exponential);
     PyModule_AddIntConstant(module, "TwoComponent", _twocomponent);
     PyModule_AddIntConstant(module, "Spherical", _spherical);
+    PyModule_AddIntConstant(module, "TrapFixed", INT_TRAP_FIXED);
+    PyModule_AddIntConstant(module, "TrapAdapt", INT_TRAP_ADAPT);
+    PyModule_AddIntConstant(module, "SimpFixed", INT_SIMP_FIXED);
+    PyModule_AddIntConstant(module, "SimpAdapt", INT_SIMP_ADAPT);
+    PyModule_AddIntConstant(module, "RombAdapt", INT_ROMB_ADAPT);
 
 #if PY_MAJOR_VERSION >= 3
     return module;

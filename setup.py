@@ -25,9 +25,10 @@ shockdepends = ["afterglowpy/shockEvolution.h",
                 "afterglowpy/offaxis_struct_funcs.h"]
 
 jetmodule = Extension('afterglowpy.jet', sources=jetsources, include_dirs=inc,
-                      depends=jetdepends)
+                      depends=jetdepends, extra_compile_args=['-Wall'])
 shockmodule = Extension('afterglowpy.shock', sources=shocksources,
-                        include_dirs=inc, depends=shockdepends)
+                        include_dirs=inc, depends=shockdepends,
+                        extra_compile_args=['-Wall'])
 
 setup(
     name='afterglowpy',

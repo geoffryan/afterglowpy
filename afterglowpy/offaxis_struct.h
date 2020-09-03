@@ -53,6 +53,9 @@
 #define SSA_SMOOTH_FLAG 4
 #define SSA_SHARP_FLAG  8
 
+enum{INT_TRAP_FIXED, INT_TRAP_ADAPT, INT_SIMP_FIXED, INT_SIMP_ADAPT,
+     INT_ROMB_ADAPT};
+
 //Integration accuracy targets (for non GSL functions)
 #define R_ACC 1.0e-6
 #define THETA_ACC 1.0e-6
@@ -103,11 +106,18 @@ struct fluxParams
     double current_theta_cone_hi;
     double current_theta_cone_low;
     double theta_obs_cur;
-    double theta_atol;
-    double flux_rtol;
     double tRes;
     int latRes;
     int spread;
+
+    double r_rtol;
+    double theta_rtol;
+    double phi_rtol;
+    int r_nmax;
+    int theta_nmax;
+    int phi_nmax;
+    double theta_atol;
+    double flux_rtol;
 
     double Rt0;
     double Rt1;
