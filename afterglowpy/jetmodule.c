@@ -615,6 +615,7 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
     int tRes = 1000;
     int spread = 7;
     int gamma_type = 0;
+    int spec_type = 0;
     double g0 = -1.0;
     double E_core_global = 0.0;
     double theta_h_core_global = 0.0;
@@ -626,19 +627,20 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
                                 "epsilon_e", "epsilon_B", "ksiN", "dL",
                                 "g0", "E0Global", "thetaCoreGlobal",
                                 "tRes", "latRes", "rtol", "mask", "spread",
-                                "gammaType",
+                                "gammaType", "specType",
                                 NULL};
 
     //Parse Arguments
     if(!PyArg_ParseTupleAndKeywords(args, kwargs,
-                                    "OOO|idddddddddddddddddiidOii",
+                                    "OOO|idddddddddddddddddiidOiii",
                 kwlist,
                 &theta_obj, &phi_obj, &tobs_obj, &jet_type,
                 &theta_obs, &E_iso_core,
                 &theta_h_core, &theta_h_wing, &b, &L0, &q, &ts,
                 &n_0, &p, &epsilon_E, &epsilon_B, &ksi_N, &d_L,
                 &g0, &E_core_global, &theta_h_core_global,
-                &tRes, &latRes, &rtol, &mask_obj, &spread, &gamma_type))
+                &tRes, &latRes, &rtol, &mask_obj, &spread, &gamma_type,
+                &spec_type))
     {
         //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
         return NULL;

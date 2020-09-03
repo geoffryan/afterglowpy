@@ -287,13 +287,6 @@ void make_R_tableInterp(struct fluxParams *pars)
 
     // prepare integration function
     double Rpar[2] = {pars->C_BMsqrd, pars->C_STsqrd};
-#ifdef USEGSL
-    gsl_function F;
-    F.function = &Rintegrand;
-    F.params = Rpar;
-    gsl_integration_workspace * w = gsl_integration_workspace_alloc (1000);
-    double error;
-#endif
 
     // set up R table. Each entry is equal to previous plus additional distance
     double fac0 = pow(Rt1/Rt0, 1.0/(table_entries-1.0));
@@ -303,21 +296,13 @@ void make_R_tableInterp(struct fluxParams *pars)
         //t = Rt0 * pow( Rt1 / Rt0, (double) i / (double) (table_entries - 1.0));
         t = Rt0 * fac;
         fac *= fac0;
-#ifdef USEGSL
-        gsl_integration_qag (&F, tp, t, 0, 1.0e-6, 1000, 1, w, &DR, &error);
-#else
-        DR = romb(&Rintegrand, tp, t, 1000, 0, R_ACC, Rpar);
-#endif
+        DR = romb(&Rintegrand, tp, t, 1000, 0, R_ACC, Rpar, NULL, NULL, 0);
         R = Rp + DR;
         t_table[i] = t; R_table[i] = R;
         Rp = R; tp = t;
     }
     t = Rt1;
-#ifdef USEGSL
-    gsl_integration_qag (&F, tp, t, 0, 1.0e-6, 1000, 1, w, &DR, &error);
-#else
-    DR = romb(&Rintegrand, tp, t, 1000, 0, R_ACC, Rpar);
-#endif
+    DR = romb(&Rintegrand, tp, t, 1000, 0, R_ACC, Rpar, NULL, NULL, 0);
     R = Rp + DR;
     t_table[table_entries-1] = t;
     R_table[table_entries-1] = R;
@@ -331,11 +316,6 @@ void make_R_tableInterp(struct fluxParams *pars)
                     0.0,Rintegrand(0.0,Rpar), t_table[0], 
                     Rintegrand(t_table[0],Rpar));
     }
-
-    // free memory for integration routine
-#ifdef USEGSL
-    gsl_integration_workspace_free(w);
-#endif
 }
 
 void make_R_table(struct fluxParams *pars)
@@ -378,7 +358,8 @@ void make_R_table(struct fluxParams *pars)
         t_table[i] = t_table[i-1] * fac;
 
     double Rpar[2] = {pars->C_BMsqrd, pars->C_STsqrd};
-    double R0 = romb(&Rintegrand, 0.0, Rt0, 1000, 0, R_ACC, Rpar);
+    double R0 = romb(&Rintegrand, 0.0, Rt0, 1000, 0, R_ACC, Rpar,
+                     NULL, NULL, 0);
     double u0 = sqrt(get_lfacbetasqrd(Rt0, pars->C_BMsqrd, pars->C_STsqrd));
     double th0 = pars->theta_h;
     double fom = 2*sin(0.5*th0)*sin(0.5*th0); //Fraction of solid angle in jet.
@@ -609,19 +590,26 @@ double emissivity(double nu, double R, double mu, double te,
                 em_lab = 0.0;
         }
     }
+    if(specType < 0)
+        em_lab = 1.0;
 
     return R * R * DR * em_lab;
 }
 
-double costheta_integrand(double act, void* params) // inner integral
+double costheta_integrand(double aomct, void* params) // inner integral
 {
     struct fluxParams *pars = (struct fluxParams *) params;
     
     //double cp = cos(pars->phi); 
     //double cto = cos(pars->theta_obs_cur);
     //double sto = sin(pars->theta_obs_cur);
-    double a_theta = acos(act);
-    double ast = sqrt(1.0 - act*act);
+    
+    double act = 1 - aomct;
+    double a_theta = 2 * asin(sqrt(0.5 * aomct));
+    double ast = sqrt(aomct * (1+act));
+
+    //double a_theta = acos(act);
+    //double ast = sqrt((1.0 - act)*(1 + act));
     double mu = ast * (pars->cp) * (pars->sto) + act * (pars->cto);
 
     int ia = searchSorted(mu, pars->mu_table, pars->table_entries);
@@ -706,11 +694,6 @@ double phi_integrand(double a_phi, void* params) // outer integral
     struct fluxParams *pars = (struct fluxParams *) params;
   
     // set up integration routine
-#ifdef USEGSL
-    gsl_integration_workspace * w = gsl_integration_workspace_alloc (1000);
-    gsl_function F; F.function = &costheta_integrand; F.params = params;
-    double error;
-#endif
 
     pars->phi = a_phi;
     pars->cp = cos(a_phi);
@@ -782,45 +765,30 @@ double phi_integrand(double a_phi, void* params) // outer integral
     //printf("# theta integration domain: %e - %e\n", theta_1 - Dtheta, theta_1); fflush(stdout);
  
     // For a given phi, integrate over theta
-#ifdef USEGSL
-    gsl_integration_qags(&F, theta_0, theta_1, 0, 1.0e-4, 1000, w, 
-                            &result, &error);
-  // free integration routine memory
-    gsl_integration_workspace_free(w);
-#else
 
-    double ct1 = cos(theta_1);
-    double ct0 = cos(theta_0);
+    //double ct1 = cos(theta_1);
+    //double ct0 = cos(theta_0);
+    
+    double theta_a = theta_0 + 1.0e-2 * (theta_1 - theta_0);
+    double theta_b = theta_0 + 1.0e-1 * (theta_1 - theta_0);
 
-    result = romb(&costheta_integrand, ct1, ct0, 1000,
-                        pars->theta_atol, THETA_ACC, params);
-   
-    /*
-    if(result == 0.0)
-    {
-        double cta = 0.5*(ct1 + ct0);
-        result = romb(&costheta_integrand, ct1, cta, 1000,
-                        pars->theta_atol, THETA_ACC, params);
-        result += romb(&costheta_integrand, cta, ct0, 1000,
-                        pars->theta_atol, THETA_ACC, params);
-    }
-    if(result == 0.0)
-    {
-        double cta = 0.25*ct1 + 0.75*ct0;
-        double ctb = 0.50*ct1 + 0.50*ct0;
-        double ctc = 0.75*ct1 + 0.25*ct0;
-        result = romb(&costheta_integrand, ct1, cta, 1000,
-                        pars->theta_atol, THETA_ACC, params);
-        result += romb(&costheta_integrand, cta, ctb, 1000,
-                        pars->theta_atol, THETA_ACC, params);
-        result += romb(&costheta_integrand, ctb, ctc, 1000,
-                        pars->theta_atol, THETA_ACC, params);
-        result += romb(&costheta_integrand, ctc, ct0, 1000,
-                        pars->theta_atol, THETA_ACC, params);
-    }
-    */
+    double sht0 = sin(0.5*theta_0);
+    double sht1 = sin(0.5*theta_1);
+    double shta = sin(0.5*theta_a);
+    double shtb = sin(0.5*theta_b);
+    double omct0 = 2 * sht0*sht0;
+    double omct1 = 2 * sht1*sht1;
+    double omcta = 2 * shta*shta;
+    double omctb = 2 * shtb*shtb;
 
-#endif
+    int Neval = 0;
+    double err = 0;
+
+    result = romb(&costheta_integrand, omct0, omct1, 1000000,
+                    pars->theta_atol, THETA_ACC, params, &Neval, &err, 1);
+    printf("phi = %.3lf:  res=%.6lg  err=%.3lg  Neval=%d  tol=%.3g\n",
+            a_phi, result, err, Neval, pars->theta_atol + THETA_ACC*result);
+
     if(result != result || result < 0.0)
     {
         printf("bad result:%.3le t_obs=%.3le theta_lo=%.3lf theta_hi=%.3lf theta_log=%.3lf phi=%.3lf\n",
@@ -905,15 +873,6 @@ double flux(struct fluxParams *pars, double atol) // determine flux for a given 
   double phi_0 = 0.0;
   double phi_1 = PI;
   
-  // set up integration routines for integration over phi
-#ifdef USEGSL
-    gsl_integration_workspace * w = gsl_integration_workspace_alloc (1000);
-    gsl_function F;
-    F.function = &phi_integrand;
-    F.params = pars;
-    double error;
-#endif
-
   // at this stage t_obs is known, so mu_table can be made
   make_mu_table(pars); 
 
@@ -921,13 +880,6 @@ double flux(struct fluxParams *pars, double atol) // determine flux for a given 
 
   double Fcoeff = cgs2mJy / (4*PI * d_L*d_L);
   
-  //printf("about to integrate phi between %e and %e\n", phi_0, phi_1); fflush(stdout);
-#ifdef USEGSL
-  gsl_integration_qags (&F, phi_0, phi_1, 0, 1.0e-3, 1000, w, 
-                            &result, &error); 
-  // free memory
-  gsl_integration_workspace_free(w);
-#else
   //pars->theta_atol = 0.0;
   //double I0 = phi_integrand(0.0, pars);
   //pars->theta_atol = 1.0e-6 * I0;
@@ -935,12 +887,12 @@ double flux(struct fluxParams *pars, double atol) // determine flux for a given 
   double phi_a = phi_0 + 0.5*(phi_1-phi_0);
 
   result = 2 * Fcoeff * romb(&phi_integrand, phi_0, phi_a, 1000, 
-                                            atol/(2*Fcoeff), PHI_ACC, pars);
+                                            atol/(2*Fcoeff), PHI_ACC, pars,
+                                            NULL, NULL, 0);
   result += 2 * Fcoeff * romb(&phi_integrand, phi_a, phi_1, 1000, 
-                                            atol/(2*Fcoeff)+result, PHI_ACC, 
-                                            pars);
+                                            (atol+result)/(2*Fcoeff), PHI_ACC, 
+                                            pars, NULL, NULL, 0);
   //result = 2 * Fcoeff * PI * phi_integrand(0.0, pars);
-#endif
 
   //return result
 
