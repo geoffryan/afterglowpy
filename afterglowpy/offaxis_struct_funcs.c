@@ -693,10 +693,20 @@ double phi_integrand(double a_phi, void* params) // outer integral
     int Neval = 0;
     double err = 0;
 
-    result = romb(&costheta_integrand, omct0, omct1, 1000,
-                    pars->theta_atol, THETA_ACC, params, &Neval, &err, 0);
-    //printf("phi = %.3lf:  res=%.6lg  err=%.3lg  Neval=%d  tol=%.3g\n",
-    //        a_phi, result, err, Neval, pars->theta_atol + THETA_ACC*result);
+    if(pars->int_type == INT_ROMB_ADAPT)
+    {
+        result = romb(&costheta_integrand, omct0, omct1, pars->nmax_theta,
+                        pars->atol_theta, pars->rtol_theta, params,
+                        &Neval, &err, 0);
+        //printf("phi = %.3lf:  res=%.6lg  err=%.3lg  Neval=%d  tol=%.3g\n",
+        //        a_phi, result, err, Neval,
+        //        pars->atol_theta + pars->rtol_theta*result);
+    }
+    else
+    {
+        printf("Unknown integrator %d!  Aborting.\n", pars->int_type);
+        abort();
+    }
 
     if(result != result || result < 0.0)
     {
@@ -778,29 +788,37 @@ double find_jet_edge(double phi, double cto, double sto, double theta0,
 
 double flux(struct fluxParams *pars, double atol) // determine flux for a given t_obs
 {
-  double result;
-  double phi_0 = 0.0;
-  double phi_1 = PI;
-  
-  // at this stage t_obs is known, so mu_table can be made
-  make_mu_table(pars); 
+    double result;
+    double phi_0 = 0.0;
+    double phi_1 = PI;
 
-  double d_L = pars->d_L;
+    // at this stage t_obs is known, so mu_table can be made
+    make_mu_table(pars); 
 
-  double Fcoeff = cgs2mJy / (4*PI * d_L*d_L);
-  
-  //pars->theta_atol = 0.0;
-  //double I0 = phi_integrand(0.0, pars);
-  //pars->theta_atol = 1.0e-6 * I0;
-  
-  double phi_a = phi_0 + 0.5*(phi_1-phi_0);
+    double d_L = pars->d_L;
 
-  result = 2 * Fcoeff * romb(&phi_integrand, phi_0, phi_a, 1000, 
-                                            atol/(2*Fcoeff), PHI_ACC, pars,
-                                            NULL, NULL, 0);
-  result += 2 * Fcoeff * romb(&phi_integrand, phi_a, phi_1, 1000, 
-                                            (atol+result)/(2*Fcoeff), PHI_ACC, 
-                                            pars, NULL, NULL, 0);
+    double Fcoeff = cgs2mJy / (4*PI * d_L*d_L);
+
+    //pars->theta_atol = 0.0;
+    //double I0 = phi_integrand(0.0, pars);
+    //pars->theta_atol = 1.0e-6 * I0;
+
+    double phi_a = phi_0 + 0.5*(phi_1-phi_0);
+
+    if(pars->int_type == INT_ROMB_ADAPT)
+    {
+        result = 2 * Fcoeff * romb(&phi_integrand, phi_0, phi_a,
+                                    pars->nmax_phi, atol/(2*Fcoeff),
+                                    pars->rtol_phi, pars, NULL, NULL, 0);
+        result += 2 * Fcoeff * romb(&phi_integrand, phi_a, phi_1,
+                                    pars->nmax_phi, (atol+result)/(2*Fcoeff),
+                                    pars->rtol_phi, pars, NULL, NULL, 0);
+    }
+    else
+    {
+        printf("Unknown integrator %d!  Aborting.\n", pars->int_type);
+        abort();
+    }
   //result = 2 * Fcoeff * PI * phi_integrand(0.0, pars);
 
   //return result
@@ -875,7 +893,8 @@ void lc_struct(double *t, double *nu, double *F, int Nt,
         {
             //printf("tobs = %.6le\n", t[j]);
             F[j] += flux_cone(t[j], nu[j], -1, -1, theta_cone_low,
-                                theta_cone_hi, F[j]*pars->flux_rtol/res_cones,
+                                theta_cone_hi,
+                                F[j]*pars->rtol_struct/res_cones,
                                 pars);
         }
     }
@@ -918,7 +937,8 @@ void lc_structCore(double *t, double *nu, double *F, int Nt,
 
         for(j=0; j<Nt; j++)
             F[j] += flux_cone(t[j], nu[j], -1, -1, theta_cone_low,
-                                theta_cone_hi, F[j]*pars->flux_rtol/res_cones,
+                                theta_cone_hi,
+                                F[j]*pars->rtol_struct/res_cones,
                                 pars);
     }
 }
@@ -945,13 +965,15 @@ double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
     F1 = flux(pars, atol);
     
     //Counter-jet
-    /*
-    theta_obs_cur = 180*deg2rad - theta_obs;
-    set_obs_params(pars, t_obs, nu_obs, theta_obs_cur, 
-                    theta_cone_hi, theta_cone_low);
-    F2 = flux(pars, atol);
-    */
-    F2 = 0.0;
+    if(pars->counterjet)
+    {
+        theta_obs_cur = 180*deg2rad - theta_obs;
+        set_obs_params(pars, t_obs, nu_obs, theta_obs_cur, 
+                        theta_cone_hi, theta_cone_low);
+        F2 = flux(pars, atol);
+    }
+    else
+        F2 = 0.0;
     
     Fboth = F1 + F2;
 
@@ -1626,17 +1648,25 @@ void calc_shockVals(int jet_type, double *theta, double *phi, double *tobs,
 ///////////////////////////////////////////////////////////////////////////////
 
 void setup_fluxParams(struct fluxParams *pars,
-                        double d_L, double theta_obs, 
-                        double E_iso_core, 
-                        double theta_core, double theta_wing, double b,
-                        double L0, double q, double ts, 
-                        double n_0, double p, double epsilon_E,
-                        double epsilon_B, double ksi_N, double g0,
-                        double E_core_global, double theta_core_global, 
-                        double ta, double tb,
-                        double tRes, 
-                        int latRes, int spec_type, double flux_rtol,
-                        double *mask, int nmask, int spread, int gamma_type)
+                    double d_L,
+                    double theta_obs,
+                    double E_iso_core, double theta_core, double theta_wing,
+                    double b, double L0, double q, double ts, 
+                    double n_0,
+                    double p,
+                    double epsilon_E,
+                    double epsilon_B, 
+                    double ksi_N,
+                    double g0,
+                    double E_core_global,
+                    double theta_core_global,
+                    double ta, double tb,
+                    int tRes, int latRes, int int_type,
+                    double rtol_struct, double rtol_phi, double rtol_theta,
+                    int nmax_phi, int nmax_theta,
+                    int spec_type,
+                    double *mask, int nmask,
+                    int spread, int counterjet, int gamma_type)
 {
     pars->t_table = NULL;
     pars->R_table = NULL;
@@ -1679,11 +1709,19 @@ void setup_fluxParams(struct fluxParams *pars,
     pars->tb = tb;
     pars->tRes = tRes;
     pars->latRes = latRes;
-    pars->flux_rtol = flux_rtol;
+    pars->int_type = int_type;
+    pars->rtol_struct = rtol_struct;
+    pars->rtol_phi = rtol_phi;
+    pars->rtol_theta = rtol_theta;
+    pars->nmax_phi = nmax_phi;
+    pars->nmax_theta = nmax_theta;
+    
+    pars->atol_theta = 0.0;
 
     pars->mask = mask;
     pars->nmask = nmask;
     pars->spread = spread;
+    pars->counterjet = counterjet;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

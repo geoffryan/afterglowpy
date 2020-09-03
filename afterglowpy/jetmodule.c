@@ -159,7 +159,7 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     profClock1A = clock();
 #endif
 
-    int jet_type = 0;
+    int jet_type = -1;
     int spec_type = 0;
     double theta_obs = 0.0;
     double E_iso_core = 1.0e53;
@@ -177,35 +177,57 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     double d_L = 1.0e27;
 
     int latRes = 5;
-    double rtol = 1.0e-4;
     int tRes = 1000;
-    int spread = 7;
-    int gamma_type = 0;
     double g0 = -1.0;
     double E_core_global = 0.0;
     double theta_h_core_global = 0.0;
-    static char *kwlist[] = {"t", "nu", "jetType", "specType", "thetaObs", 
-                                "E0", "thetaCore", "thetaWing", "b",
-                                "L0", "q", "ts",
-                                "n0", "p",
-                                "epsilon_e", "epsilon_B", "ksiN", "dL",
-                                "g0", "E0Global", "thetaCoreGlobal",
-                                "tRes", "latRes", "rtol", "mask", "spread",
-                                "gammaType",
+
+    double rtol_struct = 1.0e-4;
+    double rtol_theta = 1.0e-6;
+    double rtol_phi = 1.0e-6;
+    int int_type = INT_ROMB_ADAPT;
+    int nmax_phi = 1000;
+    int nmax_theta = 1000;
+
+    int spread = 7;
+    int counterjet = 0;
+    int gamma_type = 0;
+
+    static char *kwlist[] = {"t", "nu", "jetType", "specType",
+                                "thetaObs", "E0", "thetaCore", "thetaWing",
+                                    "b", "L0", "q", "ts", "n0", "p",
+                                    "epsilon_e", "epsilon_B", "ksiN", "dL",
+                                    "g0",
+                                "E0Global", "thetaCoreGlobal",
+                                "tRes", "latRes", "intType", "rtolStruct",
+                                    "rtolPhi", "rtolTheta", "NPhi", "NTheta",
+                                "mask",
+                                "spread", "counterjet", "gammaType",
                                 NULL};
 
     //Parse Arguments
     if(!PyArg_ParseTupleAndKeywords(args, kwargs,
-                "OO|iidddddddddddddddddiidOii",
+                "OO|ii""ddddddddddddddd""dd""iiidddii""O""iii",
+                //"OO|ii ddddddddddddddd dd iiidddii O iii",
                 kwlist,
-                &t_obj, &nu_obj, &jet_type, &spec_type, &theta_obs, &E_iso_core,
-                &theta_h_core, &theta_h_wing, &b, &L0, &q, &ts,
-                &n_0, &p, &epsilon_E, &epsilon_B, 
-                &ksi_N, &d_L,
-                &g0, &E_core_global, &theta_h_core_global,
-                &tRes, &latRes, &rtol, &mask_obj, &spread, &gamma_type))
+                &t_obj, &nu_obj, &jet_type, &spec_type,
+                &theta_obs, &E_iso_core, &theta_h_core, &theta_h_wing, &b, &L0,
+                    &q, &ts, &n_0, &p, &epsilon_E, &epsilon_B, &ksi_N, &d_L,
+                    &g0,
+                &E_core_global, &theta_h_core_global,
+                &tRes, &latRes, &int_type, &rtol_struct, &rtol_phi,
+                    &rtol_theta, &nmax_phi, &nmax_theta,
+                &mask_obj,
+                &spread, &counterjet, &gamma_type))
     {
         //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
+        return NULL;
+    }
+
+    if(int_type < 0 || int_type >= INT_UNDEFINED)
+    {
+        PyErr_SetString(PyExc_RuntimeError,
+                        "intType out of range, unknown integrator");
         return NULL;
     }
 
@@ -314,11 +336,15 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     
     struct fluxParams fp;
     setup_fluxParams(&fp, d_L, theta_obs, E_iso_core, theta_h_core,
-                        theta_h_wing, b, L0, q, ts,
+                        theta_h_wing, b,
+                        L0, q, ts,
                         n_0, p, epsilon_E, epsilon_B, ksi_N, g0, 
-                        E_core_global, theta_h_core_global, ta, tb, tRes,
-                        latRes,
-                        spec_type, rtol, mask, masklen, spread, gamma_type);
+                        E_core_global, theta_h_core_global, ta, tb,
+                        tRes, latRes, int_type,
+                        rtol_struct, rtol_phi, rtol_theta,
+                        nmax_phi, nmax_theta,
+                        spec_type, mask, masklen,
+                        spread, counterjet, gamma_type);
 
     // Calculate the flux!
     calc_flux_density(jet_type, spec_type, t, nu, Fnu, N, &fp);
@@ -392,7 +418,7 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
     PyObject *nu_obj = NULL;
     PyObject *mask_obj = NULL;
 
-    int jet_type = 0;
+    int jet_type = -1;
     int spec_type = 0;
     double theta_obs = 0.0;
     double E_iso_core = 1.0e53;
@@ -410,36 +436,55 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
     double d_L = 1.0e27;
 
     int latRes = 5;
-    double rtol = 1.0e-4;
     int tRes = 1000;
     int spread = 7;
+    int counterjet = 0;
     int gamma_type = 0;
     double g0 = -1.0;
     double E_core_global = 0.0;
     double theta_h_core_global = 0.0;
+
+    double rtol_struct = 1.0e-4;
+    double rtol_theta = 1.0e-6;
+    double rtol_phi = 1.0e-6;
+    int int_type = INT_ROMB_ADAPT;
+    int nmax_phi = 1000;
+    int nmax_theta = 1000;
+
     static char *kwlist[] = {"theta", "phi", "t", "nu", "jetType", "specType",
-                                "thetaObs", 
-                                "E0", "thetaCore", "thetaWing", "b",
-                                "L0", "q", "ts",
-                                "n0", "p",
-                                "epsilon_e", "epsilon_B", "ksiN", "dL",
-                                "g0", "E0Global", "thetaCoreGlobal",
-                                "tRes", "latRes", "rtol", "mask", "spread",
-                                "gammaType",
+                                "thetaObs", "E0", "thetaCore", "thetaWing",
+                                    "b", "L0", "q", "ts", "n0", "p",
+                                    "epsilon_e", "epsilon_B", "ksiN", "dL",
+                                    "g0",
+                                "E0Global", "thetaCoreGlobal",
+                                "tRes", "latRes", "intType", "rtolStruct",
+                                    "rtolPhi", "rtolTheta", "NPhi", "NTheta",
+                                "mask",
+                                "spread", "counterjet", "gammaType",
                                 NULL};
 
     //Parse Arguments
     if(!PyArg_ParseTupleAndKeywords(args, kwargs,
-                                    "OOOO|iidddddddddddddddddiidOii",
+                "OOOO|ii""ddddddddddddddd""dd""iiidddii""O""iii",
                 kwlist,
                 &theta_obj, &phi_obj, &t_obj, &nu_obj, &jet_type, &spec_type,
-                &theta_obs, &E_iso_core,
-                &theta_h_core, &theta_h_wing, &b, &L0, &q, &ts,
-                &n_0, &p, &epsilon_E, &epsilon_B, &ksi_N, &d_L,
-                &g0, &E_core_global, &theta_h_core_global,
-                &tRes, &latRes, &rtol, &mask_obj, &spread, &gamma_type))
+                &theta_obs, &E_iso_core, &theta_h_core, &theta_h_wing, &b, &L0,
+                    &q, &ts, &n_0, &p, &epsilon_E, &epsilon_B, &ksi_N, &d_L,
+                    &g0,
+                &E_core_global, &theta_h_core_global,
+                &tRes, &latRes, &int_type, &rtol_struct, &rtol_phi,
+                    &rtol_theta, &nmax_phi, &nmax_theta,
+                &mask_obj,
+                &spread, &counterjet, &gamma_type))
     {
         //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
+        return NULL;
+    }
+
+    if(int_type < 0 || int_type >= INT_UNDEFINED)
+    {
+        PyErr_SetString(PyExc_RuntimeError,
+                        "intType out of range, unknown integrator");
         return NULL;
     }
 
@@ -566,11 +611,15 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
     
     struct fluxParams fp;
     setup_fluxParams(&fp, d_L, theta_obs, E_iso_core, theta_h_core,
-                        theta_h_wing, b, L0, q, ts,
+                        theta_h_wing, b,
+                        L0, q, ts,
                         n_0, p, epsilon_E, epsilon_B, ksi_N, g0, 
-                        E_core_global, theta_h_core_global, ta, tb, tRes,
-                        latRes,
-                        spec_type, rtol, mask, masklen, spread, gamma_type);
+                        E_core_global, theta_h_core_global, ta, tb,
+                        tRes, latRes, int_type,
+                        rtol_struct, rtol_phi, rtol_theta,
+                        nmax_phi, nmax_theta,
+                        spec_type, mask, masklen,
+                        spread, counterjet, gamma_type);
 
     // Calculate the intensity!
     calc_intensity(jet_type, spec_type, theta, phi, t, nu, Inu, N, &fp);
@@ -596,10 +645,10 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     PyObject *theta_obj = NULL;
     PyObject *phi_obj = NULL;
-    PyObject *tobs_obj = NULL;
+    PyObject *t_obj = NULL;
     PyObject *mask_obj = NULL;
 
-    int jet_type = 0;
+    int jet_type = -1;
     double theta_obs = 0.0;
     double E_iso_core = 1.0e53;
     double theta_h_core = 0.1;
@@ -616,82 +665,100 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
     double d_L = 1.0e27;
 
     int latRes = 5;
-    double rtol = 1.0e-4;
     int tRes = 1000;
     int spread = 7;
+    int counterjet = 0;
     int gamma_type = 0;
     int spec_type = 0;
     double g0 = -1.0;
     double E_core_global = 0.0;
     double theta_h_core_global = 0.0;
-    static char *kwlist[] = {"theta", "phi", "tobs", "jetType",
-                                "thetaObs", 
-                                "E0", "thetaCore", "thetaWing", "b",
-                                "L0", "q", "ts",
-                                "n0", "p",
-                                "epsilon_e", "epsilon_B", "ksiN", "dL",
-                                "g0", "E0Global", "thetaCoreGlobal",
-                                "tRes", "latRes", "rtol", "mask", "spread",
-                                "gammaType", "specType",
+
+    double rtol_struct = 1.0e-4;
+    double rtol_theta = 1.0e-6;
+    double rtol_phi = 1.0e-6;
+    int int_type = INT_ROMB_ADAPT;
+    int nmax_phi = 1000;
+    int nmax_theta = 1000;
+
+    static char *kwlist[] = {"theta", "phi", "t", "jetType", "specType",
+                                "thetaObs", "E0", "thetaCore", "thetaWing",
+                                    "b", "L0", "q", "ts", "n0", "p",
+                                    "epsilon_e", "epsilon_B", "ksiN", "dL",
+                                    "g0",
+                                "E0Global", "thetaCoreGlobal",
+                                "tRes", "latRes", "intType", "rtolStruct",
+                                    "rtolPhi", "rtolTheta", "NPhi", "NTheta",
+                                "mask",
+                                "spread", "counterjet", "gammaType",
                                 NULL};
 
     //Parse Arguments
     if(!PyArg_ParseTupleAndKeywords(args, kwargs,
-                                    "OOO|idddddddddddddddddiidOiii",
+                "OOO|ii""ddddddddddddddd""dd""iiidddii""O""iii",
                 kwlist,
-                &theta_obj, &phi_obj, &tobs_obj, &jet_type,
-                &theta_obs, &E_iso_core,
-                &theta_h_core, &theta_h_wing, &b, &L0, &q, &ts,
-                &n_0, &p, &epsilon_E, &epsilon_B, &ksi_N, &d_L,
-                &g0, &E_core_global, &theta_h_core_global,
-                &tRes, &latRes, &rtol, &mask_obj, &spread, &gamma_type,
-                &spec_type))
+                &theta_obj, &phi_obj, &t_obj, &jet_type, &spec_type,
+                &theta_obs, &E_iso_core, &theta_h_core, &theta_h_wing, &b, &L0,
+                    &q, &ts, &n_0, &p, &epsilon_E, &epsilon_B, &ksi_N, &d_L,
+                    &g0,
+                &E_core_global, &theta_h_core_global,
+                &tRes, &latRes, &int_type, &rtol_struct, &rtol_phi,
+                    &rtol_theta, &nmax_phi, &nmax_theta,
+                &mask_obj,
+                &spread, &counterjet, &gamma_type))
     {
         //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
+        return NULL;
+    }
+
+    if(int_type < 0 || int_type >= INT_UNDEFINED)
+    {
+        PyErr_SetString(PyExc_RuntimeError,
+                        "intType out of range, unknown integrator");
         return NULL;
     }
 
     //Grab NUMPY arrays
     PyArrayObject *theta_arr;
     PyArrayObject *phi_arr;
-    PyArrayObject *tobs_arr;
+    PyArrayObject *t_arr;
     PyArrayObject *mask_arr = NULL;
 
     theta_arr = (PyArrayObject *) PyArray_FROM_OTF(theta_obj, NPY_DOUBLE,
                                                 NPY_ARRAY_IN_ARRAY);
     phi_arr = (PyArrayObject *) PyArray_FROM_OTF(phi_obj, NPY_DOUBLE,
                                                 NPY_ARRAY_IN_ARRAY);
-    tobs_arr = (PyArrayObject *) PyArray_FROM_OTF(tobs_obj, NPY_DOUBLE,
+    t_arr = (PyArrayObject *) PyArray_FROM_OTF(t_obj, NPY_DOUBLE,
                                                 NPY_ARRAY_IN_ARRAY);
     if(mask_obj != NULL)
         mask_arr = (PyArrayObject *) PyArray_FROM_OTF(mask_obj, NPY_DOUBLE,
                                                 NPY_ARRAY_IN_ARRAY);
 
-    if(theta_arr == NULL || phi_arr == NULL || tobs_arr == NULL
+    if(theta_arr == NULL || phi_arr == NULL || t_arr == NULL
             || (mask_obj != NULL && mask_arr == NULL))
     {
         PyErr_SetString(PyExc_RuntimeError, "Could not read input arrays.");
         Py_XDECREF(theta_arr);
         Py_XDECREF(phi_arr);
-        Py_XDECREF(tobs_arr);
+        Py_XDECREF(t_arr);
         Py_XDECREF(mask_arr);
         return NULL;
     }
 
     int theta_ndim = (int) PyArray_NDIM(theta_arr);
     int phi_ndim = (int) PyArray_NDIM(phi_arr);
-    int tobs_ndim = (int) PyArray_NDIM(tobs_arr);
+    int t_ndim = (int) PyArray_NDIM(t_arr);
     int mask_ndim = 0;
     if(mask_obj != NULL)
         mask_ndim = (int) PyArray_NDIM(mask_arr);
 
-    if(theta_ndim != 1 || phi_ndim != 1 || tobs_ndim != 1
+    if(theta_ndim != 1 || phi_ndim != 1 || t_ndim != 1
             || (mask_obj != NULL && mask_ndim != 1))
     {
         PyErr_SetString(PyExc_RuntimeError, "Arrays must be 1-D.");
         Py_DECREF(theta_arr);
         Py_DECREF(phi_arr);
-        Py_DECREF(tobs_arr);
+        Py_DECREF(t_arr);
         if(mask_obj != NULL)
             Py_DECREF(mask_arr);
         return NULL;
@@ -699,17 +766,17 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
 
     int N = (int)PyArray_DIM(theta_arr, 0);
     int Np = (int)PyArray_DIM(phi_arr, 0);
-    int Ntobs = (int)PyArray_DIM(tobs_arr, 0);
+    int Nt = (int)PyArray_DIM(t_arr, 0);
     int Nmask = 0;
     if(mask_obj != NULL)
         Nmask = (int)PyArray_DIM(mask_arr, 0);
 
-    if(N!=Np || N!=Ntobs || Np!=Ntobs)
+    if(N!=Np || N!=Nt || Np!=Nt)
     {
         PyErr_SetString(PyExc_RuntimeError, "Arrays must be same size.");
         Py_DECREF(theta_arr);
         Py_DECREF(phi_arr);
-        Py_DECREF(tobs_arr);
+        Py_DECREF(t_arr);
         if(mask_obj != NULL)
             Py_DECREF(mask_arr);
         return NULL;
@@ -720,7 +787,7 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
                             "Mask length must be multiple of 9.");
         Py_DECREF(theta_arr);
         Py_DECREF(phi_arr);
-        Py_DECREF(tobs_arr);
+        Py_DECREF(t_arr);
         if(mask_obj != NULL)
             Py_DECREF(mask_arr);
         return NULL;
@@ -728,7 +795,7 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
 
     double *theta = (double *)PyArray_DATA(theta_arr);
     double *phi = (double *)PyArray_DATA(phi_arr);
-    double *tobs = (double *)PyArray_DATA(tobs_arr);
+    double *t = (double *)PyArray_DATA(t_arr);
     double *mask = NULL;
     if(mask_obj != NULL)
         mask = (double *)PyArray_DATA(mask_arr);
@@ -737,48 +804,52 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
     //Allocate output array
 
     npy_intp dims[1] = {N};
-    PyObject *t_obj = PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+    PyObject *te_obj = PyArray_SimpleNew(1, dims, NPY_DOUBLE);
     PyObject *R_obj = PyArray_SimpleNew(1, dims, NPY_DOUBLE);
     PyObject *u_obj = PyArray_SimpleNew(1, dims, NPY_DOUBLE);
     PyObject *thj_obj = PyArray_SimpleNew(1, dims, NPY_DOUBLE);
 
-    if(t_obj == NULL || R_obj == NULL || u_obj == NULL || thj_obj == NULL)
+    if(te_obj == NULL || R_obj == NULL || u_obj == NULL || thj_obj == NULL)
     {
         PyErr_SetString(PyExc_RuntimeError, "Could not make arrays.");
         Py_DECREF(theta_arr);
         Py_DECREF(phi_arr);
-        Py_DECREF(tobs_arr);
+        Py_DECREF(t_arr);
         if(mask_obj != NULL)
             Py_DECREF(mask_arr);
         return NULL;
     }
-    double *t = PyArray_DATA((PyArrayObject *) t_obj);
+    double *te = PyArray_DATA((PyArrayObject *) te_obj);
     double *R = PyArray_DATA((PyArrayObject *) R_obj);
     double *u = PyArray_DATA((PyArrayObject *) u_obj);
     double *thj = PyArray_DATA((PyArrayObject *) thj_obj);
 
     // Set Up The Parameters
-    double ta = tobs[0];
-    double tb = tobs[0];
+    double ta = t[0];
+    double tb = t[0];
     int i;
     for(i=0; i<N; i++)
     {
-        if(tobs[i] < ta)
-            ta = tobs[i];
-        else if(tobs[i] > tb)
-            tb = tobs[i];
+        if(t[i] < ta)
+            ta = t[i];
+        else if(t[i] > tb)
+            tb = t[i];
     }
 
     struct fluxParams fp;
     setup_fluxParams(&fp, d_L, theta_obs, E_iso_core, theta_h_core,
-                        theta_h_wing, b, L0, q, ts,
+                        theta_h_wing, b,
+                        L0, q, ts,
                         n_0, p, epsilon_E, epsilon_B, ksi_N, g0, 
-                        E_core_global, theta_h_core_global, ta, tb, tRes,
-                        latRes,
-                        0, rtol, mask, masklen, spread, gamma_type);
+                        E_core_global, theta_h_core_global, ta, tb,
+                        tRes, latRes, int_type,
+                        rtol_struct, rtol_phi, rtol_theta,
+                        nmax_phi, nmax_theta,
+                        spec_type, mask, masklen,
+                        spread, counterjet, gamma_type);
 
     // Calculate the intensity!
-    calc_shockVals(jet_type, theta, phi, tobs, t, R, u, thj, N, &fp);
+    calc_shockVals(jet_type, theta, phi, t, te, R, u, thj, N, &fp);
     
     //Free the parameters
     free_fluxParams(&fp);
@@ -786,12 +857,12 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
     // Clean up!
     Py_DECREF(theta_arr);
     Py_DECREF(phi_arr);
-    Py_DECREF(tobs_arr);
+    Py_DECREF(t_arr);
     if(mask_obj != NULL)
         Py_DECREF(mask_arr);
 
     //Build output
-    PyObject *ret = Py_BuildValue("NNNN", t_obj, R_obj, u_obj, thj_obj);
+    PyObject *ret = Py_BuildValue("NNNN", te_obj, R_obj, u_obj, thj_obj);
     
     return ret;
 }
@@ -862,23 +933,8 @@ static PyObject *jet_shock(PyObject *self, PyObject *args)
     {
         t[i] = pars.t_table[i];
         R[i] = pars.R_table[i];
-        if(pars.u_table != NULL)
-            u[i] = pars.u_table[i];
-        else
-            u[i] = sqrt(get_lfacbetasqrd(t[i], pars.C_BMsqrd, pars.C_STsqrd));
-        if(pars.th_table != NULL)
-            th[i] = pars.th_table[i];
-        else
-        {
-            if(t[i] < pars.t_NR)
-                th[i] = thetah;
-            else
-            {
-                th[i] = thetah + 1.0/sqrt(20)*log(t[i]/pars.t_NR);
-                if(th[i] > 0.5*M_PI)
-                    th[i] = 0.5*M_PI;
-            }
-        }
+        u[i] = pars.u_table[i];
+        th[i] = pars.th_table[i];
     }
 
     PyObject *ret = Py_BuildValue("NNNN", t_obj, R_obj, u_obj, th_obj);
@@ -957,23 +1013,8 @@ static PyObject *jet_shockObs(PyObject *self, PyObject *args)
     {
         t[i] = pars.t_table[i];
         R[i] = pars.R_table[i];
-        if(pars.u_table != NULL)
-            u[i] = pars.u_table[i];
-        else
-            u[i] = sqrt(get_lfacbetasqrd(t[i], pars.C_BMsqrd, pars.C_STsqrd));
-        if(pars.th_table != NULL)
-            th[i] = pars.th_table[i];
-        else
-        {
-            if(t[i] < pars.t_NR)
-                th[i] = thetah;
-            else
-            {
-                th[i] = thetah + 1.0/sqrt(20)*log(t[i]/pars.t_NR);
-                if(th[i] > 0.5*M_PI)
-                    th[i] = 0.5*M_PI;
-            }
-        }
+        u[i] = pars.u_table[i];
+        th[i] = pars.th_table[i];
     }
 
     PyObject *ret = Py_BuildValue("NNNN", t_obj, R_obj, u_obj, th_obj);

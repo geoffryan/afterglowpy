@@ -54,12 +54,7 @@
 #define SSA_SHARP_FLAG  8
 
 enum{INT_TRAP_FIXED, INT_TRAP_ADAPT, INT_SIMP_FIXED, INT_SIMP_ADAPT,
-     INT_ROMB_ADAPT};
-
-//Integration accuracy targets (for non GSL functions)
-#define R_ACC 1.0e-6
-#define THETA_ACC 1.0e-6
-#define PHI_ACC 1.0e-6
+     INT_ROMB_ADAPT, INT_UNDEFINED};
 
 struct fluxParams
 {
@@ -109,15 +104,16 @@ struct fluxParams
     double tRes;
     int latRes;
     int spread;
+    int counterjet;
 
-    double r_rtol;
-    double theta_rtol;
-    double phi_rtol;
-    int r_nmax;
-    int theta_nmax;
-    int phi_nmax;
-    double theta_atol;
-    double flux_rtol;
+    int int_type;
+    double rtol_struct;
+    double rtol_theta;
+    double rtol_phi;
+    int nmax_theta;
+    int nmax_phi;
+
+    double atol_theta;
 
     double Rt0;
     double Rt1;
@@ -270,11 +266,14 @@ void setup_fluxParams(struct fluxParams *pars,
                     double ksi_N,
                     double g0,
                     double E_core_global,
-                    double theta_h_core_global,
-                    double ta, double tb, double tRes,
-                    int latRes,
-                    int spec_type, double flux_rtol,
-                    double *mask, int nmask, int spread, int gammaType);
+                    double theta_core_global,
+                    double ta, double tb,
+                    int tRes, int latRes, int int_type,
+                    double rtol_struct, double rtol_phi, double rtol_theta,
+                    int nmax_phi, int nmax_theta,
+                    int spec_type,
+                    double *mask, int nmask,
+                    int spread, int counterjet, int gamma_type);
 void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h);
 void set_obs_params(struct fluxParams *pars, double t_obs, double nu_obs,
                         double theta_obs_cur, double current_theta_cone_hi, 
