@@ -690,11 +690,21 @@ double phi_integrand(double a_phi, void* params) // outer integral
     double omct0 = 2 * sht0*sht0;
     double omct1 = 2 * sht1*sht1;
 
-    int Neval = 0;
-    double err = 0;
-
-    if(pars->int_type == INT_ROMB_ADAPT)
+    if(pars->int_type == INT_TRAP_FIXED)
     {
+        result = trap(&costheta_integrand, omct0, omct1, pars->nmax_theta,
+                      params);
+    }
+    else if(pars->int_type == INT_SIMP_FIXED)
+    {
+        result = simp(&costheta_integrand, omct0, omct1, pars->nmax_theta,
+                      params);
+    }
+    else if(pars->int_type == INT_ROMB_ADAPT)
+    {
+        int Neval = 0;
+        double err = 0;
+
         result = romb(&costheta_integrand, omct0, omct1, pars->nmax_theta,
                         pars->atol_theta, pars->rtol_theta, params,
                         &Neval, &err, 0);
@@ -803,10 +813,20 @@ double flux(struct fluxParams *pars, double atol) // determine flux for a given 
     //double I0 = phi_integrand(0.0, pars);
     //pars->theta_atol = 1.0e-6 * I0;
 
-    double phi_a = phi_0 + 0.5*(phi_1-phi_0);
 
-    if(pars->int_type == INT_ROMB_ADAPT)
+    if(pars->int_type == INT_TRAP_FIXED)
     {
+        result = 2 * Fcoeff * trap(&phi_integrand, phi_0, phi_1,
+                                    pars->nmax_phi, pars);
+    }
+    else if(pars->int_type == INT_SIMP_FIXED)
+    {
+        result = 2 * Fcoeff * simp(&phi_integrand, phi_0, phi_1,
+                                    pars->nmax_phi, pars);
+    }
+    else if(pars->int_type == INT_ROMB_ADAPT)
+    {
+        double phi_a = phi_0 + 0.5*(phi_1-phi_0);
         result = 2 * Fcoeff * romb(&phi_integrand, phi_0, phi_a,
                                     pars->nmax_phi, atol/(2*Fcoeff),
                                     pars->rtol_phi, pars, NULL, NULL, 0);

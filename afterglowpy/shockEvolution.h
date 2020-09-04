@@ -1,5 +1,5 @@
-#ifndef GRBPY_SHOCK
-#define GRBPY_SHOCK
+#ifndef AFTERGLOWPY_SHOCK
+#define AFTERGLOWPY_SHOCK
 
 static const double T0_inj = 1.0e3;
 

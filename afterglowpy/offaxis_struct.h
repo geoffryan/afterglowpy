@@ -1,5 +1,5 @@
-#ifndef GRBPY_STRUCT
-#define GRBPY_STRUCT
+#ifndef AFTERGLOWPY_STRUCT
+#define AFTERGLOWPY_STRUCT
 
 // offaxis.h
 
