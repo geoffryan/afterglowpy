@@ -695,10 +695,22 @@ double phi_integrand(double a_phi, void* params) // outer integral
         result = trap(&costheta_integrand, omct0, omct1, pars->nmax_theta,
                       params);
     }
+    else if(pars->int_type == INT_TRAP_ADAPT)
+    {
+        result = trap_adapt(&costheta_integrand, omct0, omct1,
+                            pars->nmax_theta, pars->atol_theta,
+                            pars->rtol_theta, params, NULL, NULL, NULL, 0);
+    }
     else if(pars->int_type == INT_SIMP_FIXED)
     {
         result = simp(&costheta_integrand, omct0, omct1, pars->nmax_theta,
                       params);
+    }
+    else if(pars->int_type == INT_SIMP_ADAPT)
+    {
+        result = simp_adapt(&costheta_integrand, omct0, omct1,
+                            pars->nmax_theta, pars->atol_theta,
+                            pars->rtol_theta, params, NULL, NULL, NULL, 0);
     }
     else if(pars->int_type == INT_ROMB_ADAPT)
     {
@@ -819,10 +831,24 @@ double flux(struct fluxParams *pars, double atol) // determine flux for a given 
         result = 2 * Fcoeff * trap(&phi_integrand, phi_0, phi_1,
                                     pars->nmax_phi, pars);
     }
+    else if(pars->int_type == INT_TRAP_ADAPT)
+    {
+        result = 2 * Fcoeff * trap_adapt(&phi_integrand, phi_0, phi_1,
+                                         pars->nmax_phi, atol/(2*Fcoeff),
+                                         pars->rtol_phi, pars, NULL, NULL,
+                                         NULL, 0);
+    }
     else if(pars->int_type == INT_SIMP_FIXED)
     {
         result = 2 * Fcoeff * simp(&phi_integrand, phi_0, phi_1,
                                     pars->nmax_phi, pars);
+    }
+    else if(pars->int_type == INT_SIMP_ADAPT)
+    {
+        result = 2 * Fcoeff * simp_adapt(&phi_integrand, phi_0, phi_1,
+                                         pars->nmax_phi, atol/(2*Fcoeff),
+                                         pars->rtol_phi, pars, NULL, NULL,
+                                         NULL, 0);
     }
     else if(pars->int_type == INT_ROMB_ADAPT)
     {

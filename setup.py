@@ -16,9 +16,10 @@ libs = []
 libdirs = []
 
 jetsources = ["afterglowpy/jetmodule.c", "afterglowpy/offaxis_struct_funcs.c",
-              "afterglowpy/integrate.c", "afterglowpy/shockEvolution.c"]
+              "afterglowpy/integrate.c", "afterglowpy/shockEvolution.c",
+              "afterglowpy/interval.c"]
 jetdepends = ["afterglowpy/offaxis_struct_funcs.h",
-              "afterglowpy/shockEvolution.h"]
+              "afterglowpy/shockEvolution.h", "afterglowpy/interval.h"]
 
 shocksources = ["afterglowpy/shockmodule.c", "afterglowpy/shockEvolution.c"]
 shockdepends = ["afterglowpy/shockEvolution.h",
