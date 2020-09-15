@@ -149,15 +149,17 @@ double check_t_e(double t_e, double mu, double t_obs, double *mu_table, int N)
 {
     if(mu > mu_table[N-1])
     {
-        printf("mu >> 1? this should not have happened\n");
-        printf("   t_obs=%.6lg t_e=%.6lg mu=%.6lg mu_table[-1]=%.6lg\n",
+        fprintf(stderr, "mu >> 1? this should not have happened\n");
+        fprintf(stderr,
+                "   t_obs=%.6lg t_e=%.6lg mu=%.6lg mu_table[-1]=%.6lg\n",
                 t_obs, t_e, mu, mu_table[N-1]);
         return -1;
     }
 
     if(mu_table[0] >= mu) // happens only if t_e very small
     {
-        printf("very small mu: mu=%.3lg, mu[0]=%.3lg\n", mu, mu_table[0]);
+        fprintf(stderr, "very small mu: mu=%.3lg, mu[0]=%.3lg\n",
+                mu, mu_table[0]);
         //return t_obs / (1.0 - mu); // so return small t_e limit
         return -1;
     }
@@ -307,10 +309,32 @@ void make_R_table(struct fluxParams *pars)
 
     if(R_table[0] != R_table[0])
     {
-        printf("Shock integration Error: R[0]=%.3e  (fac=%.3e)\n", 
-                                    R_table[0], fac);
-        printf("    t0=%.3e R0=%.3e u0=%.3e th0=%.3e\n",
-                    Rt0, R0, u0, th0);
+        char msg[MSG_LEN];
+        int c = 0;
+        c += snprintf(msg, MSG_LEN,
+                      "Shock integration Error: R[0]=%.3e  (fac=%.3e)\n",
+                      R_table[0], fac);
+
+        c += snprintf(msg+c, MSG_LEN-c,
+                      "    t0=%.3e R0=%.3e u0=%.3e th0=%.3e\n",
+                      Rt0, R0, u0, th0);
+        set_error(pars, msg);
+        return;
+    }
+
+    if(R_table[table_entries-1] != R_table[table_entries-1])
+    {
+        char msg[MSG_LEN];
+        int c = 0;
+        c += snprintf(msg, MSG_LEN,
+                      "Shock integration Error: R[-1]=%.3e  (fac=%.3e)\n",
+                      R_table[table_entries-1], fac);
+
+        c += snprintf(msg+c, MSG_LEN-c,
+                      "    t0=%.3e R0=%.3e u0=%.3e th0=%.3e\n",
+                      Rt0, R0, u0, th0);
+        set_error(pars, msg);
+        return;
     }
 }
 
@@ -420,11 +444,17 @@ double emissivity(double nu, double R, double mu, double te,
 
 
     if(em != em || em < 0.0)
-        printf("bad em:%.3le te=%.3le mu=%.3lf\n",
+    {
+        fprintf(stderr, "bad em:%.3le te=%.3le mu=%.3lf\n",
                 em, te, mu);
+        return -1;
+    }
     if(freq != freq || freq < 0.0)
-        printf("bad freq at:%.3le te=%.3le mu=%.3lf\n",
+    {
+        fprintf(stderr, "bad freq at:%.3le te=%.3le mu=%.3lf\n",
                 freq, te, mu);
+        return -1;
+    }
 
     double em_lab = em * freq / (g*g * a*a);
 
@@ -611,7 +641,12 @@ double costheta_integrand(double aomct, void* params) // inner integral
     }
 
     if(fac != fac || fac < 0.0)
-        printf("bad mask fac: %.3le\n", fac);
+    {
+        char msg[MSG_LEN];
+        snprintf(msg, MSG_LEN, "bad mask fac: %.3le\n", fac);
+        set_error(pars, msg);
+        return 0.0;
+    }
 
     return fac * dFnu;
 }
@@ -1134,7 +1169,29 @@ double intensity(double theta, double phi, double tobs, double nuobs,
     t_e = check_t_e(t_e, mu, pars->t_obs, pars->mu_table, 
                                 pars->table_entries);
     if(t_e < 0.0)
-        printf("WTFWTF\n");
+    {
+        char msg[MSG_LEN];
+        int c = 0;
+        c += snprintf(msg, MSG_LEN-c,
+                     "BAD t_e: %.6lf Eiso=%.3le n0=%.3le thetah=%.3le\n",
+                     t_e, pars->E_iso, pars->n_0, pars->theta_h);
+        c += snprintf(msg+c, MSG_LEN-c,
+                      "    theta_obs=%.3lf phi=%.3lf theta=%.3lf mu=%.3lf\n",
+                      pars->theta_obs, pars->phi, pars->theta, mu);
+        c += snprintf(msg+c, MSG_LEN-c,
+                      "    L0=%.3le q=%.3lf ts=%.3le\n",
+                      pars->L0, pars->q, pars->ts);
+        c += snprintf(msg+c, MSG_LEN-c,
+                      "    t[0]=%.3le t[-1]=%.3le R[0]=%.3le R[-1]=%.3le\n",
+                      pars->t_table[0], pars->t_table[pars->table_entries-1],
+                      pars->R_table[0], pars->R_table[pars->table_entries-1]);
+        c += snprintf(msg+c, MSG_LEN-c,
+                      "    u[0]=%.3le u[-1]=%.3le th[0]=%.3le th[-1]=%.3le\n",
+                      pars->u_table[0], pars->u_table[pars->table_entries-1],
+                      pars->th_table[0], pars->th_table[pars->table_entries-1]);
+        set_error(pars, msg);
+        return 0.0;
+    }
 
     double R = interpolateLog(ia, ib, t_e, pars->t_table,
                                 pars->R_table, pars->table_entries);
@@ -1173,7 +1230,29 @@ void shockVals(double theta, double phi, double tobs,
     t_e = check_t_e(t_e, mu, pars->t_obs, pars->mu_table, 
                                 pars->table_entries);
     if(t_e < 0.0)
-        printf("WTFWTF\n");
+    {
+        char msg[MSG_LEN];
+        int c = 0;
+        c += snprintf(msg, MSG_LEN-c,
+                     "BAD t_e: %.6lf Eiso=%.3le n0=%.3le thetah=%.3le\n",
+                     t_e, pars->E_iso, pars->n_0, pars->theta_h);
+        c += snprintf(msg+c, MSG_LEN-c,
+                      "    theta_obs=%.3lf phi=%.3lf theta=%.3lf mu=%.3lf\n",
+                      pars->theta_obs, pars->phi, pars->theta, mu);
+        c += snprintf(msg+c, MSG_LEN-c,
+                      "    L0=%.3le q=%.3lf ts=%.3le\n",
+                      pars->L0, pars->q, pars->ts);
+        c += snprintf(msg+c, MSG_LEN-c,
+                      "    t[0]=%.3le t[-1]=%.3le R[0]=%.3le R[-1]=%.3le\n",
+                      pars->t_table[0], pars->t_table[pars->table_entries-1],
+                      pars->R_table[0], pars->R_table[pars->table_entries-1]);
+        c += snprintf(msg+c, MSG_LEN-c,
+                      "    u[0]=%.3le u[-1]=%.3le th[0]=%.3le th[-1]=%.3le\n",
+                      pars->u_table[0], pars->u_table[pars->table_entries-1],
+                      pars->th_table[0], pars->th_table[pars->table_entries-1]);
+        set_error(pars, msg);
+        return;
+    }
 
     *t = t_e;
     *R = interpolateLog(ia, ib, t_e, pars->t_table,
