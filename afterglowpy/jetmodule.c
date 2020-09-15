@@ -9,6 +9,39 @@
 #define PROFILE2
 #define PROFILEOUTA
 
+static const int jet_type_default = -1;
+static const int spec_type_default = 0;
+static const double theta_obs_default = 0.0;
+static const double E_iso_core_default = 1.0e53;
+static const double theta_h_core_default = 0.1;
+static const double theta_h_wing_default = 0.4;
+static const double b_default = 0.0;
+static const double L0_default = 0.0;
+static const double q_default = 0.0;
+static const double ts_default = 0.0; 
+static const double n_0_default = 1.0;
+static const double p_default = 2.2;
+static const double epsilon_E_default = 0.1;
+static const double epsilon_B_default = 0.01;
+static const double ksi_N_default = 1.0; 
+static const double d_L_default = 1.0e27;
+
+static const int latRes_default = 5;
+static const int tRes_default = 1000;
+static const int spread_default = 7;
+static const int counterjet_default = 0;
+static const int gamma_type_default = GAMMA_INF;
+static const double g0_default = -1.0;
+static const double E_core_global_default = 0.0;
+static const double theta_h_core_global_default = 0.0;
+
+static const double rtol_struct_default = 1.0e-4;
+static const double rtol_theta_default = 1.0e-6;
+static const double rtol_phi_default = 1.0e-6;
+static const int int_type_default = INT_ROMB_ADAPT;
+static const int nmax_phi_default = 1000;
+static const int nmax_theta_default = 1000;
+
 static char jet_docstring[] = 
     "This module calculates emission from a semi-analytic GRB afterglow model.";
 static char fluxDensity_docstring[] = 
@@ -130,6 +163,10 @@ void initjet(void)
     PyModule_AddIntConstant(module, "SimpFixed", INT_SIMP_FIXED);
     PyModule_AddIntConstant(module, "SimpAdapt", INT_SIMP_ADAPT);
     PyModule_AddIntConstant(module, "RombAdapt", INT_ROMB_ADAPT);
+    PyModule_AddIntConstant(module, "GammaInf", GAMMA_INF);
+    PyModule_AddIntConstant(module, "GammaFlat", GAMMA_FLAT);
+    PyModule_AddIntConstant(module, "GammaEvenMass", GAMMA_EVENMASS);
+    PyModule_AddIntConstant(module, "GammaStruct", GAMMA_STRUCT);
 
 #if PY_MAJOR_VERSION >= 3
     return module;
@@ -159,39 +196,39 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     profClock1A = clock();
 #endif
 
-    int jet_type = -1;
-    int spec_type = 0;
-    double theta_obs = 0.0;
-    double E_iso_core = 1.0e53;
-    double theta_h_core = 0.1;
-    double theta_h_wing = 0.4;
-    double b = 0.0;
-    double L0 = 0.0;
-    double q = 0.0;
-    double ts = 0.0; 
-    double n_0 = 1.0;
-    double p = 2.2;
-    double epsilon_E = 0.1;
-    double epsilon_B = 0.01;
-    double ksi_N = 1.0; 
-    double d_L = 1.0e27;
+    int jet_type = jet_type_default;
+    int spec_type = spec_type_default;
+    double theta_obs = theta_obs_default;
+    double E_iso_core = E_iso_core_default;
+    double theta_h_core = theta_h_core_default;
+    double theta_h_wing = theta_h_wing_default;
+    double b = b_default;
+    double L0 = L0_default;
+    double q = q_default;
+    double ts = ts_default; 
+    double n_0 = n_0_default;
+    double p = p_default;
+    double epsilon_E = epsilon_E_default;
+    double epsilon_B = epsilon_B_default;
+    double ksi_N = ksi_N_default; 
+    double d_L = d_L_default;
 
-    int latRes = 5;
-    int tRes = 1000;
-    double g0 = -1.0;
-    double E_core_global = 0.0;
-    double theta_h_core_global = 0.0;
+    int latRes = latRes_default;
+    int tRes = tRes_default;
+    double g0 = g0_default;
+    double E_core_global = E_core_global_default;
+    double theta_h_core_global = theta_h_core_global_default;
 
-    double rtol_struct = 1.0e-4;
-    double rtol_theta = 1.0e-6;
-    double rtol_phi = 1.0e-6;
-    int int_type = INT_ROMB_ADAPT;
-    int nmax_phi = 1000;
-    int nmax_theta = 1000;
+    double rtol_struct = rtol_struct_default;
+    double rtol_theta = rtol_theta_default;
+    double rtol_phi = rtol_phi_default;
+    int int_type = int_type_default;
+    int nmax_phi = nmax_phi_default;
+    int nmax_theta = nmax_theta_default;
 
-    int spread = 7;
-    int counterjet = 0;
-    int gamma_type = 0;
+    int spread = spread_default;
+    int counterjet = counterjet_default;
+    int gamma_type = gamma_type_default;
 
     static char *kwlist[] = {"t", "nu", "jetType", "specType",
                                 "thetaObs", "E0", "thetaCore", "thetaWing",
@@ -348,6 +385,13 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
 
     // Calculate the flux!
     calc_flux_density(jet_type, spec_type, t, nu, Fnu, N, &fp);
+   
+    if(fp.error)
+    {
+        PyErr_SetString(PyExc_RuntimeError, fp.error_msg);
+        free_fluxParams(&fp);
+        return NULL;
+    }
 
     //Free the parameters!
     free_fluxParams(&fp);
@@ -418,38 +462,39 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
     PyObject *nu_obj = NULL;
     PyObject *mask_obj = NULL;
 
-    int jet_type = -1;
-    int spec_type = 0;
-    double theta_obs = 0.0;
-    double E_iso_core = 1.0e53;
-    double theta_h_core = 0.1;
-    double theta_h_wing = 0.4;
-    double b = 0.0;
-    double L0 = 0.0;
-    double q = 0.0;
-    double ts = 0.0; 
-    double n_0 = 1.0;
-    double p = 2.2;
-    double epsilon_E = 0.1;
-    double epsilon_B = 0.01;
-    double ksi_N = 1.0; 
-    double d_L = 1.0e27;
+    int jet_type = jet_type_default;
+    int spec_type = spec_type_default;
+    double theta_obs = theta_obs_default;
+    double E_iso_core = E_iso_core_default;
+    double theta_h_core = theta_h_core_default;
+    double theta_h_wing = theta_h_wing_default;
+    double b = b_default;
+    double L0 = L0_default;
+    double q = q_default;
+    double ts = ts_default; 
+    double n_0 = n_0_default;
+    double p = p_default;
+    double epsilon_E = epsilon_E_default;
+    double epsilon_B = epsilon_B_default;
+    double ksi_N = ksi_N_default; 
+    double d_L = d_L_default;
 
-    int latRes = 5;
-    int tRes = 1000;
-    int spread = 7;
-    int counterjet = 0;
-    int gamma_type = 0;
-    double g0 = -1.0;
-    double E_core_global = 0.0;
-    double theta_h_core_global = 0.0;
+    int latRes = latRes_default;
+    int tRes = tRes_default;
+    double g0 = g0_default;
+    double E_core_global = E_core_global_default;
+    double theta_h_core_global = theta_h_core_global_default;
 
-    double rtol_struct = 1.0e-4;
-    double rtol_theta = 1.0e-6;
-    double rtol_phi = 1.0e-6;
-    int int_type = INT_ROMB_ADAPT;
-    int nmax_phi = 1000;
-    int nmax_theta = 1000;
+    double rtol_struct = rtol_struct_default;
+    double rtol_theta = rtol_theta_default;
+    double rtol_phi = rtol_phi_default;
+    int int_type = int_type_default;
+    int nmax_phi = nmax_phi_default;
+    int nmax_theta = nmax_theta_default;
+
+    int spread = spread_default;
+    int counterjet = counterjet_default;
+    int gamma_type = gamma_type_default;
 
     static char *kwlist[] = {"theta", "phi", "t", "nu", "jetType", "specType",
                                 "thetaObs", "E0", "thetaCore", "thetaWing",
@@ -623,6 +668,13 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
 
     // Calculate the intensity!
     calc_intensity(jet_type, spec_type, theta, phi, t, nu, Inu, N, &fp);
+   
+    if(fp.error)
+    {
+        PyErr_SetString(PyExc_RuntimeError, fp.error_msg);
+        free_fluxParams(&fp);
+        return NULL;
+    }
     
     // Free the parameters!
     free_fluxParams(&fp);
@@ -648,38 +700,38 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
     PyObject *t_obj = NULL;
     PyObject *mask_obj = NULL;
 
-    int jet_type = -1;
-    double theta_obs = 0.0;
-    double E_iso_core = 1.0e53;
-    double theta_h_core = 0.1;
-    double theta_h_wing = 0.4;
-    double b = 0.0;
-    double L0 = 0.0;
-    double q = 0.0;
-    double ts = 0.0; 
-    double n_0 = 1.0;
-    double p = 2.2;
-    double epsilon_E = 0.1;
-    double epsilon_B = 0.01;
-    double ksi_N = 1.0; 
-    double d_L = 1.0e27;
+    int jet_type = jet_type_default;
+    double theta_obs = theta_obs_default;
+    double E_iso_core = E_iso_core_default;
+    double theta_h_core = theta_h_core_default;
+    double theta_h_wing = theta_h_wing_default;
+    double b = b_default;
+    double L0 = L0_default;
+    double q = q_default;
+    double ts = ts_default; 
+    double n_0 = n_0_default;
+    double p = p_default;
+    double epsilon_E = epsilon_E_default;
+    double epsilon_B = epsilon_B_default;
+    double ksi_N = ksi_N_default; 
+    double d_L = d_L_default;
 
-    int latRes = 5;
-    int tRes = 1000;
-    int spread = 7;
-    int counterjet = 0;
-    int gamma_type = 0;
-    int spec_type = 0;
-    double g0 = -1.0;
-    double E_core_global = 0.0;
-    double theta_h_core_global = 0.0;
+    int latRes = latRes_default;
+    int tRes = tRes_default;
+    int spread = spread_default;
+    int counterjet = counterjet_default;
+    int gamma_type = gamma_type_default;
+    int spec_type = spec_type_default;
+    double g0 = g0_default;
+    double E_core_global = E_core_global_default;
+    double theta_h_core_global = theta_h_core_global_default;
 
-    double rtol_struct = 1.0e-4;
-    double rtol_theta = 1.0e-6;
-    double rtol_phi = 1.0e-6;
-    int int_type = INT_ROMB_ADAPT;
-    int nmax_phi = 1000;
-    int nmax_theta = 1000;
+    double rtol_struct = rtol_struct_default;
+    double rtol_theta = rtol_theta_default;
+    double rtol_phi = rtol_phi_default;
+    int int_type = int_type_default;
+    int nmax_phi = nmax_phi_default;
+    int nmax_theta = nmax_theta_default;
 
     static char *kwlist[] = {"theta", "phi", "t", "jetType", "specType",
                                 "thetaObs", "E0", "thetaCore", "thetaWing",
@@ -850,6 +902,13 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
 
     // Calculate the intensity!
     calc_shockVals(jet_type, theta, phi, t, te, R, u, thj, N, &fp);
+   
+    if(fp.error)
+    {
+        PyErr_SetString(PyExc_RuntimeError, fp.error_msg);
+        free_fluxParams(&fp);
+        return NULL;
+    }
     
     //Free the parameters
     free_fluxParams(&fp);
@@ -901,9 +960,22 @@ static PyObject *jet_shock(PyObject *self, PyObject *args)
     pars.spread = spread;
 
     set_jet_params(&pars, E0, thetah);
+   
+    if(pars.error)
+    {
+        PyErr_SetString(PyExc_RuntimeError, pars.error_msg);
+        free_fluxParams(&pars);
+        return NULL;
+    }
     pars.Rt0 = Rt0;
     pars.Rt1 = Rt1;
     make_R_table(&pars);
+    if(pars.error)
+    {
+        PyErr_SetString(PyExc_RuntimeError, pars.error_msg);
+        free_fluxParams(&pars);
+        return NULL;
+    }
 
     //Allocate output arrays
     int N = pars.table_entries;
@@ -983,6 +1055,12 @@ static PyObject *jet_shockObs(PyObject *self, PyObject *args)
 
     printf("set_jet_params\n");
     set_jet_params(&pars, E0, thetah);
+    if(pars.error)
+    {
+        PyErr_SetString(PyExc_RuntimeError, pars.error_msg);
+        free_fluxParams(&pars);
+        return NULL;
+    }
     printf("done\n");
 
     //Allocate output arrays

@@ -6,14 +6,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#ifdef USEGSL
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_sf.h>
-#include <gsl/gsl_spline.h>
-#include <gsl/gsl_integration.h>
-#else
 #include "integrate.h"
-#endif
+
+#define ERR_CHK_VOID(pars) if(pars->error){ return;}
+#define ERR_CHK_INT(pars) if(pars->error){ return 0;}
+#define ERR_CHK_DBL(pars) if(pars->error){ return 0.0;}
+
 
 // some physical and mathematical constants
 #define PI          3.14159265358979323846
@@ -55,6 +53,8 @@
 
 enum{INT_TRAP_FIXED, INT_TRAP_ADAPT, INT_SIMP_FIXED, INT_SIMP_ADAPT,
      INT_ROMB_ADAPT, INT_UNDEFINED};
+
+enum{GAMMA_INF, GAMMA_FLAT, GAMMA_EVENMASS, GAMMA_STRUCT};
 
 struct fluxParams
 {
@@ -101,7 +101,7 @@ struct fluxParams
     double current_theta_cone_hi;
     double current_theta_cone_low;
     double theta_obs_cur;
-    double tRes;
+    int tRes;
     int latRes;
     int spread;
     int counterjet;
@@ -146,6 +146,11 @@ struct fluxParams
 
     double *mask;
     int nmask;
+
+    long nevals;
+
+    int error;
+    char *error_msg;
 };
 
 
@@ -278,6 +283,8 @@ void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h);
 void set_obs_params(struct fluxParams *pars, double t_obs, double nu_obs,
                         double theta_obs_cur, double current_theta_cone_hi, 
                         double current_theta_cone_low);
+int check_error(void *params);
+void set_error(struct fluxParams *pars, char msg[]);
 void free_fluxParams(struct fluxParams *pars);
 
 #endif
