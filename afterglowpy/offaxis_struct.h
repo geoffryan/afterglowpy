@@ -11,7 +11,7 @@
 #define ERR_CHK_VOID(pars) if(pars->error){ return;}
 #define ERR_CHK_INT(pars) if(pars->error){ return 0;}
 #define ERR_CHK_DBL(pars) if(pars->error){ return 0.0;}
-
+#define MSG_LEN 4096
 
 // some physical and mathematical constants
 #define PI          3.14159265358979323846

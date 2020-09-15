@@ -544,18 +544,27 @@ double costheta_integrand(double aomct, void* params) // inner integral
 
     if(t_e < 0.0)
     {
-        printf("BAD t_e: %.6lf Eiso=%.3le n0=%.3le thetah=%.3le\n",
-                t_e, pars->E_iso, pars->n_0, pars->theta_h);
-        printf("    theta_obs=%.3lf phi=%.3lf theta=%.3lf mu=%.3lf\n",
-                pars->theta_obs, pars->phi, pars->theta, mu);
-        printf("    L0=%.3le q=%.3lf ts=%.3le\n", pars->L0, pars->q, pars->ts);
-        printf("    t[0]=%.3le t[-1]=%.3le R[0]=%.3le R[-1]=%.3le\n",
-                pars->t_table[0], pars->t_table[pars->table_entries-1],
-                pars->R_table[0], pars->R_table[pars->table_entries-1]);
-        printf("    u[0]=%.3le u[-1]=%.3le th[0]=%.3le th[-1]=%.3le\n",
-                pars->u_table[0], pars->u_table[pars->table_entries-1],
-                pars->th_table[0], pars->th_table[pars->table_entries-1]);
-        abort();
+        char msg[MSG_LEN];
+        int c = 0;
+        c += snprintf(msg, MSG_LEN-c,
+                     "BAD t_e: %.6lf Eiso=%.3le n0=%.3le thetah=%.3le\n",
+                     t_e, pars->E_iso, pars->n_0, pars->theta_h);
+        c += snprintf(msg+c, MSG_LEN-c,
+                      "    theta_obs=%.3lf phi=%.3lf theta=%.3lf mu=%.3lf\n",
+                      pars->theta_obs, pars->phi, pars->theta, mu);
+        c += snprintf(msg+c, MSG_LEN-c,
+                      "    L0=%.3le q=%.3lf ts=%.3le\n",
+                      pars->L0, pars->q, pars->ts);
+        c += snprintf(msg+c, MSG_LEN-c,
+                      "    t[0]=%.3le t[-1]=%.3le R[0]=%.3le R[-1]=%.3le\n",
+                      pars->t_table[0], pars->t_table[pars->table_entries-1],
+                      pars->R_table[0], pars->R_table[pars->table_entries-1]);
+        c += snprintf(msg+c, MSG_LEN-c,
+                      "    u[0]=%.3le u[-1]=%.3le th[0]=%.3le th[-1]=%.3le\n",
+                      pars->u_table[0], pars->u_table[pars->table_entries-1],
+                      pars->th_table[0], pars->th_table[pars->table_entries-1]);
+        set_error(pars, msg);
+        return 0.0;
     }
     
     double R = interpolateLog(ia, ib, t_e, pars->t_table, pars->R_table, 
@@ -572,15 +581,23 @@ double costheta_integrand(double aomct, void* params) // inner integral
 
     if(dFnu != dFnu || dFnu < 0.0)
     {
-        printf("bad dFnu:%.3le nu=%.3le R=%.3le th=%.3lf mu=%.3lf\n",
-                dFnu, pars->nu_obs, R, a_theta, mu);
-        printf("               t=%.3le u=%.3le us=%.3le n0=%.3le p=%.3lf\n",
-                t_e, u, us, pars->n_0, pars->p);
-        printf("               epse=%.3le epsB=%.3le ksiN=%.3le specType=%d\n",
-                pars->epsilon_E, pars->epsilon_B, pars->ksi_N, pars->spec_type);
-        printf("               Rt0=%.3le Rt1=%.3le E_iso=%.3le L0=%.3le ts=%.3le\n",
-                pars->Rt0, pars->Rt1, pars->E_iso, pars->L0, pars->ts);
-        abort();
+        char msg[MSG_LEN];
+        int c = 0;
+        c += snprintf(msg, MSG_LEN,
+                     "bad dFnu:%.3le nu=%.3le R=%.3le th=%.3lf mu=%.3lf\n",
+                     dFnu, pars->nu_obs, R, a_theta, mu);
+        c += snprintf(msg+c, MSG_LEN-c,
+                     "      t=%.3le u=%.3le us=%.3le n0=%.3le p=%.3lf\n",
+                     t_e, u, us, pars->n_0, pars->p);
+        c += snprintf(msg+c, MSG_LEN-c,
+                     "      epse=%.3le epsB=%.3le ksiN=%.3le specType=%d\n",
+                     pars->epsilon_E, pars->epsilon_B, pars->ksi_N,
+                     pars->spec_type);
+        c += snprintf(msg+c, MSG_LEN-c,
+                     "      Rt0=%.3le Rt1=%.3le E_iso=%.3le L0=%.3le ts=%.3le\n",
+                     pars->Rt0, pars->Rt1, pars->E_iso, pars->L0, pars->ts);
+        set_error(pars, msg);
+        return 0.0;
     }
 
     int i;
@@ -730,16 +747,26 @@ double phi_integrand(double a_phi, void* params) // outer integral
     }
     else
     {
-        printf("Unknown integrator %d!  Aborting.\n", pars->int_type);
-        abort();
+        char msg[MSG_LEN];
+        snprintf(msg, MSG_LEN,
+                 "Unknown integrator %d!  Aborting.\n", pars->int_type);
+        set_error(pars, msg);
+        return 0.0;
     }
     ERR_CHK_DBL(pars)
 
     if(result != result || result < 0.0)
     {
-        printf("bad result:%.3le t_obs=%.3le theta_lo=%.3lf theta_hi=%.3lf theta_log=%.3lf phi=%.3lf\n",
-              result, pars->t_obs, theta_0, theta_1, pars->theta_h + 0.1 * log( pars->t_obs / pars->t_NR), pars->phi);
-        abort();
+        char msg[MSG_LEN];
+        int c = 0;
+        c += snprintf(msg, MSG_LEN,
+                     "bad result in phi_integrand :%.3le\n", result);
+
+        c += snprintf(msg+c, MSG_LEN-c,
+                     "   t_obs=%.3le theta_lo=%.3lf theta_hi=%.3lf phi=%.3lf\n",
+                     pars->t_obs, theta_0, theta_1, pars->phi);
+        set_error(pars, msg);
+        return 0.0;
     }
   
     //printf("   a_phi: %.6lf (%.6le)\n", a_phi, result);
@@ -874,8 +901,11 @@ double flux(struct fluxParams *pars, double atol) // determine flux for a given 
     }
     else
     {
-        printf("Unknown integrator %d!  Aborting.\n", pars->int_type);
-        abort();
+        char msg[MSG_LEN];
+        snprintf(msg, MSG_LEN,
+                 "Unknown integrator %d!  Aborting.\n", pars->int_type);
+        set_error(pars, msg);
+        return 0.0;
     }
 
     return result;
@@ -1055,15 +1085,23 @@ double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
 
     if(F1 != F1 || F1 < 0.0)
     {
-        printf("bad F1:%.3lg t_obs=%.3le theta_lo=%.3lf theta_hi=%.3lf\n",
-                F1, t_obs, theta_cone_low, theta_cone_hi);
-        abort();
+        char msg[MSG_LEN];
+        int c = snprintf(msg, MSG_LEN, "bad F1 in flux_cone:%.3lg\n", F1);
+        c += snprintf(msg+c, MSG_LEN-c,
+                      "      t_obs=%.3le theta_lo=%.3lf theta_hi=%.3lf\n",
+                      t_obs, theta_cone_low, theta_cone_hi);
+        set_error(pars, msg);
+        return 0.0;
     }
     if(F2 != F2 || F2 < 0.0)
     {
-        printf("bad F2:%.3lg t_obs=%.3le theta_lo=%.3lf theta_hi=%.3lf\n",
-                F2, t_obs, theta_cone_low, theta_cone_hi);
-        abort();
+        char msg[MSG_LEN];
+        int c = snprintf(msg, MSG_LEN, "bad F2 in flux_cone:%.3lg\n", F2);
+        c += snprintf(msg+c, MSG_LEN-c,
+                      "      t_obs=%.3le theta_lo=%.3lf theta_hi=%.3lf\n",
+                      t_obs, theta_cone_low, theta_cone_hi);
+        set_error(pars, msg);
+        return 0.0;
     }
 
     //printf(" Fcone = %.6le\n", Fboth);
@@ -1900,15 +1938,17 @@ void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h)
         || pars->gamma_type == GAMMA_EVENMASS
         || pars->gamma_type == GAMMA_STRUCT))
     {
-        char msg[4096];
+        char msg[MSG_LEN];
         int c = 0;
-        c += sprintf(msg, "Bad initial Lorentz factor: gamma_init = %.6lg\n",
-                pars->g_init);
-        c += sprintf(msg+c, "    E_iso = %.6lg   theta_h = %.6lg\n",
-                     E_iso, theta_h);
-        c += sprintf(msg+c, "    gamma_type = %d   gamma_core = %.6lg\n",
-                pars->gamma_type, pars->g_core);
-        msg[c] = '\0';
+        c += snprintf(msg, MSG_LEN,
+                      "Bad initial Lorentz factor: gamma_init = %.6lg\n",
+                      pars->g_init);
+        c += snprintf(msg+c, MSG_LEN-c,
+                      "    E_iso = %.6lg   theta_h = %.6lg\n",
+                      E_iso, theta_h);
+        c += snprintf(msg+c, MSG_LEN-c,
+                      "    gamma_type = %d   gamma_core = %.6lg\n",
+                      pars->gamma_type, pars->g_core);
         set_error(pars, msg);
         return;
     }
@@ -1982,73 +2022,93 @@ void set_error(struct fluxParams *pars, char msg[])
     int dumplenmax = 16384;  // overkill: 200 lines * 80c per line = 16000
 
     char dump[dumplenmax];
-    int c = sprintf(dump, "fluxParamsDump\n{\n");
-    c += sprintf(dump+c, "    theta: %.12lg\n", pars->theta);
-    c += sprintf(dump+c, "    phi: %.12lg\n", pars->phi);
-    c += sprintf(dump+c, "    cp: %.12lg\n", pars->cp);
-    c += sprintf(dump+c, "    ct: %.12lg\n", pars->ct);
-    c += sprintf(dump+c, "    st: %.12lg\n", pars->st);
-    c += sprintf(dump+c, "    cto: %.12lg\n", pars->cto);
-    c += sprintf(dump+c, "    sto: %.12lg\n", pars->sto);
-    c += sprintf(dump+c, "    theta_obs: %.12lg\n", pars->theta_obs);
-    c += sprintf(dump+c, "    t_obs: %.12lg\n", pars->t_obs);
-    c += sprintf(dump+c, "    nu_obs: %.12lg\n", pars->nu_obs);
-    c += sprintf(dump+c, "    d_L: %.12lg\n", pars->d_L);
-    c += sprintf(dump+c, "    E_iso: %.12lg\n", pars->E_iso);
-    c += sprintf(dump+c, "    n_0: %.12lg\n", pars->n_0);
-    c += sprintf(dump+c, "    g_init: %.12lg\n", pars->g_init);
-    c += sprintf(dump+c, "    p: %.12lg\n", pars->p);
-    c += sprintf(dump+c, "    epsilon_E: %.12lg\n", pars->epsilon_E);
-    c += sprintf(dump+c, "    epsilon_B: %.12lg\n", pars->epsilon_B);
-    c += sprintf(dump+c, "    ksi_N: %.12lg\n", pars->ksi_N);
-    c += sprintf(dump+c, "    theta_h: %.12lg\n", pars->theta_h);
-    c += sprintf(dump+c, "    E_iso_core: %.12lg\n", pars->E_iso_core);
-    c += sprintf(dump+c, "    theta_core: %.12lg\n", pars->theta_core);
-    c += sprintf(dump+c, "    theta_wing: %.12lg\n", pars->theta_wing);
-    c += sprintf(dump+c, "    b: %.12lg\n", pars->b);
-    c += sprintf(dump+c, "    E_tot: %.12lg\n", pars->E_tot);
-    c += sprintf(dump+c, "    g_core: %.12lg\n", pars->g_core);
-    c += sprintf(dump+c, "    E_core_global: %.12lg\n", pars->E_core_global);
-    c += sprintf(dump+c, "    theta_core_global: %.12lg\n",
+    int c = snprintf(dump, dumplenmax, "fluxParamsDump\n{\n");
+    c += snprintf(dump+c, dumplenmax-c, "    theta: %.12lg\n", pars->theta);
+    c += snprintf(dump+c, dumplenmax-c, "    phi: %.12lg\n", pars->phi);
+    c += snprintf(dump+c, dumplenmax-c, "    cp: %.12lg\n", pars->cp);
+    c += snprintf(dump+c, dumplenmax-c, "    ct: %.12lg\n", pars->ct);
+    c += snprintf(dump+c, dumplenmax-c, "    st: %.12lg\n", pars->st);
+    c += snprintf(dump+c, dumplenmax-c, "    cto: %.12lg\n", pars->cto);
+    c += snprintf(dump+c, dumplenmax-c, "    sto: %.12lg\n", pars->sto);
+    c += snprintf(dump+c, dumplenmax-c, "    theta_obs: %.12lg\n",
+            pars->theta_obs);
+    c += snprintf(dump+c, dumplenmax-c, "    t_obs: %.12lg\n", pars->t_obs);
+    c += snprintf(dump+c, dumplenmax-c, "    nu_obs: %.12lg\n", pars->nu_obs);
+    c += snprintf(dump+c, dumplenmax-c, "    d_L: %.12lg\n", pars->d_L);
+    c += snprintf(dump+c, dumplenmax-c, "    E_iso: %.12lg\n", pars->E_iso);
+    c += snprintf(dump+c, dumplenmax-c, "    n_0: %.12lg\n", pars->n_0);
+    c += snprintf(dump+c, dumplenmax-c, "    g_init: %.12lg\n", pars->g_init);
+    c += snprintf(dump+c, dumplenmax-c, "    p: %.12lg\n", pars->p);
+    c += snprintf(dump+c, dumplenmax-c, "    epsilon_E: %.12lg\n",
+                pars->epsilon_E);
+    c += snprintf(dump+c, dumplenmax-c, "    epsilon_B: %.12lg\n",
+            pars->epsilon_B);
+    c += snprintf(dump+c, dumplenmax-c, "    ksi_N: %.12lg\n", pars->ksi_N);
+    c += snprintf(dump+c, dumplenmax-c, "    theta_h: %.12lg\n",
+            pars->theta_h);
+    c += snprintf(dump+c, dumplenmax-c, "    E_iso_core: %.12lg\n",
+            pars->E_iso_core);
+    c += snprintf(dump+c, dumplenmax-c, "    theta_core: %.12lg\n",
+            pars->theta_core);
+    c += snprintf(dump+c, dumplenmax-c, "    theta_wing: %.12lg\n",
+            pars->theta_wing);
+    c += snprintf(dump+c, dumplenmax-c, "    b: %.12lg\n", pars->b);
+    c += snprintf(dump+c, dumplenmax-c, "    E_tot: %.12lg\n", pars->E_tot);
+    c += snprintf(dump+c, dumplenmax-c, "    g_core: %.12lg\n", pars->g_core);
+    c += snprintf(dump+c, dumplenmax-c, "    E_core_global: %.12lg\n",
+            pars->E_core_global);
+    c += snprintf(dump+c, dumplenmax-c, "    theta_core_global: %.12lg\n",
                  pars->theta_core_global);
-    c += sprintf(dump+c, "    envType: %d\n", pars->envType);
-    c += sprintf(dump+c, "    As: %.12lg\n", pars->As);
-    c += sprintf(dump+c, "    Rwind: %.12lg\n", pars->Rwind);
-    c += sprintf(dump+c, "    L0: %.12lg\n", pars->L0);
-    c += sprintf(dump+c, "    q: %.12lg\n", pars->q);
-    c += sprintf(dump+c, "    ts: %.12lg\n", pars->ts);
-    c += sprintf(dump+c, "    current_theta_cone_hi: %.12lg\n",
+    c += snprintf(dump+c, dumplenmax-c, "    envType: %d\n", pars->envType);
+    c += snprintf(dump+c, dumplenmax-c, "    As: %.12lg\n", pars->As);
+    c += snprintf(dump+c, dumplenmax-c, "    Rwind: %.12lg\n", pars->Rwind);
+    c += snprintf(dump+c, dumplenmax-c, "    L0: %.12lg\n", pars->L0);
+    c += snprintf(dump+c, dumplenmax-c, "    q: %.12lg\n", pars->q);
+    c += snprintf(dump+c, dumplenmax-c, "    ts: %.12lg\n", pars->ts);
+    c += snprintf(dump+c, dumplenmax-c, "    current_theta_cone_hi: %.12lg\n",
                  pars->current_theta_cone_hi);
-    c += sprintf(dump+c, "    current_theta_cone_low: %.12lg\n",
+    c += snprintf(dump+c, dumplenmax-c, "    current_theta_cone_low: %.12lg\n",
                  pars->current_theta_cone_low);
-    c += sprintf(dump+c, "    theta_obs_cur: %.12lg\n", pars->theta_obs_cur);
-    c += sprintf(dump+c, "    tRes: %d\n", pars->tRes);
-    c += sprintf(dump+c, "    latRes: %d\n", pars->latRes);
-    c += sprintf(dump+c, "    spread: %d\n", pars->spread);
-    c += sprintf(dump+c, "    counterjet: %d\n", pars->counterjet);
-    c += sprintf(dump+c, "    int_type: %d\n", pars->int_type);
-    c += sprintf(dump+c, "    rtol_struct: %.12lg\n", pars->rtol_struct);
-    c += sprintf(dump+c, "    rtol_theta: %.12lg\n", pars->rtol_theta);
-    c += sprintf(dump+c, "    rtol_phi: %.12lg\n", pars->rtol_phi);
-    c += sprintf(dump+c, "    nmax_theta: %d\n", pars->nmax_theta);
-    c += sprintf(dump+c, "    nmax_phi: %d\n", pars->nmax_phi);
-    c += sprintf(dump+c, "    atol_theta: %.12lg\n", pars->atol_theta);
-    c += sprintf(dump+c, "    Rt0: %.12lg\n", pars->Rt0);
-    c += sprintf(dump+c, "    Rt1: %.12lg\n", pars->Rt1);
-    c += sprintf(dump+c, "    ta: %.12lg\n", pars->ta);
-    c += sprintf(dump+c, "    tb: %.12lg\n", pars->tb);
-    c += sprintf(dump+c, "    C_BMsqrd: %.12lg\n", pars->C_BMsqrd);
-    c += sprintf(dump+c, "    C_STsqrd: %.12lg\n", pars->C_STsqrd);
-    c += sprintf(dump+c, "    t_NR: %.12lg\n", pars->t_NR);
-    c += sprintf(dump+c, "    table_entries: %d\n", pars->table_entries);
-    c += sprintf(dump+c, "    table_entries_inner: %d\n", pars->table_entries_inner);
-    c += sprintf(dump+c, "    spec_type: %d\n", pars->spec_type);
-    c += sprintf(dump+c, "    gamma_type: %d\n", pars->gamma_type);
-    c += sprintf(dump+c, "    nmask: %d\n", pars->nmask);
-    c += sprintf(dump+c, "    nevals: %ld\n", pars->nevals);
-    c += sprintf(dump+c, "    error: %d\n", pars->error);
-    c += sprintf(dump+c, "}\n");
-    dump[c] = '\0';
+    c += snprintf(dump+c, dumplenmax-c, "    theta_obs_cur: %.12lg\n",
+            pars->theta_obs_cur);
+    c += snprintf(dump+c, dumplenmax-c, "    tRes: %d\n", pars->tRes);
+    c += snprintf(dump+c, dumplenmax-c, "    latRes: %d\n", pars->latRes);
+    c += snprintf(dump+c, dumplenmax-c, "    spread: %d\n", pars->spread);
+    c += snprintf(dump+c, dumplenmax-c, "    counterjet: %d\n",
+            pars->counterjet);
+    c += snprintf(dump+c, dumplenmax-c, "    int_type: %d\n", pars->int_type);
+    c += snprintf(dump+c, dumplenmax-c, "    rtol_struct: %.12lg\n",
+            pars->rtol_struct);
+    c += snprintf(dump+c, dumplenmax-c, "    rtol_theta: %.12lg\n",
+            pars->rtol_theta);
+    c += snprintf(dump+c, dumplenmax-c, "    rtol_phi: %.12lg\n",
+            pars->rtol_phi);
+    c += snprintf(dump+c, dumplenmax-c, "    nmax_theta: %d\n",
+            pars->nmax_theta);
+    c += snprintf(dump+c, dumplenmax-c, "    nmax_phi: %d\n", pars->nmax_phi);
+    c += snprintf(dump+c, dumplenmax-c, "    atol_theta: %.12lg\n",
+            pars->atol_theta);
+    c += snprintf(dump+c, dumplenmax-c, "    Rt0: %.12lg\n", pars->Rt0);
+    c += snprintf(dump+c, dumplenmax-c, "    Rt1: %.12lg\n", pars->Rt1);
+    c += snprintf(dump+c, dumplenmax-c, "    ta: %.12lg\n", pars->ta);
+    c += snprintf(dump+c, dumplenmax-c, "    tb: %.12lg\n", pars->tb);
+    c += snprintf(dump+c, dumplenmax-c, "    C_BMsqrd: %.12lg\n",
+            pars->C_BMsqrd);
+    c += snprintf(dump+c, dumplenmax-c, "    C_STsqrd: %.12lg\n",
+            pars->C_STsqrd);
+    c += snprintf(dump+c, dumplenmax-c, "    t_NR: %.12lg\n", pars->t_NR);
+    c += snprintf(dump+c, dumplenmax-c, "    table_entries: %d\n",
+            pars->table_entries);
+    c += snprintf(dump+c, dumplenmax-c, "    table_entries_inner: %d\n",
+            pars->table_entries_inner);
+    c += snprintf(dump+c, dumplenmax-c, "    spec_type: %d\n",
+            pars->spec_type);
+    c += snprintf(dump+c, dumplenmax-c, "    gamma_type: %d\n",
+            pars->gamma_type);
+    c += snprintf(dump+c, dumplenmax-c, "    nmask: %d\n", pars->nmask);
+    c += snprintf(dump+c, dumplenmax-c, "    nevals: %ld\n", pars->nevals);
+    c += snprintf(dump+c, dumplenmax-c, "    error: %d\n", pars->error);
+    c += snprintf(dump+c, dumplenmax-c, "}\n");
 
     int dumplen = strlen(dump);
     int len = msglen + dumplen + 1;
@@ -2057,7 +2117,6 @@ void set_error(struct fluxParams *pars, char msg[])
     
     strcpy(pars->error_msg, msg);
     strcpy(pars->error_msg+msglen, dump);
-    pars->error_msg[len] = '\0';
 }
 
 
