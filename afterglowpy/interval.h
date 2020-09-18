@@ -85,6 +85,7 @@ double meshTotalError(struct Mesh *m);
 void meshHeapifyUp(struct Mesh *m);
 void meshHeapifyDown(struct Mesh *m);
 int meshCheck(struct Mesh *m);
+void meshWrite(struct Mesh *m, char **buf);
 
 void mesh3Init(struct Mesh3 *m);
 void mesh3Free(struct Mesh3 *m);
@@ -95,6 +96,7 @@ double mesh3TotalError(struct Mesh3 *m);
 void mesh3HeapifyUp(struct Mesh3 *m);
 void mesh3HeapifyDown(struct Mesh3 *m);
 int mesh3Check(struct Mesh3 *m);
+void mesh3Write(struct Mesh3 *m, char **buf);
 
 void mesh5Init(struct Mesh5 *m);
 void mesh5Free(struct Mesh5 *m);
@@ -105,5 +107,6 @@ double mesh5TotalError(struct Mesh5 *m);
 void mesh5HeapifyUp(struct Mesh5 *m);
 void mesh5HeapifyDown(struct Mesh5 *m);
 int mesh5Check(struct Mesh5 *m);
+void mesh5Write(struct Mesh5 *m, char **buf);
 
 #endif

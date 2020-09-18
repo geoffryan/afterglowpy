@@ -51,7 +51,7 @@ double simp(double (*f)(double, void *), double xa, double xb, int N,
 
 double romb(double (*f)(double, void *), double xa, double xb, int N,
             double atol, double rtol, void *args, int *Neval, double *eps,
-            int verbose, int (*errf)(void *))
+            int verbose, int (*errf)(void *), double *pfa, double *pfb)
 {
     double R[KMAX];
 
@@ -61,12 +61,28 @@ double romb(double (*f)(double, void *), double xa, double xb, int N,
 
     double maxFracChange = 0.1;
 
+    double fa, fb;
+    if(pfa == NULL)
+    {
+        fa = f(xa, args);
+        if(errf(args))
+            return 0.0;
+    }
+    else
+        fa = *pfa;
+
+    if(pfb == NULL)
+    {
+        fb = f(xb, args);
+        if(errf(args))
+            return 0.0;
+    }
+    else
+        fb = *pfb;
+
     hk = xb - xa;
     Nk = 1;
-    R[KMAX-1] = 0.5*(xb-xa)*(f(xa, args) + f(xb, args));
-    if(errf(args))
-        return 0.0;
-    R[0] = R[KMAX-1];
+    R[KMAX-1] = 0.5*(xb-xa)*(fa + fb);
 
     if(Neval != NULL)
         *Neval = 2;
@@ -88,29 +104,29 @@ double romb(double (*f)(double, void *), double xa, double xb, int N,
         if(Neval != NULL)
             *Neval += Nk/2;
 
+        double lastVal = R[KMAX-1];
         fpm = 1;
         for(m=1; m<=k; m++)
         {
             fpm *= 4;
+            err = (R[k0+m-1] - R[k0+m]) / (fpm - 1);
             R[k0+m] = (fpm*R[k0+m-1] - R[k0+m]) / (fpm - 1);
         }
-        err = (R[KMAX-1] - R[0]) / (fpm - 1);
-        double lastVal = R[0];
-        R[0] = R[KMAX-1];
+        //err = (R[KMAX-1] - R[0]) / (fpm - 1);
 
-        double fracChange = fabs((R[0] - lastVal) / lastVal);
+        double fracChange = fabs((R[KMAX-1] - lastVal) / lastVal);
 
         if(eps != NULL)
             *eps = err;
         if(verbose)
             printf("level %d:  Neval=%d  I=%.6lg  fracDelta=%.3lg"
                    " err=%.6lg  tol=%.6lg\n",
-                    k, Nk+1, R[0], fracChange, err, atol+rtol*fabs(R[0]));
+                    k, Nk+1, R[KMAX-1], fracChange, err, atol+rtol*fabs(R[0]));
 
         //printf("      k%d: I=%.6le err=%.6le frac=%.3le\n", k, R[0], err, 
         //        fabs(err) / (atol + rtol*fabs(R[0])));
 
-        if((fabs(err) < atol + rtol*fabs(R[0]))
+        if((fabs(err) < atol + rtol*fabs(R[KMAX-1]))
                 && fracChange < maxFracChange)
             break;
 
@@ -118,27 +134,119 @@ double romb(double (*f)(double, void *), double xa, double xb, int N,
             break;
     }
 
-    return R[0];
+    return R[KMAX-1];
 }
 
 double trap_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
                   double atol, double rtol, void *args, int *Neval,
-                  double *eps, Mesh3 *mout, int verbose, int (*errf)(void *))
+                  double *eps, Mesh3 *mout, int verbose, int (*errf)(void *),
+                  double *pfa, double *pfb)
 {
-    double I = m3_adapt(f, xa, xb, Nmax, trapProcessInterval,
-                        trapSplitInterval, atol, rtol, args,
-                        Neval, eps, mout, verbose, errf);
+    double I = m3_adapt(f, xa, xb, Nmax, trapInitInterval,
+                        trapProcessInterval, trapSplitInterval,
+                        atol, rtol, args, Neval, eps, mout, verbose, errf,
+                        pfa, pfb);
+    return I;
+}
+
+double trapNL_adapt(double (*f)(double, void *), double xa, double xb,
+                    int Nmax, double atol, double rtol, void *args, int *Neval,
+                    double *eps, Mesh5 *mout, int verbose, int (*errf)(void *),
+                    double *pfa, double *pfb)
+{
+    double I = m5_adapt(f, xa, xb, Nmax, trapNLInitInterval,
+                        trapNLProcessInterval, trapNLSplitInterval,
+                        atol, rtol, args, Neval, eps, mout, verbose, errf,
+                        pfa, pfb);
     return I;
 }
 
 double simp_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
                   double atol, double rtol, void *args, int *Neval,
-                  double *eps, Mesh5 *mout, int verbose, int (*errf)(void *))
+                  double *eps, Mesh5 *mout, int verbose, int (*errf)(void *),
+                  double *pfa, double *pfb)
 {
-    double I = m5_adapt(f, xa, xb, Nmax, simpProcessInterval,
-                        simpSplitInterval, atol, rtol, args,
-                        Neval, eps, mout, verbose, errf);
+    double I = m5_adapt(f, xa, xb, Nmax, simpInitInterval,
+                        simpProcessInterval, simpSplitInterval,
+                        atol, rtol, args, Neval, eps, mout, verbose, errf,
+                        pfa, pfb);
     return I;
+}
+
+double hybrid_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
+                  double atol, double rtol, void *args, int *Neval,
+                  double *eps, int verbose, int (*errf)(void *),
+                  double *pfa, double *pfb)
+{
+    double I, fa, fb;
+
+    //Compute f at endpoints
+    if(pfa == NULL)
+    {
+        fa = f(xa, args);
+        if(errf(args))
+            return 0.0;
+    }
+    else
+        fa = *pfa;
+
+    if(pfb == NULL)
+    {
+        fb = f(xb, args);
+        if(errf(args))
+            return 0.0;
+    }
+    else
+        fb = *pfb;
+
+    double ratio = fabs(fa/fb);
+
+    double NLrtol = 2.0e-4;
+
+    // If there's a large gradient, use an adaptive scheme.
+    if(ratio > 100 || ratio < 0.01)
+    {
+        //Adaptive Simpson's rule is more efficient but less robust,
+        // requires a small error tolerance
+        if(rtol < NLrtol)
+            I = simp_adapt(f, xa, xb, Nmax, atol, rtol, args, Neval, eps,
+                           NULL, verbose, errf, &fa, &fb);
+        //The non-linear scheme is more robust, but less efficient. Useful
+        //for large tolerances, where Simpson's rule under-estimates the error
+        else
+            I = trapNL_adapt(f, xa, xb, Nmax, atol, rtol, args, Neval, eps,
+                             NULL, verbose, errf, &fa, &fb);
+    }
+    else
+        //If the gradient is not too big, Romberg will converge the fastest.
+        I = romb(f, xa, xb, Nmax, atol, rtol, args, Neval, eps, verbose, errf,
+                 &fa, &fb);
+
+    return I;
+}
+
+int trapInitInterval(double (*f)(double, void *), void *args, Interval3 *i,
+                        int (*errf)(void *), double *pfa, double *pfb)
+{
+    if(pfa == NULL)
+    {
+        i->fa = f(i->a, args);
+        if(errf(args))
+            return 1;
+    }
+    else
+        i->fa = *pfa;
+
+    if(pfb == NULL)
+    {
+        i->fb = f(i->b, args);
+        if(errf(args))
+            return 2;
+    }
+    else
+        i->fb = *pfb;
+
+    return 2;
 }
 
 int trapProcessInterval(double (*f)(double, void *), void *args, Interval3 *i,
@@ -183,6 +291,32 @@ int trapSplitInterval(double (*f)(double, void *), void *args,
     n += trapProcessInterval(f, args, i2, errf);
 
     return n;
+}
+
+int simpInitInterval(double (*f)(double, void *), void *args, Interval5 *i,
+                        int (*errf)(void *), double *pfa, double *pfb)
+{
+    if(pfa == NULL)
+    {
+        i->fa = f(i->a, args);
+        if(errf(args))
+            return 1;
+    }
+    else
+        i->fa = *pfa;
+
+    if(pfb == NULL)
+    {
+        i->fb = f(i->b, args);
+        if(errf(args))
+            return 2;
+    }
+    else
+        i->fb = *pfb;
+
+    i->fm = f(0.5*(i->a + i->b), args);
+
+    return 3;
 }
 
 int simpProcessInterval(double (*f)(double, void *), void *args, Interval5 *i,
@@ -236,32 +370,145 @@ int simpSplitInterval(double (*f)(double, void *), void *args,
     return n;
 }
 
+int trapNLInitInterval(double (*f)(double, void *), void *args, Interval5 *i,
+                        int (*errf)(void *), double *pfa, double *pfb)
+{
+    if(pfa == NULL)
+    {
+        i->fa = f(i->a, args);
+        if(errf(args))
+            return 1;
+    }
+    else
+        i->fa = *pfa;
+
+    if(pfb == NULL)
+    {
+        i->fb = f(i->b, args);
+        if(errf(args))
+            return 2;
+    }
+    else
+        i->fb = *pfb;
+
+    i->fm = f(0.5*(i->a + i->b), args);
+
+    return 3;
+}
+
+int trapNLProcessInterval(double (*f)(double, void *), void *args,
+                          Interval5 *i, int (*errf)(void *))
+{
+    double fa = i->fa;
+    double fb = i->fb;
+    double fm = i->fm;
+    double fl = f(0.75*i->a+0.25*i->b, args);
+    if(errf(args))
+        return 0.0;
+    double fr = f(0.25*i->a+0.75*i->b, args);
+    if(errf(args))
+        return 0.0;
+    i->fl = fl;
+    i->fr = fr;
+
+    double h = 0.25*(i->b - i->a);
+
+    // First compute three trapezoid rule refinements
+    // Assume error ~ epsilon * h^n, if f is smooth
+    // then n = 2, but if we are under-resolved the effective n
+    // could be less than two.
+    double I0 = 2*h * (fa + fb);
+    double I1 = h * (fa + 2*fm + fb);
+    double I2 = 0.5*h * (fa + 2*(fl+fm+fr) + fb);
+
+    double R = (I1 - I0) / (I2 - I1);
+    double err = - (I2-I1)*(I2-I1) / (I2 - 2*I1 + I0);
+
+    double Is0 = 2*h * (fa + 4*fm + fb)/3.0;
+    double Is1 = h * (fa + 4*fl + 2*fm + 4*fr + fb)/3.0;
+    double errs = (Is1 - Is0) / 15.0;
+
+    /*
+    double exact = (atan((i->b-((double *)args)[1])/((double *)args)[0])
+                    - atan((i->a-((double *)args)[1])/((double *)args)[0]));
+    printf("%lf\n", twopn);
+    printf("   %lf %lf\n", i->a, i->b);
+    printf("   %lf %lf %lf %lf %lf\n", fa, fl, fm, fr, fb);
+    printf("   %lf %lf %lf\n", I0, I1, I2);
+    printf("     %lf %le   (%lf, %le)\n", I2+err, err,
+            exact, fabs(I2+err-exact));
+    printf("   %lf %lf\n", Is0, Is1);
+    printf("     %lf %le   (%lf, %le)\n", Is1+errs, errs,
+            exact, fabs(I2+err-exact));
+    */
+    
+    i->err = fabs(err);
+    i->I = I2 + err;
+
+    if(R > 3.95 && R < 4.05)
+    {
+        i->err = fabs(errs);
+        i->I = Is1 + errs;
+    }
+    if(R > 4.05 || R < 1.95 || R != R)
+    {
+        double errt = (I2-I1)/3.0;
+        i->err = fabs(errt);
+        i->I = I2 + errt;
+    }
+
+    return 2;
+}
+
+int trapNLSplitInterval(double (*f)(double, void *), void *args,
+                        Interval5 *i0, Interval5 *i1, Interval5 *i2,
+                        int (*errf)(void *))
+{
+    double xm = 0.5*(i0->a + i0->b);
+    i1->a = i0->a;
+    i1->b = xm;
+    i2->a = xm;
+    i2->b = i0->b;
+
+    i1->fa = i0->fa;
+    i1->fm = i0->fl;
+    i1->fb = i0->fm;
+    i2->fa = i0->fm;
+    i2->fm = i0->fr;
+    i2->fb = i0->fb;
+
+    int n = 0;
+    n += trapNLProcessInterval(f, args, i1, errf);
+    n += trapNLProcessInterval(f, args, i2, errf);
+
+    return n;
+}
+
 double m3_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
+                 int (*initInterval)(double (*f)(double, void*), void *,
+                                     Interval3 *, int (*errf)(void *),
+                                     double *pfa, double *pfb),
                  int (*processInterval)(double (*f)(double, void*), void *,
                                          Interval3 *, int (*errf)(void *)),
                  int (*splitInterval)(double (*f)(double, void *), void *,
                       Interval3 *, Interval3 *, Interval3 *,
                       int (*errf)(void *)),
                  double atol, double rtol, void *args, int *Neval,
-                 double *eps, Mesh3 *mout, int verbose, int (*errf)(void *))
+                 double *eps, Mesh3 *mout, int verbose, int (*errf)(void *),
+                 double *pfa, double *pfb)
 {
     Mesh3 m;
     mesh3Init(&m);
 
     Interval3 i = {.a=xa, .b=xb, .I=0, .err=0, .fa=0, .fm=0, .fb=0};
-    i.fa = f(xa, args);
+    
+    int n = initInterval(f, args, &i, errf, pfa, pfb);
     if(errf(args))
     {
         mesh3Free(&m);
         return 0.0;
     }
-    i.fb = f(xb, args);
-    if(errf(args))
-    {
-        mesh3Free(&m);
-        return 0.0;
-    }
-    int n = 2;
+    
     n += processInterval(f, args, &i, errf);
     if(errf(args))
     {
@@ -330,38 +577,30 @@ double m3_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
 }
 
 double m5_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
+                 int (*initInterval)(double (*f)(double, void*), void *,
+                                     Interval5 *, int (*errf)(void *),
+                                     double *pfa, double *pfb),
                  int (*processInterval)(double (*f)(double, void*), void *,
                                          Interval5 *, int (*errf)(void *)),
                  int (*splitInterval)(double (*f)(double, void *), void *,
                       Interval5 *, Interval5 *, Interval5 *,
                       int (*errf)(void *)),
                  double atol, double rtol, void *args, int *Neval,
-                 double *eps, Mesh5 *mout, int verbose, int (*errf)(void *))
+                 double *eps, Mesh5 *mout, int verbose, int (*errf)(void *),
+                 double *pfa, double *pfb)
 {
     Mesh5 m;
     mesh5Init(&m);
 
     Interval5 i = {.a=xa, .b=xb, .I=0, .err=0,
                    .fa=0, .fl=0, .fm=0, .fr=0, .fb=0};
-    i.fa = f(xa, args);
+    int n = initInterval(f, args, &i, errf, pfa, pfb);
     if(errf(args))
     {
         mesh5Free(&m);
         return 0.0;
     }
-    i.fm = f(0.5*(xa+xb), args);
-    if(errf(args))
-    {
-        mesh5Free(&m);
-        return 0.0;
-    }
-    i.fb = f(xb, args);
-    if(errf(args))
-    {
-        mesh5Free(&m);
-        return 0.0;
-    }
-    int n = 3;
+
     n += processInterval(f, args, &i, errf);
     if(errf(args))
     {

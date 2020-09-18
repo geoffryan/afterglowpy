@@ -154,6 +154,21 @@ int meshCheck(struct Mesh *m)
     return 1;
 }
 
+void meshWrite(struct Mesh *m, char **buf)
+{
+    *buf = (char *) malloc((m->N * 4 * 30 + 12) * sizeof(char));
+
+    size_t i;
+    int c = sprintf(*buf, "%lu", m->N);
+    for(i=0; i < m->N; i++)
+    {
+        struct Interval *in = &(m->heap[i]);
+        c += sprintf(*buf + c, " %.16e %.16e %.16e %.16e",
+                     in->a, in->b, in->I, in->err);
+    }
+    *buf = (char *) realloc(*buf, (c+1) * sizeof(char));
+}
+
 /***  Mesh 3  ***/
 
 void mesh3Init(struct Mesh3 *m)
@@ -290,6 +305,21 @@ int mesh3Check(struct Mesh3 *m)
     return 1;
 }
 
+void mesh3Write(struct Mesh3 *m, char **buf)
+{
+    *buf = (char *) malloc((m->N * 4 * 30 + 12) * sizeof(char));
+
+    size_t i;
+    int c = sprintf(*buf, "%lu", m->N);
+    for(i=0; i < m->N; i++)
+    {
+        struct Interval3 *in = &(m->heap[i]);
+        c += sprintf(*buf + c, " %.16e %.16e %.16e %.16e",
+                     in->a, in->b, in->I, in->err);
+    }
+    *buf = (char *) realloc(*buf, (c+1) * sizeof(char));
+}
+
 /***  Mesh 5  ***/
 
 void mesh5Init(struct Mesh5 *m)
@@ -424,4 +454,19 @@ int mesh5Check(struct Mesh5 *m)
     }
 
     return 1;
+}
+
+void mesh5Write(struct Mesh5 *m, char **buf)
+{
+    *buf = (char *) malloc((m->N * 4 * 30 + 12) * sizeof(char));
+
+    size_t i;
+    int c = sprintf(*buf, "%lu", m->N);
+    for(i=0; i < m->N; i++)
+    {
+        struct Interval5 *in = &(m->heap[i]);
+        c += sprintf(*buf + c, " %.16e %.16e %.16e %.16e",
+                     in->a, in->b, in->I, in->err);
+    }
+    *buf = (char *) realloc(*buf, (c+1) * sizeof(char));
 }

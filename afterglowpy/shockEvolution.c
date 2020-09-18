@@ -91,7 +91,7 @@ void shockInitDecel(double t0, double *R0, double *u0, void *argv)
 
     if(L0 < 0.0 || ts < 0.0)
     {
-        printf("No energy injection! E=%.3le\n", E0);
+        //printf("No energy injection! E=%.3le\n", E0);
         *R0 = R;
         *u0 = u;
         return;
@@ -103,7 +103,7 @@ void shockInitDecel(double t0, double *R0, double *u0, void *argv)
 
     if(Ei <= E0)
     {
-        printf("Energy injection not important! E0=%.3le Ei=%.3le\n", E0, Ei);
+        //printf("Energy injection not important! E0=%.3le Ei=%.3le\n", E0, Ei);
         *R0 = R;
         *u0 = u;
         return;

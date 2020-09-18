@@ -1,3 +1,4 @@
+#include <string.h>
 #include "offaxis_struct.h"
 #include "shockEvolution.h"
 
@@ -754,7 +755,7 @@ double phi_integrand(double a_phi, void* params) // outer integral
         result = trap_adapt(&costheta_integrand, omct0, omct1,
                             pars->nmax_theta, pars->atol_theta,
                             pars->rtol_theta, params, NULL, NULL, NULL, 0,
-                            check_error);
+                            check_error, NULL, NULL);
     }
     else if(pars->int_type == INT_SIMP_FIXED)
     {
@@ -766,7 +767,7 @@ double phi_integrand(double a_phi, void* params) // outer integral
         result = simp_adapt(&costheta_integrand, omct0, omct1,
                             pars->nmax_theta, pars->atol_theta,
                             pars->rtol_theta, params, NULL, NULL, NULL, 0,
-                            check_error);
+                            check_error, NULL, NULL);
     }
     else if(pars->int_type == INT_ROMB_ADAPT)
     {
@@ -775,10 +776,24 @@ double phi_integrand(double a_phi, void* params) // outer integral
 
         result = romb(&costheta_integrand, omct0, omct1, pars->nmax_theta,
                         pars->atol_theta, pars->rtol_theta, params,
-                        &Neval, &err, 0, check_error);
+                        &Neval, &err, 0, check_error, NULL, NULL);
         //printf("phi = %.3lf:  res=%.6lg  err=%.3lg  Neval=%d  tol=%.3g\n",
         //        a_phi, result, err, Neval,
         //        pars->atol_theta + pars->rtol_theta*result);
+    }
+    else if(pars->int_type == INT_TRAP_NL)
+    {
+        result = trapNL_adapt(&costheta_integrand, omct0, omct1,
+                              pars->nmax_theta, pars->atol_theta,
+                              pars->rtol_theta, params, NULL, NULL, NULL, 0,
+                              check_error, NULL, NULL);
+    }
+    else if(pars->int_type == INT_HYBRID)
+    {
+        result = hybrid_adapt(&costheta_integrand, omct0, omct1,
+                              pars->nmax_theta, pars->atol_theta,
+                              pars->rtol_theta, params, NULL, NULL, 0,
+                              check_error, NULL, NULL);
     }
     else
     {
@@ -907,7 +922,7 @@ double flux(struct fluxParams *pars, double atol) // determine flux for a given 
         result = 2 * Fcoeff * trap_adapt(&phi_integrand, phi_0, phi_1,
                                          pars->nmax_phi, atol/(2*Fcoeff),
                                          pars->rtol_phi, pars, NULL, NULL,
-                                         NULL, 0, check_error);
+                                         NULL, 0, check_error, NULL, NULL);
     }
     else if(pars->int_type == INT_SIMP_FIXED)
     {
@@ -919,7 +934,7 @@ double flux(struct fluxParams *pars, double atol) // determine flux for a given 
         result = 2 * Fcoeff * simp_adapt(&phi_integrand, phi_0, phi_1,
                                          pars->nmax_phi, atol/(2*Fcoeff),
                                          pars->rtol_phi, pars, NULL, NULL,
-                                         NULL, 0, check_error);
+                                         NULL, 0, check_error, NULL, NULL);
     }
     else if(pars->int_type == INT_ROMB_ADAPT)
     {
@@ -927,12 +942,26 @@ double flux(struct fluxParams *pars, double atol) // determine flux for a given 
         result = 2 * Fcoeff * romb(&phi_integrand, phi_0, phi_a,
                                     pars->nmax_phi, atol/(2*Fcoeff),
                                     pars->rtol_phi, pars, NULL, NULL, 0,
-                                    check_error);
+                                    check_error, NULL, NULL);
         ERR_CHK_DBL(pars)
         result += 2 * Fcoeff * romb(&phi_integrand, phi_a, phi_1,
                                     pars->nmax_phi, (atol+result)/(2*Fcoeff),
                                     pars->rtol_phi, pars, NULL, NULL, 0,
-                                    check_error);
+                                    check_error, NULL, NULL);
+    }
+    else if(pars->int_type == INT_TRAP_NL)
+    {
+        result = 2 * Fcoeff * trapNL_adapt(&phi_integrand, phi_0, phi_1,
+                                           pars->nmax_phi, atol/(2*Fcoeff),
+                                           pars->rtol_phi, pars, NULL, NULL,
+                                           NULL, 0, check_error, NULL, NULL);
+    }
+    else if(pars->int_type == INT_HYBRID)
+    {
+        result = 2 * Fcoeff * hybrid_adapt(&phi_integrand, phi_0, phi_1,
+                                           pars->nmax_phi, atol/(2*Fcoeff),
+                                           pars->rtol_phi, pars, NULL, NULL,
+                                           0, check_error, NULL, NULL);
     }
     else
     {
@@ -1775,7 +1804,7 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
                 theta_h_wing, NULL, NULL, res_cones, &f_E_exponential, fp);
     }
 
-    printf("  Calc took %ld evalutions\n", fp->nevals);
+    //printf("  Calc took %ld evalutions\n", fp->nevals);
 }    
 
 void calc_intensity(int jet_type, int spec_type, double *theta, double *phi,
@@ -2097,7 +2126,7 @@ void set_error(struct fluxParams *pars, char msg[])
     fprintf(stderr, "error in afterglowpy\n");
     pars->error = 1;
 
-    int msglen = strlen(msg);
+    int msglen = (int)strlen(msg);
     int dumplenmax = 16384;  // overkill: 200 lines * 80c per line = 16000
 
     char dump[dumplenmax];

@@ -163,6 +163,8 @@ void initjet(void)
     PyModule_AddIntConstant(module, "SimpFixed", INT_SIMP_FIXED);
     PyModule_AddIntConstant(module, "SimpAdapt", INT_SIMP_ADAPT);
     PyModule_AddIntConstant(module, "RombAdapt", INT_ROMB_ADAPT);
+    PyModule_AddIntConstant(module, "TrapNL", INT_TRAP_NL);
+    PyModule_AddIntConstant(module, "Hybrid", INT_HYBRID);
     PyModule_AddIntConstant(module, "GammaInf", GAMMA_INF);
     PyModule_AddIntConstant(module, "GammaFlat", GAMMA_FLAT);
     PyModule_AddIntConstant(module, "GammaEvenMass", GAMMA_EVENMASS);
