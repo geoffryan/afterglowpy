@@ -827,7 +827,10 @@ int cadreProcessInterval(double (*f)(double, void *), void *args,
             double err = - (T2-T1)*(T2-T1) / (T2 - 2*T1 + T0);
 
             i->err = fabs(err);
-            i->I = T2 + err;
+            if(fabs(T2 + err) < 1.0e-14 * fabs(T2))
+                i->I = 1.0e-14 * T2;
+            else
+                i->I = T2 + err;
 
             return count;
         }
@@ -1474,7 +1477,8 @@ double m9_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
     double I = i.I;
     double err = i.err;
     int num_intervals = 1;
-    int last_check = 1;
+    int num_iterations = 0;
+    int last_check = 0;
 
     if(verbose)
     {   
@@ -1488,9 +1492,10 @@ double m9_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
     {
         mesh9Extract(&m, &i);
 
-        if(verbose)
-            printf("(%.3le %.3le)  %.3le +/- %.3le",
-                   i.a, i.b, i.I, i.err);
+        if(verbose && num_iterations > 0)
+            interval9Write(&i, stdout);
+
+        double newI, newErr;
 
         if(i.refinement >= 4)
         {
@@ -1507,6 +1512,9 @@ double m9_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
 
             err += i.err - olderr;
             I += i.I - oldI;
+
+            newI = i.I;
+            newErr = i.err;
         }
         else
         {
@@ -1524,9 +1532,12 @@ double m9_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
             
             err += i1.err + i2.err - i.err;
             I += i1.I + i2.I - i.I;
+            
+            newI = i1.I + i2.I;
+            newErr = i1.err + i2.err;
         }
 
-        if(num_intervals == 2*last_check)
+        if(num_iterations == 2*last_check)
         {
             err = mesh9TotalError(&m);
             I = mesh9TotalIntegral(&m);
@@ -1535,12 +1546,12 @@ double m9_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
         
         if(verbose)
         {
-            printf(" --> %.3le +/- %.3le\n", i.I, i.err);
+            printf("                   ---> %.12le +/- %.3le\n", newI, newErr);
             printf("   Num Intervals: %d - I=%.12lg  err=%.3lg  tol=%.3lg"
                    "  meshOk=%d\n",
                    num_intervals, I, err, atol + rtol*fabs(I), mesh9Check(&m));
-            interval9Write(&i, stdout);
         }
+        num_iterations++;
     }
 
     I = mesh9TotalIntegral(&m);

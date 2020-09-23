@@ -35,10 +35,10 @@ static const double g0_default = -1.0;
 static const double E_core_global_default = 0.0;
 static const double theta_h_core_global_default = 0.0;
 
-static const double rtol_struct_default = 1.0e-4;
-static const double rtol_theta_default = 1.0e-5;
-static const double rtol_phi_default = 1.0e-5;
-static const int int_type_default = INT_HYBRID;
+static const double rtol_struct_default = 1.0e-2;
+static const double rtol_theta_default = 1.0e-2;
+static const double rtol_phi_default = 1.0e-2;
+static const int int_type_default = INT_CADRE;
 static const int nmax_phi_default = 1000;
 static const int nmax_theta_default = 1000;
 
@@ -173,6 +173,10 @@ void initjet(void)
     PyModule_AddIntConstant(module, "GammaFlat", GAMMA_FLAT);
     PyModule_AddIntConstant(module, "GammaEvenMass", GAMMA_EVENMASS);
     PyModule_AddIntConstant(module, "GammaStruct", GAMMA_STRUCT);
+    PyModule_AddIntConstant(module, "ICCooling", IC_COOLING_FLAG);
+    PyModule_AddIntConstant(module, "EpsEBar", EPS_E_BAR_FLAG);
+    PyModule_AddIntConstant(module, "SSASmooth", SSA_SMOOTH_FLAG);
+    PyModule_AddIntConstant(module, "SSASharp", SSA_SHARP_FLAG);
 
 #if PY_MAJOR_VERSION >= 3
     return module;

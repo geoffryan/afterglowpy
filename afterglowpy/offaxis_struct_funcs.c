@@ -562,6 +562,9 @@ double costheta_integrand(double aomct, void* params) // inner integral
     double act = 1 - aomct;
     double a_theta = 2 * asin(sqrt(0.5 * aomct));
     double ast = sqrt(aomct * (1+act));
+    pars->theta = a_theta;
+    pars->ct = act;
+    pars->st = ast;
 
     //double a_theta = acos(act);
     //double ast = sqrt((1.0 - act)*(1 + act));
@@ -973,7 +976,8 @@ double flux(struct fluxParams *pars, double atol) // determine flux for a given 
                                     check_error, NULL, NULL);
         ERR_CHK_DBL(pars)
         result += 2 * Fcoeff * romb(&phi_integrand, phi_a, phi_1,
-                                    pars->nmax_phi, (atol+result)/(2*Fcoeff),
+                                    pars->nmax_phi,
+                                    (atol+pars->rtol_phi*result)/(2*Fcoeff),
                                     pars->rtol_phi, pars, NULL, NULL, 0,
                                     check_error, NULL, NULL);
     }
@@ -1024,6 +1028,25 @@ double flux(struct fluxParams *pars, double atol) // determine flux for a given 
         char msg[MSG_LEN];
         snprintf(msg, MSG_LEN,
                  "Unknown integrator %d!  Aborting.\n", pars->int_type);
+        set_error(pars, msg);
+        return 0.0;
+    }
+
+    ERR_CHK_DBL(pars)
+    
+    if(result != result || result < 0.0)
+    {
+        char msg[MSG_LEN];
+        int c = 0;
+        c += snprintf(msg, MSG_LEN,
+                     "bad result in flux() :%.3le\n", result);
+
+        c += snprintf(msg+c, MSG_LEN-c,
+                "   t_obs=%.3le nu_obs=%.3le theta_lo=%.3lf theta_hi=%.3lf\n",
+                     pars->t_obs, pars->nu_obs, pars->current_theta_cone_low,
+                     pars->current_theta_cone_hi);
+        c += snprintf(msg+c, MSG_LEN-c,
+                "   Fcoeff=%.6le\n", Fcoeff);
         set_error(pars, msg);
         return 0.0;
     }
@@ -1860,7 +1883,7 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
                 theta_h_wing, NULL, NULL, res_cones, &f_E_exponential, fp);
     }
 
-    // printf("  Calc took %ld evalutions\n", fp->nevals);
+    //printf("  Calc took %ld evalutions\n", fp->nevals);
 }    
 
 void calc_intensity(int jet_type, int spec_type, double *theta, double *phi,
