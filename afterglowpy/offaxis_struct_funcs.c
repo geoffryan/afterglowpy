@@ -795,6 +795,34 @@ double phi_integrand(double a_phi, void* params) // outer integral
                               pars->rtol_theta, params, NULL, NULL, 0,
                               check_error, NULL, NULL);
     }
+    else if(pars->int_type == INT_CADRE)
+    {
+        result = cadre_adapt(&costheta_integrand, omct0, omct1,
+                              pars->nmax_theta, pars->atol_theta,
+                              pars->rtol_theta, params, NULL, NULL, 0,
+                              check_error, NULL, NULL);
+    }
+    else if(pars->int_type == INT_GK49_ADAPT)
+    {
+        result = gk49_adapt(&costheta_integrand, omct0, omct1,
+                              pars->nmax_theta, pars->atol_theta,
+                              pars->rtol_theta, params, NULL, NULL, 0,
+                              check_error);
+    }
+    else if(pars->int_type == INT_GK715_ADAPT)
+    {
+        result = gk715_adapt(&costheta_integrand, omct0, omct1,
+                              pars->nmax_theta, pars->atol_theta,
+                              pars->rtol_theta, params, NULL, NULL, 0,
+                              check_error);
+    }
+    else if(pars->int_type == INT_GK1021_ADAPT)
+    {
+        result = gk1021_adapt(&costheta_integrand, omct0, omct1,
+                              pars->nmax_theta, pars->atol_theta,
+                              pars->rtol_theta, params, NULL, NULL, 0,
+                              check_error);
+    }
     else
     {
         char msg[MSG_LEN];
@@ -962,6 +990,34 @@ double flux(struct fluxParams *pars, double atol) // determine flux for a given 
                                            pars->nmax_phi, atol/(2*Fcoeff),
                                            pars->rtol_phi, pars, NULL, NULL,
                                            0, check_error, NULL, NULL);
+    }
+    else if(pars->int_type == INT_CADRE)
+    {
+        result = 2 * Fcoeff * cadre_adapt(&phi_integrand, phi_0, phi_1,
+                                           pars->nmax_phi, atol/(2*Fcoeff),
+                                           pars->rtol_phi, pars, NULL, NULL,
+                                           0, check_error, NULL, NULL);
+    }
+    else if(pars->int_type == INT_GK49_ADAPT)
+    {
+        result = 2 * Fcoeff * gk49_adapt(&phi_integrand, phi_0, phi_1,
+                                           pars->nmax_phi, atol/(2*Fcoeff),
+                                           pars->rtol_phi, pars, NULL, NULL,
+                                           0, check_error);
+    }
+    else if(pars->int_type == INT_GK715_ADAPT)
+    {
+        result = 2 * Fcoeff * gk715_adapt(&phi_integrand, phi_0, phi_1,
+                                           pars->nmax_phi, atol/(2*Fcoeff),
+                                           pars->rtol_phi, pars, NULL, NULL,
+                                           0, check_error);
+    }
+    else if(pars->int_type == INT_GK1021_ADAPT)
+    {
+        result = 2 * Fcoeff * gk1021_adapt(&phi_integrand, phi_0, phi_1,
+                                           pars->nmax_phi, atol/(2*Fcoeff),
+                                           pars->rtol_phi, pars, NULL, NULL,
+                                           0, check_error);
     }
     else
     {
@@ -1804,7 +1860,7 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
                 theta_h_wing, NULL, NULL, res_cones, &f_E_exponential, fp);
     }
 
-    //printf("  Calc took %ld evalutions\n", fp->nevals);
+    // printf("  Calc took %ld evalutions\n", fp->nevals);
 }    
 
 void calc_intensity(int jet_type, int spec_type, double *theta, double *phi,

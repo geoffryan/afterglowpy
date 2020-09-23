@@ -44,11 +44,33 @@ double hybrid_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
                   double atol, double rtol, void *args, int *Neval,
                   double *eps, int verbose, int (*errf)(void *),
                   double *pfa, double *pfb);
+double cadre_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
+                  double atol, double rtol, void *args, int *Neval,
+                  double *eps, int verbose, int (*errf)(void *),
+                  double *pfa, double *pfb);
+double gk49_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
+                  double atol, double rtol, void *args, int *Neval,
+                  double *eps, int verbose, int (*errf)(void *));
+double gk715_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
+                  double atol, double rtol, void *args, int *Neval,
+                  double *eps, int verbose, int (*errf)(void *));
+double gk1021_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
+                  double atol, double rtol, void *args, int *Neval,
+                  double *eps, int verbose, int (*errf)(void *));
 
 /*
  * Internal functions for trap_adapt and simp_adapt.
  */
 
+double m_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
+                 int (*processInterval)(double (*f)(double, void*), void *,
+                                         Interval *, int (*errf)(void *)),
+                 int (*splitInterval)(double (*f)(double, void *), void *,
+                                Interval *, Interval *, Interval *,
+                                int (*errf)(void *)),
+                 double atol, double rtol, void *args, int *Neval,
+                 double *eps, struct Mesh *mout, int verbose,
+                 int (*errf)(void *));
 double m3_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
                  int (*initInterval)(double (*f)(double, void*), void *,
                                          Interval3 *, int (*errf)(void *),
@@ -72,6 +94,18 @@ double m5_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
                                 int (*errf)(void *)),
                  double atol, double rtol, void *args, int *Neval,
                  double *eps, struct Mesh5 *mout, int verbose,
+                 int (*errf)(void *), double *pfa, double *pbf);
+double m9_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
+                 int (*initInterval)(double (*f)(double, void*), void *,
+                                         Interval9 *, int (*errf)(void *),
+                                     double *pfa, double *pfb),
+                 int (*processInterval)(double (*f)(double, void*), void *,
+                                         Interval9 *, int (*errf)(void *)),
+                 int (*splitInterval)(double (*f)(double, void *), void *,
+                                Interval9 *, Interval9 *, Interval9 *,
+                                int (*errf)(void *)),
+                 double atol, double rtol, void *args, int *Neval,
+                 double *eps, struct Mesh9 *mout, int verbose,
                  int (*errf)(void *), double *pfa, double *pbf);
 
 int trapInitInterval(double (*f)(double, void *), void *args, Interval3 *i,
@@ -97,4 +131,35 @@ int trapNLProcessInterval(double (*f)(double, void *), void *args,
 int trapNLSplitInterval(double (*f)(double, void *), void *args,
                         Interval5 *i0, Interval5 *i1, Interval5 *i2,
                         int (*errf)(void *));
+
+int cadreInitInterval(double (*f)(double, void *), void *args, Interval9 *i,
+                        int (*errf)(void *), double *pfa, double *pfb);
+int cadreProcessInterval(double (*f)(double, void *), void *args,
+                          Interval9 *i, int (*errf)(void *));
+int cadreSplitInterval(double (*f)(double, void *), void *args,
+                        Interval9 *i0, Interval9 *i1, Interval9 *i2,
+                        int (*errf)(void *));
+
+int gk49ProcessInterval(double (*f)(double, void *), void *args,
+                          Interval *i, int (*errf)(void *));
+int gk49SplitInterval(double (*f)(double, void *), void *args,
+                        Interval *i0, Interval *i1, Interval *i2,
+                        int (*errf)(void *));
+
+int gk715ProcessInterval(double (*f)(double, void *), void *args,
+                          Interval *i, int (*errf)(void *));
+int gk715SplitInterval(double (*f)(double, void *), void *args,
+                        Interval *i0, Interval *i1, Interval *i2,
+                        int (*errf)(void *));
+
+int gk1021ProcessInterval(double (*f)(double, void *), void *args,
+                          Interval *i, int (*errf)(void *));
+int gk1021SplitInterval(double (*f)(double, void *), void *args,
+                        Interval *i0, Interval *i1, Interval *i2,
+                        int (*errf)(void *));
+
+int gk_compute(double (*f)(double, void *), void *args, int (*errf)(void *),
+               double c, double z0, const double xg[], const double xk[],
+               const double wg[], const double wgk[], int ng,
+               double *I, double *err);
 #endif

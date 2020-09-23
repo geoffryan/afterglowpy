@@ -36,9 +36,9 @@ static const double E_core_global_default = 0.0;
 static const double theta_h_core_global_default = 0.0;
 
 static const double rtol_struct_default = 1.0e-4;
-static const double rtol_theta_default = 1.0e-6;
-static const double rtol_phi_default = 1.0e-6;
-static const int int_type_default = INT_ROMB_ADAPT;
+static const double rtol_theta_default = 1.0e-5;
+static const double rtol_phi_default = 1.0e-5;
+static const int int_type_default = INT_HYBRID;
 static const int nmax_phi_default = 1000;
 static const int nmax_theta_default = 1000;
 
@@ -165,6 +165,10 @@ void initjet(void)
     PyModule_AddIntConstant(module, "RombAdapt", INT_ROMB_ADAPT);
     PyModule_AddIntConstant(module, "TrapNL", INT_TRAP_NL);
     PyModule_AddIntConstant(module, "Hybrid", INT_HYBRID);
+    PyModule_AddIntConstant(module, "Cadre", INT_CADRE);
+    PyModule_AddIntConstant(module, "GK49Adapt", INT_GK49_ADAPT);
+    PyModule_AddIntConstant(module, "GK715Adapt", INT_GK715_ADAPT);
+    PyModule_AddIntConstant(module, "GK1021Adapt", INT_GK1021_ADAPT);
     PyModule_AddIntConstant(module, "GammaInf", GAMMA_INF);
     PyModule_AddIntConstant(module, "GammaFlat", GAMMA_FLAT);
     PyModule_AddIntConstant(module, "GammaEvenMass", GAMMA_EVENMASS);
@@ -1113,7 +1117,7 @@ static PyObject *jet_find_jet_edge(PyObject *self, PyObject *args)
     
 
     //Parse Arguments
-    if(!PyArg_ParseTuple(args, "OOOddddd", &t_obj, &R_obj, &thj_obj, &tobs,
+    if(!PyArg_ParseTuple(args, "OOOdddd", &t_obj, &R_obj, &thj_obj, &tobs,
                          &phi, &theta_obs, &theta_0))
     {
         //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");

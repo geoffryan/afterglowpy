@@ -489,8 +489,10 @@ def checkJetArgs(**argsDict):
         raise ValueError("theta_obs must be in [0.0, pi/2]")
     if E0 <= 0.0:
         raise ValueError("E0 must be positive")
-    if theta_c <= 0.0 or theta_c > 0.5*np.pi:
+    if jetType != jet.Cone and (theta_c <= 0.0 or theta_c > 0.5*np.pi):
         raise ValueError("theta_c must be in (0.0, pi/2]")
+    if jetType == jet.Cone and (theta_c < 0.0 or theta_c > 0.5*np.pi):
+        raise ValueError("theta_c must be in [0.0, pi/2]")
     if n0 <= 0.0:
         raise ValueError("n0 must be positive")
     if specType != 2 and p <= 2.0:
