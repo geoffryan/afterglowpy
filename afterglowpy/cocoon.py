@@ -51,15 +51,15 @@ def dP(costheta, amu, ate, au, ar, nu, n0, p, epsE, epsB, ksiN, specType):
     return 2*np.pi * em
 
 
-def fluxDensity(t, nu, jetType, specType, umax, umin, Ei, k, Mej_solar, L0, q,
-                ts, n0, p, epsE, epsB, ksiN, dL, tRes=1000, latRes=0,
-                rtol=1.0e-3):
+def fluxDensity(t, nu, jetType, specType, uMax, uMin, Er, k, MFast_solar, L0, q,
+                ts, n0, p, epsilon_e, epsilon_B, ksiN, dL, tRes=1000, latRes=0,
+                rtol=1.0e-3, **kwargs):
 
     t = np.array(t)
 
     rho0 = mp * n0
-    Mej = Mej_solar * Msun
-    u0 = umax
+    Mej = MFast_solar * Msun
+    u0 = uMax
     g0 = math.sqrt(1+u0*u0)
     bes0 = 4*u0*g0 / (4*u0*u0+3)
     Rd = math.pow(9*g0*g0*Mej / (4*np.pi*(g0+1)*(4*u0*u0+3)*rho0), 1./3.)
@@ -77,8 +77,8 @@ def fluxDensity(t, nu, jetType, specType, umax, umin, Ei, k, Mej_solar, L0, q,
 
     ate = np.logspace(math.log10(t0), math.log10(t1), num=NT, base=10.0)
 
-    ar, au = shock.shockEvolRK4(ate, r0, umax,
-                                Mej_solar*Msun, rho0, Ei, k, umin, L0, q, ts)
+    ar, au = shock.shockEvolRK4(ate, r0, uMax,
+                                MFast_solar*Msun, rho0, Er, k, uMin, L0, q, ts)
 
     P = np.zeros(t.shape)
 
@@ -87,7 +87,8 @@ def fluxDensity(t, nu, jetType, specType, umax, umin, Ei, k, Mej_solar, L0, q,
     for i in range(len(t)):
         amu = c * (ate - t[i]) / ar
 
-        args = (amu, ate, au, ar, nu[i], n0, p, epsE, epsB, ksiN, specType)
+        args = (amu, ate, au, ar, nu[i], n0, p, epsilon_e, epsilon_B, ksiN,
+                specType)
 
         res = integrate.quad(dP, 0.0, 1.0, args, full_output=1, wopts=wopts,
                              epsrel=rtol)

@@ -564,14 +564,16 @@ def checkJetArgs(**argsDict):
 
 def checkCocoonArgs(**argsDict):
 
-    for _, x in args.items():
+    for _, x in argsDict.items():
         if not np.isfinite(x):
             raise ValueError("All parameters must be finite")
 
+    specType = argsDict['specType']
+
     u_max = argsDict['uMax']
-    u_min = args['uMin']
-    Er = args['Er']
-    MFast = args['MFast']
+    u_min = argsDict['uMin']
+    Er = argsDict['Er']
+    MFast = argsDict['MFast_solar']
     n0 = argsDict['n0']
     p = argsDict['p']
     epse = argsDict['epsilon_e']
