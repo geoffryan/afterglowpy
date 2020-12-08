@@ -103,6 +103,18 @@ double f_E_exponential(double theta, void *params)
     return 0.0;
 }
 
+double f_E_exponential2(double theta, void *params)
+{
+    struct fluxParams *pars = (struct fluxParams *)params;
+    if(theta <= pars->theta_wing)
+    {
+        double x = theta / pars->theta_core;
+        double y = theta / 0.225;  // From Lazzati 19
+        return pars->E_iso_core * (exp(-x) + pars->b * exp(-y));
+    }
+    return 0.0;
+}
+
 double f_Etot_tophat(void *params)
 {
     struct fluxParams *pars = (struct fluxParams *)params;
@@ -511,8 +523,10 @@ double emissivity(double nu, double R, double mu, double te,
             else if(dtau > 0.0)
                 abs_fac = -expm1(-dtau) / dtau;
             else
-                abs_fac = expm1(dtau) / dtau * exp(
-                            abs * DR * betaS*mu / (mu - betaS));
+            {
+                abs_fac = expm1(dtau) / dtau; //* exp(
+                            //abs * DR * betaS*mu / (mu - betaS));
+            }
 
             em_lab *= abs_fac;
         }
@@ -1881,6 +1895,11 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
     {
         lc_structCore(t, nu, Fnu, N, E_iso_core, theta_h_core, 
                 theta_h_wing, NULL, NULL, res_cones, &f_E_exponential, fp);
+    }
+    else if(jet_type == _exponential2)
+    {
+        lc_structCore(t, nu, Fnu, N, E_iso_core, theta_h_core, 
+                theta_h_wing, NULL, NULL, res_cones, &f_E_exponential2, fp);
     }
 
     //printf("  Calc took %ld evalutions\n", fp->nevals);
