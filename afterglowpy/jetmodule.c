@@ -263,6 +263,7 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
                                 "spread", "counterjet", "gammaType", "moment",
                                 NULL};
 
+    printf("About to parse args\n");
     //Parse Arguments
     if(!PyArg_ParseTupleAndKeywords(args, kwargs,
                 "OO|ii""ddddddddddddddd""dd""iiidddii""O""iii""O",
@@ -276,11 +277,13 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
                 &tRes, &latRes, &int_type, &rtol_struct, &rtol_phi,
                     &rtol_theta, &nmax_phi, &nmax_theta,
                 &mask_obj,
-                &spread, &counterjet, &gamma_type))
+                &spread, &counterjet, &gamma_type, &moment_obj))
     {
-        //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
+        PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
         return NULL;
     }
+
+    printf("Args loaded\n");
 
     if(int_type < 0 || int_type >= INT_UNDEFINED)
     {
@@ -308,7 +311,7 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
         mask_arr = (PyArrayObject *) PyArray_FROM_OTF(mask_obj, NPY_DOUBLE,
                                                 NPY_ARRAY_IN_ARRAY);
     if(givenMoment)
-        moment_arr = (PyArrayObject *) PyArray_FROM_OTF(moment_obj, NPY_INT32,
+        moment_arr = (PyArrayObject *) PyArray_FROM_OTF(moment_obj, NPY_INT64,
                                                 NPY_ARRAY_IN_ARRAY);
 
     if(t_arr == NULL || nu_arr == NULL || (givenMask && mask_arr == NULL)
@@ -389,7 +392,7 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
         mask = (double *)PyArray_DATA(mask_arr);
     int masklen = Nmask/9;
     
-    int *moment = NULL;
+    long *moment = NULL;
     if(moment_arr != NULL)
         moment = (int *)PyArray_DATA(moment_arr);
 

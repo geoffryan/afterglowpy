@@ -149,19 +149,27 @@ def fluxDensity(t, nu, jetType=-1, specType=0,
     # we need to keep the ordering of the arguments for people who use
     # the positional interface
 
+    print("In Flux")
+
     argsDict = kwargs.copy()
     for key, val in locals().items():
         if (key != 'kwargs' and key != 't' and key != 'nu'
                 and key != 'argsDict'):
             argsDict[key] = val
     
+    print("Checking t, nu")
+
     # Check Arguments, will raise ValueError if args are bad
     t, nu = checkTNu(t, nu)
+    
+    print("Checking args")
 
     if jetType == jet.Spherical:
         checkCocoonArgs(**argsDict)
     else:
         checkJetArgs(**argsDict)
+
+    print("Dealing with z")
 
     # arguments are good, full steam ahead!
     if 'z' in argsDict.keys():
@@ -172,6 +180,8 @@ def fluxDensity(t, nu, jetType=-1, specType=0,
     tz = t / (1+z)
     nuz = nu * (1+z)
 
+    print("Setting spread")
+
     # Default spreading method
     if 'spread' in argsDict:
         if argsDict['spread'] == True:
@@ -181,6 +191,7 @@ def fluxDensity(t, nu, jetType=-1, specType=0,
                 argsDict['spread'] = 7
 
     # Intercept background luminosities
+    print("Intercept luminosities")
 
     if 'LR' in argsDict.keys():
         argsDict.pop('LR')
@@ -193,8 +204,10 @@ def fluxDensity(t, nu, jetType=-1, specType=0,
 
     # timeA = time.time()
 
+    print("Allocate Fnu")
     Fnu = np.empty(tz.shape)
 
+    print("Calculate Fnu")
     if jetType == jet.Spherical:
         Fnu.flat[:] = cocoon.fluxDensity(tz.flat, nuz.flat, **argsDict)
     else:
@@ -202,6 +215,7 @@ def fluxDensity(t, nu, jetType=-1, specType=0,
     # timeB = time.time()
     # print("Eval took: {0:f} s".format(timeB - timeA))
 
+    print("add Lums back")
     
     # Adding background luminosities.
     L_to_flux = cocoon.cgs2mJy / (4*np.pi*dL*dL)
@@ -221,8 +235,11 @@ def fluxDensity(t, nu, jetType=-1, specType=0,
         Lnu = LX / (9.7e3 * cocoon.eV2Hz)  # 9.7 keV bandwidth
         Fnu[xry] += Lnu*L_to_flux
 
+    print("K-correct")
     # K-correct the flux
     Fnu *= 1+z
+    
+    print("return")
 
     return Fnu
 

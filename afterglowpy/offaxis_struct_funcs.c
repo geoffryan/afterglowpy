@@ -882,7 +882,7 @@ double phi_integrand(double a_phi, void* params) // outer integral
     }
     ERR_CHK_DBL(pars)
 
-    if(result != result || result < 0.0)
+    if(result != result || (result < 0.0 && pars->moment == 0))
     {
         char msg[MSG_LEN];
         int c = 0;
@@ -1080,7 +1080,7 @@ double flux(struct fluxParams *pars, double atol) // determine flux for a given 
 
     ERR_CHK_DBL(pars)
     
-    if(result != result || result < 0.0)
+    if(result != result || (result < 0.0 && pars->moment == 0))
     {
         char msg[MSG_LEN];
         int c = 0;
@@ -1106,7 +1106,7 @@ double flux(struct fluxParams *pars, double atol) // determine flux for a given 
     return result;
 }
 
-void lc_cone(double *t, double *nu, double *F, int *moment, int Nt,
+void lc_cone(double *t, double *nu, double *F, long *moment, int Nt,
              double E_iso, double theta_core, double theta_wing,
              struct fluxParams *pars)
 {
@@ -1117,14 +1117,14 @@ void lc_cone(double *t, double *nu, double *F, int *moment, int Nt,
 
     for(i=0; i<Nt; i++)
     {
-        int mom = moment == NULL ? 0 : moment[i];
+        long mom = moment == NULL ? 0 : moment[i];
         F[i] = flux_cone(t[i], nu[i], mom, -1, -1, theta_core, theta_wing, 0.0,
                             pars);
         ERR_CHK_VOID(pars)
     }
 }
 
-void lc_tophat(double *t, double *nu, double *F, int *moment, int Nt,
+void lc_tophat(double *t, double *nu, double *F, long *moment, int Nt,
                 double E_iso, double theta_h, struct fluxParams *pars)
 {
     int i;
@@ -1134,13 +1134,13 @@ void lc_tophat(double *t, double *nu, double *F, int *moment, int Nt,
 
     for(i=0; i<Nt; i++)
     {
-        int mom = moment == NULL ? 0 : moment[i];
+        long mom = moment == NULL ? 0 : moment[i];
         F[i] = flux_cone(t[i], nu[i], mom, -1, -1, 0.0, theta_h, 0.0, pars);
         ERR_CHK_VOID(pars)
     }
 }
 
-void lc_struct(double *t, double *nu, double *F, int *moment, int Nt,
+void lc_struct(double *t, double *nu, double *F, long *moment, int Nt,
                         double E_iso_core, 
                         double theta_h_core, double theta_h_wing,
                         double *theta_c_arr, double *E_iso_arr,
@@ -1184,17 +1184,17 @@ void lc_struct(double *t, double *nu, double *F, int *moment, int Nt,
         for(j=0; j<Nt; j++)
         {
             //printf("tobs = %.6le\n", t[j]);
-            int mom = moment == NULL ? 0 : moment[j];
+            long mom = moment == NULL ? 0 : moment[j];
             F[j] += flux_cone(t[j], nu[j], mom, -1, -1, theta_cone_low,
                                 theta_cone_hi,
-                                F[j]*pars->rtol_struct/res_cones,
+                                fabs(F[j])*pars->rtol_struct/res_cones,
                                 pars);
             ERR_CHK_VOID(pars)
         }
     }
 }
 
-void lc_structCore(double *t, double *nu, double *F, int *moment, int Nt,
+void lc_structCore(double *t, double *nu, double *F, long *moment, int Nt,
                         double E_iso_core, 
                         double theta_h_core, double theta_h_wing,
                         double *theta_c_arr, double *E_iso_arr,
@@ -1233,17 +1233,17 @@ void lc_structCore(double *t, double *nu, double *F, int *moment, int Nt,
 
         for(j=0; j<Nt; j++)
         {
-            int mom = moment == NULL ? 0 : moment[j];
+            long mom = moment == NULL ? 0 : moment[j];
             F[j] += flux_cone(t[j], nu[j], mom, -1, -1, theta_cone_low,
                                 theta_cone_hi,
-                                F[j]*pars->rtol_struct/res_cones,
+                                fabs(F[j])*pars->rtol_struct/res_cones,
                                 pars);
             ERR_CHK_VOID(pars)
         }
     }
 }
 
-double flux_cone(double t_obs, double nu_obs, int moment,
+double flux_cone(double t_obs, double nu_obs, long moment,
                     double E_iso, double theta_h,
                     double theta_cone_low, double theta_cone_hi, double atol,
                     struct fluxParams *pars)
@@ -1284,7 +1284,7 @@ double flux_cone(double t_obs, double nu_obs, int moment,
     Fboth = F1 + F2;
 
 
-    if(F1 != F1 || F1 < 0.0)
+    if(F1 != F1 || (F1 < 0.0 && pars->moment == 0))
     {
         char msg[MSG_LEN];
         int c = snprintf(msg, MSG_LEN, "bad F1 in flux_cone:%.3lg\n", F1);
@@ -1294,7 +1294,7 @@ double flux_cone(double t_obs, double nu_obs, int moment,
         set_error(pars, msg);
         return 0.0;
     }
-    if(F2 != F2 || F2 < 0.0)
+    if(F2 != F2 || (F2 < 0.0 && pars->moment == 0))
     {
         char msg[MSG_LEN];
         int c = snprintf(msg, MSG_LEN, "bad F2 in flux_cone:%.3lg\n", F2);
@@ -1895,7 +1895,7 @@ void shockVals_structCore(double *theta, double *phi, double *tobs,
 }
 
 void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
-                            double *Fnu, int *moment, int N,
+                            double *Fnu, long *moment, int N,
                             struct fluxParams *fp)
 {
     int latRes = fp->latRes;
@@ -2246,7 +2246,7 @@ void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h)
 ///////////////////////////////////////////////////////////////////////////////
 
 void set_obs_params(struct fluxParams *pars,
-                        double t_obs, double nu_obs, int moment,
+                        double t_obs, double nu_obs, long moment,
                         double theta_obs_cur, double current_theta_cone_hi, 
                         double current_theta_cone_low)
 {
