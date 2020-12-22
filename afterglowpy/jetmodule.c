@@ -177,6 +177,16 @@ void initjet(void)
     PyModule_AddIntConstant(module, "EpsEBar", EPS_E_BAR_FLAG);
     PyModule_AddIntConstant(module, "SSASmooth", SSA_SMOOTH_FLAG);
     PyModule_AddIntConstant(module, "SSASharp", SSA_SHARP_FLAG);
+    PyModule_AddIntConstant(module, "MOM_0", MOM_0);
+    PyModule_AddIntConstant(module, "MOM_X", MOM_X);
+    PyModule_AddIntConstant(module, "MOM_Y", MOM_Y);
+    PyModule_AddIntConstant(module, "MOM_Z", MOM_Z);
+    PyModule_AddIntConstant(module, "MOM_XX", MOM_XX);
+    PyModule_AddIntConstant(module, "MOM_YY", MOM_YY);
+    PyModule_AddIntConstant(module, "MOM_ZZ", MOM_ZZ);
+    PyModule_AddIntConstant(module, "MOM_XY", MOM_XY);
+    PyModule_AddIntConstant(module, "MOM_YZ", MOM_YZ);
+    PyModule_AddIntConstant(module, "MOM_XZ", MOM_XZ);
 
 #if PY_MAJOR_VERSION >= 3
     return module;
@@ -196,6 +206,7 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     PyObject *t_obj = NULL;
     PyObject *nu_obj = NULL;
     PyObject *mask_obj = NULL;
+    PyObject *moment_obj = NULL;
 
 #ifdef PROFILE
     clock_t profClock1A, profClock1B, profClock2A, profClock2B;
@@ -249,12 +260,12 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
                                 "tRes", "latRes", "intType", "rtolStruct",
                                     "rtolPhi", "rtolTheta", "NPhi", "NTheta",
                                 "mask",
-                                "spread", "counterjet", "gammaType",
+                                "spread", "counterjet", "gammaType", "moment",
                                 NULL};
 
     //Parse Arguments
     if(!PyArg_ParseTupleAndKeywords(args, kwargs,
-                "OO|ii""ddddddddddddddd""dd""iiidddii""O""iii",
+                "OO|ii""ddddddddddddddd""dd""iiidddii""O""iii""O",
                 //"OO|ii ddddddddddddddd dd iiidddii O iii",
                 kwlist,
                 &t_obj, &nu_obj, &jet_type, &spec_type,
@@ -278,58 +289,83 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
         return NULL;
     }
 
+    printf("Args parsed\n");
+
     //Grab NUMPY arrays
     PyArrayObject *t_arr;
     PyArrayObject *nu_arr;
     PyArrayObject *mask_arr = NULL;
+    PyArrayObject *moment_arr = NULL;
+
+    int givenMask = mask_obj != NULL && mask_obj != Py_None;
+    int givenMoment = moment_obj != NULL && moment_obj != Py_None;
 
     t_arr = (PyArrayObject *) PyArray_FROM_OTF(t_obj, NPY_DOUBLE,
                                                 NPY_ARRAY_IN_ARRAY);
     nu_arr = (PyArrayObject *) PyArray_FROM_OTF(nu_obj, NPY_DOUBLE,
                                                 NPY_ARRAY_IN_ARRAY);
-    if(mask_obj != NULL)
+    if(givenMask)
         mask_arr = (PyArrayObject *) PyArray_FROM_OTF(mask_obj, NPY_DOUBLE,
                                                 NPY_ARRAY_IN_ARRAY);
+    if(givenMoment)
+        moment_arr = (PyArrayObject *) PyArray_FROM_OTF(moment_obj, NPY_INT32,
+                                                NPY_ARRAY_IN_ARRAY);
 
-    if(t_arr == NULL || nu_arr == NULL || (mask_obj != NULL
-                                            && mask_arr == NULL))
+    if(t_arr == NULL || nu_arr == NULL || (givenMask && mask_arr == NULL)
+            || (givenMoment && moment_arr == NULL))
     {
         PyErr_SetString(PyExc_RuntimeError, "Could not read input arrays.");
         Py_XDECREF(t_arr);
         Py_XDECREF(nu_arr);
         Py_XDECREF(mask_arr);
+        Py_XDECREF(moment_arr);
         return NULL;
     }
+    
+    printf("Arrays grabbed\n");
 
     int t_ndim = (int) PyArray_NDIM(t_arr);
     int nu_ndim = (int) PyArray_NDIM(nu_arr);
     int mask_ndim = 0;
+    int moment_ndim = 0;
     if(mask_obj != NULL)
         mask_ndim = (int) PyArray_NDIM(mask_arr);
+    if(givenMoment)
+        moment_ndim = (int) PyArray_NDIM(moment_arr);
 
-    if(t_ndim != 1 || nu_ndim != 1 || (mask_obj != NULL && mask_ndim != 1))
+    if(t_ndim != 1 || nu_ndim != 1 || (givenMask && mask_ndim != 1)
+            || (givenMoment && moment_ndim != 1))
     {
         PyErr_SetString(PyExc_RuntimeError, "Arrays must be 1-D.");
         Py_DECREF(t_arr);
         Py_DECREF(nu_arr);
-        if(mask_obj != NULL)
+        if(mask_arr != NULL)
             Py_DECREF(mask_arr);
+        if(moment_arr != NULL)
+            Py_DECREF(moment_arr);
         return NULL;
     }
+    
+    printf("NDims checked\n");
 
     int N = (int)PyArray_DIM(t_arr, 0);
     int Nnu = (int)PyArray_DIM(nu_arr, 0);
     int Nmask = 0;
-    if(mask_obj != NULL)
+    if(givenMask)
         Nmask = (int)PyArray_DIM(mask_arr, 0);
+    int Nmoment = 0;
+    if(givenMoment)
+        Nmoment = (int)PyArray_DIM(moment_arr, 0);
 
-    if(N != Nnu)
+    if(N != Nnu || (givenMoment && (Nmoment != N)))
     {
         PyErr_SetString(PyExc_RuntimeError, "Arrays must be same size.");
         Py_DECREF(t_arr);
         Py_DECREF(nu_arr);
-        if(mask_obj != NULL)
+        if(mask_arr != NULL)
             Py_DECREF(mask_arr);
+        if(moment_arr != NULL)
+            Py_DECREF(moment_arr);
         return NULL;
     }
     if(mask_obj != NULL && Nmask%9 != 0)
@@ -339,15 +375,25 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
         Py_DECREF(t_arr);
         Py_DECREF(nu_arr);
         Py_DECREF(mask_arr);
+        if(moment_arr != NULL)
+            Py_DECREF(moment_arr);
         return NULL;
     }
+    
+    printf("Dims checked\n");
 
     double *t = (double *)PyArray_DATA(t_arr);
     double *nu = (double *)PyArray_DATA(nu_arr);
     double *mask = NULL;
-    if(mask_obj != NULL)
+    if(mask_arr != NULL)
         mask = (double *)PyArray_DATA(mask_arr);
     int masklen = Nmask/9;
+    
+    int *moment = NULL;
+    if(moment_arr != NULL)
+        moment = (int *)PyArray_DATA(moment_arr);
+
+    printf("Data got\n");
 
     //Allocate output array
 
@@ -359,6 +405,10 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
         PyErr_SetString(PyExc_RuntimeError, "Could not make flux array.");
         Py_DECREF(t_arr);
         Py_DECREF(nu_arr);
+        if(mask_arr != NULL)
+            Py_DECREF(mask_arr);
+        if(moment_arr != NULL)
+            Py_DECREF(moment_arr);
         return NULL;
     }
     double *Fnu = PyArray_DATA((PyArrayObject *) Fnu_obj);
@@ -393,8 +443,12 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
                         spec_type, mask, masklen,
                         spread, counterjet, gamma_type);
 
+    printf("Ready to go!\n");
+
     // Calculate the flux!
-    calc_flux_density(jet_type, spec_type, t, nu, Fnu, N, &fp);
+    calc_flux_density(jet_type, spec_type, t, nu, Fnu, moment, N, &fp);
+    
+    printf("Gone!\n");
    
     if(fp.error)
     {
@@ -403,8 +457,10 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
         return NULL;
     }
 
+
     //Free the parameters!
     free_fluxParams(&fp);
+    printf("Freed params!\n");
 
 #ifdef PROFILE2
     //Profile 2
@@ -417,9 +473,15 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     Py_DECREF(nu_arr);
     if(mask_obj != NULL)
         Py_DECREF(mask_arr);
+    if(moment_obj != NULL)
+        Py_DECREF(moment_arr);
+    
+    printf("Decref'ed inputs!\n");
 
     //Build output
     PyObject *ret = Py_BuildValue("N", Fnu_obj);
+    
+    printf("Built outputs!\n");
     
 #ifdef PROFILE1
     //Profile 1 and output

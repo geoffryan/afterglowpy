@@ -466,11 +466,6 @@ def checkThetaPhiTNu(theta, phi, t, nu):
 
 def checkJetArgs(**argsDict):
 
-    for _, x in argsDict.items():
-        if not np.isfinite(x):
-            raise ValueError("All parameters must be finite")
-
-
     jetType = argsDict['jetType']
     specType = argsDict['specType']
 

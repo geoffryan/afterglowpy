@@ -648,6 +648,37 @@ double costheta_integrand(double aomct, void* params) // inner integral
         return 0.0;
     }
 
+    double momentFactor = 1.0;
+    if(pars->moment > 0)
+    {
+        double xlab = R * ast * pars->cp;
+        double ylab = R * ast * pars->sp;
+        double zlab = R * act;
+
+        double xobs = -(pars->cto * xlab - pars->sto * zlab);
+        double yobs = -ylab;
+        double zobs = (pars->sto * xlab + pars->cto * zlab);
+
+        if(pars->moment == MOM_X)
+            momentFactor = xobs;
+        else if(pars->moment == MOM_Y)
+            momentFactor = yobs;
+        else if(pars->moment == MOM_Z)
+            momentFactor = zobs;
+        else if(pars->moment == MOM_XX)
+            momentFactor = xobs*xobs;
+        else if(pars->moment == MOM_YY)
+            momentFactor = yobs*yobs;
+        else if(pars->moment == MOM_ZZ)
+            momentFactor = zobs*zobs;
+        else if(pars->moment == MOM_XY)
+            momentFactor = xobs*yobs;
+        else if(pars->moment == MOM_YZ)
+            momentFactor = yobs*zobs;
+        else if(pars->moment == MOM_XZ)
+            momentFactor = xobs*zobs;
+    }
+
     int i;
     double fac = 1.0;
     for(i=0; i<pars->nmask; i++)
@@ -666,7 +697,7 @@ double costheta_integrand(double aomct, void* params) // inner integral
         return 0.0;
     }
 
-    return fac * dFnu;
+    return momentFactor * fac * dFnu;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -688,6 +719,7 @@ double phi_integrand(double a_phi, void* params) // outer integral
 
     pars->phi = a_phi;
     pars->cp = cos(a_phi);
+    pars->sp = sin(a_phi);
   
   // implement sideways spreading approximation until spherical symmetry reached
     double theta_1 = pars->current_theta_cone_hi;
@@ -1065,11 +1097,18 @@ double flux(struct fluxParams *pars, double atol) // determine flux for a given 
         return 0.0;
     }
 
+    if(pars->moment == MOM_Y || pars->moment == MOM_XY
+        || pars->moment == MOM_YZ)
+    {
+        result = 0.0;
+    }
+
     return result;
 }
 
-void lc_cone(double *t, double *nu, double *F, int Nt, double E_iso,
-                double theta_core, double theta_wing, struct fluxParams *pars)
+void lc_cone(double *t, double *nu, double *F, int *moment, int Nt,
+             double E_iso, double theta_core, double theta_wing,
+             struct fluxParams *pars)
 {
     int i;
 
@@ -1078,13 +1117,14 @@ void lc_cone(double *t, double *nu, double *F, int Nt, double E_iso,
 
     for(i=0; i<Nt; i++)
     {
-        F[i] = flux_cone(t[i], nu[i], -1, -1, theta_core, theta_wing, 0.0,
+        int mom = moment == NULL ? 0 : moment[i];
+        F[i] = flux_cone(t[i], nu[i], mom, -1, -1, theta_core, theta_wing, 0.0,
                             pars);
         ERR_CHK_VOID(pars)
     }
 }
 
-void lc_tophat(double *t, double *nu, double *F, int Nt,
+void lc_tophat(double *t, double *nu, double *F, int *moment, int Nt,
                 double E_iso, double theta_h, struct fluxParams *pars)
 {
     int i;
@@ -1094,12 +1134,13 @@ void lc_tophat(double *t, double *nu, double *F, int Nt,
 
     for(i=0; i<Nt; i++)
     {
-        F[i] = flux_cone(t[i], nu[i], -1, -1, 0.0, theta_h, 0.0, pars);
+        int mom = moment == NULL ? 0 : moment[i];
+        F[i] = flux_cone(t[i], nu[i], mom, -1, -1, 0.0, theta_h, 0.0, pars);
         ERR_CHK_VOID(pars)
     }
 }
 
-void lc_struct(double *t, double *nu, double *F, int Nt,
+void lc_struct(double *t, double *nu, double *F, int *moment, int Nt,
                         double E_iso_core, 
                         double theta_h_core, double theta_h_wing,
                         double *theta_c_arr, double *E_iso_arr,
@@ -1143,7 +1184,8 @@ void lc_struct(double *t, double *nu, double *F, int Nt,
         for(j=0; j<Nt; j++)
         {
             //printf("tobs = %.6le\n", t[j]);
-            F[j] += flux_cone(t[j], nu[j], -1, -1, theta_cone_low,
+            int mom = moment == NULL ? 0 : moment[j];
+            F[j] += flux_cone(t[j], nu[j], mom, -1, -1, theta_cone_low,
                                 theta_cone_hi,
                                 F[j]*pars->rtol_struct/res_cones,
                                 pars);
@@ -1152,7 +1194,7 @@ void lc_struct(double *t, double *nu, double *F, int Nt,
     }
 }
 
-void lc_structCore(double *t, double *nu, double *F, int Nt,
+void lc_structCore(double *t, double *nu, double *F, int *moment, int Nt,
                         double E_iso_core, 
                         double theta_h_core, double theta_h_wing,
                         double *theta_c_arr, double *E_iso_arr,
@@ -1161,7 +1203,7 @@ void lc_structCore(double *t, double *nu, double *F, int Nt,
 {
     //Flux from a structured jet with core.
     
-    lc_tophat(t, nu, F, Nt, E_iso_core, theta_h_core, pars);
+    lc_tophat(t, nu, F, moment, Nt, E_iso_core, theta_h_core, pars);
     ERR_CHK_VOID(pars)
 
     double Dtheta, theta_cone_hi, theta_cone_low, theta_h, theta_c, E_iso;
@@ -1191,7 +1233,8 @@ void lc_structCore(double *t, double *nu, double *F, int Nt,
 
         for(j=0; j<Nt; j++)
         {
-            F[j] += flux_cone(t[j], nu[j], -1, -1, theta_cone_low,
+            int mom = moment == NULL ? 0 : moment[j];
+            F[j] += flux_cone(t[j], nu[j], mom, -1, -1, theta_cone_low,
                                 theta_cone_hi,
                                 F[j]*pars->rtol_struct/res_cones,
                                 pars);
@@ -1200,7 +1243,8 @@ void lc_structCore(double *t, double *nu, double *F, int Nt,
     }
 }
 
-double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
+double flux_cone(double t_obs, double nu_obs, int moment,
+                    double E_iso, double theta_h,
                     double theta_cone_low, double theta_cone_hi, double atol,
                     struct fluxParams *pars)
 {
@@ -1220,7 +1264,7 @@ double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
 
     //Jet 
     theta_obs_cur = theta_obs;
-    set_obs_params(pars, t_obs, nu_obs, theta_obs_cur, 
+    set_obs_params(pars, t_obs, nu_obs, moment, theta_obs_cur, 
                     theta_cone_hi, theta_cone_low);
     F1 = flux(pars, atol);
     ERR_CHK_DBL(pars)
@@ -1229,7 +1273,7 @@ double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
     if(pars->counterjet)
     {
         theta_obs_cur = 180*deg2rad - theta_obs;
-        set_obs_params(pars, t_obs, nu_obs, theta_obs_cur, 
+        set_obs_params(pars, t_obs, nu_obs, moment, theta_obs_cur, 
                         theta_cone_hi, theta_cone_low);
         F2 = flux(pars, atol);
         ERR_CHK_DBL(pars)
@@ -1275,11 +1319,14 @@ double intensity(double theta, double phi, double tobs, double nuobs,
     int remakeMu = 0;
     if(tobs != pars->t_obs)
         remakeMu = 1;
-    set_obs_params(pars, tobs, nuobs, theta_obs, theta_cone_hi, 
+    set_obs_params(pars, tobs, nuobs, 0, theta_obs, theta_cone_hi, 
                     theta_cone_low);
 
     if(remakeMu)
+    {
+        printf("Remaking mu\n");
         make_mu_table(pars);
+    }
 
     double mu = cos(theta)*cos(theta_obs)
                     + sin(theta)*sin(theta_obs)*cos(phi);
@@ -1336,7 +1383,7 @@ void shockVals(double theta, double phi, double tobs,
     int remakeMu = 0;
     if(tobs != pars->t_obs)
         remakeMu = 1;
-    set_obs_params(pars, tobs, 1.0, theta_obs, theta_cone_hi, 
+    set_obs_params(pars, tobs, 1.0, 0, theta_obs, theta_cone_hi, 
                     theta_cone_low);
 
     if(remakeMu)
@@ -1406,7 +1453,7 @@ void intensity_cone(double *theta, double *phi, double *t, double *nu,
 
     set_jet_params(pars, E_iso_core, theta_h_wing);
     ERR_CHK_VOID(pars)
-    set_obs_params(pars, t[0], nu[0], theta_obs,
+    set_obs_params(pars, t[0], nu[0], 0, theta_obs,
                    theta_cone_hi, theta_cone_low);
     make_mu_table(pars);
     double tobs = t[0];
@@ -1419,7 +1466,7 @@ void intensity_cone(double *theta, double *phi, double *t, double *nu,
         if(I[j] > 0.0 || th < theta_cone_low)
             continue;
 
-        set_obs_params(pars, t[j], nu[j], theta_obs,
+        set_obs_params(pars, t[j], nu[j], 0, theta_obs,
                        theta_cone_hi, theta_cone_low);
         if(tobs != t[j])
         {
@@ -1482,7 +1529,7 @@ void intensity_struct(double *theta, double *phi, double *t, double *nu,
         set_jet_params(pars, E_iso, theta_h);
         ERR_CHK_VOID(pars)
 
-        set_obs_params(pars, t[0], nu[0], theta_obs, theta_cone_hi, 
+        set_obs_params(pars, t[0], nu[0], 0, theta_obs, theta_cone_hi, 
                        theta_cone_low);
         make_mu_table(pars);
         double tobs = t[0];
@@ -1498,7 +1545,7 @@ void intensity_struct(double *theta, double *phi, double *t, double *nu,
                 continue;
 
 
-            set_obs_params(pars, t[j], nu[j], theta_obs, theta_cone_hi, 
+            set_obs_params(pars, t[j], nu[j], 0, theta_obs, theta_cone_hi, 
                             theta_cone_low);
             if(tobs != t[j])
             {
@@ -1567,7 +1614,7 @@ void intensity_structCore(double *theta, double *phi, double *t, double *nu,
 
         set_jet_params(pars, E_iso, theta_h);
         ERR_CHK_VOID(pars)
-        set_obs_params(pars, t[0], nu[0], theta_obs, theta_cone_hi, 
+        set_obs_params(pars, t[0], nu[0], 0, theta_obs, theta_cone_hi, 
                         theta_cone_low);
         make_mu_table(pars);
         double tobs = t[0];
@@ -1580,7 +1627,7 @@ void intensity_structCore(double *theta, double *phi, double *t, double *nu,
             if(I[j] > 0.0 || th < theta_cone_low)
                 continue;
 
-            set_obs_params(pars, t[j], nu[j], theta_obs, theta_cone_hi, 
+            set_obs_params(pars, t[j], nu[j], 0, theta_obs, theta_cone_hi, 
                             theta_cone_low);
             if(tobs != t[j])
             {
@@ -1638,7 +1685,7 @@ void shockVals_cone(double *theta, double *phi, double *tobs,
 
     set_jet_params(pars, E_iso_core, theta_h_wing);
     ERR_CHK_VOID(pars)
-    set_obs_params(pars, tobs[0], 1.0, theta_obs, theta_cone_hi, 
+    set_obs_params(pars, tobs[0], 1.0, 0, theta_obs, theta_cone_hi, 
                     theta_cone_low);
     make_mu_table(pars);
     double tobs_cur = t[0];
@@ -1651,7 +1698,7 @@ void shockVals_cone(double *theta, double *phi, double *tobs,
         if(t[j] > 0.0 || th < theta_cone_low)
             continue;
 
-        set_obs_params(pars, tobs[j], 1.0, theta_obs,
+        set_obs_params(pars, tobs[j], 1.0, 0, theta_obs,
                        theta_cone_hi, theta_cone_low);
         if(tobs_cur != tobs[j])
         {
@@ -1720,7 +1767,7 @@ void shockVals_struct(double *theta, double *phi, double *tobs,
 
         set_jet_params(pars, E_iso, theta_h);
         ERR_CHK_VOID(pars)
-        set_obs_params(pars, tobs[0], 1.0, theta_obs, theta_cone_hi, 
+        set_obs_params(pars, tobs[0], 1.0, 0, theta_obs, theta_cone_hi, 
                         theta_cone_low);
         make_mu_table(pars);
         double tobs_cur = t[0];
@@ -1733,7 +1780,7 @@ void shockVals_struct(double *theta, double *phi, double *tobs,
             if(t[j] > 0.0 || th < theta_cone_low)
                 continue;
 
-            set_obs_params(pars, tobs[j], 1.0, theta_obs, theta_cone_hi, 
+            set_obs_params(pars, tobs[j], 1.0, 0, theta_obs, theta_cone_hi, 
                             theta_cone_low);
             if(tobs_cur != tobs[j])
             {
@@ -1800,7 +1847,7 @@ void shockVals_structCore(double *theta, double *phi, double *tobs,
 
         set_jet_params(pars, E_iso, theta_h);
         ERR_CHK_VOID(pars)
-        set_obs_params(pars, tobs[0], 1.0, theta_obs, theta_cone_hi, 
+        set_obs_params(pars, tobs[0], 1.0, 0, theta_obs, theta_cone_hi, 
                         theta_cone_low);
         make_mu_table(pars);
         double tobs_cur = tobs[0];
@@ -1813,7 +1860,7 @@ void shockVals_structCore(double *theta, double *phi, double *tobs,
             if(t[j] > 0.0 || th < theta_cone_low)
                 continue;
 
-            set_obs_params(pars, tobs[j], 1.0, theta_obs, theta_cone_hi, 
+            set_obs_params(pars, tobs[j], 1.0, 0, theta_obs, theta_cone_hi, 
                             theta_cone_low);
             if(tobs_cur != tobs[j])
             {
@@ -1848,7 +1895,8 @@ void shockVals_structCore(double *theta, double *phi, double *tobs,
 }
 
 void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
-                            double *Fnu, int N, struct fluxParams *fp)
+                            double *Fnu, int *moment, int N,
+                            struct fluxParams *fp)
 {
     int latRes = fp->latRes;
     double E_iso_core = fp->E_iso_core;
@@ -1860,45 +1908,46 @@ void calc_flux_density(int jet_type, int spec_type, double *t, double *nu,
 
     if(jet_type == _tophat)
     {
-        lc_tophat(t, nu, Fnu, N, E_iso_core, theta_h_core, fp);
+        lc_tophat(t, nu, Fnu, moment, N, E_iso_core, theta_h_core, fp);
     }
     else if(jet_type == _cone)
     {
-        lc_cone(t, nu, Fnu, N, E_iso_core, theta_h_core, theta_h_wing, fp);
+        lc_cone(t, nu, Fnu, moment, N, E_iso_core, theta_h_core, theta_h_wing,
+                fp);
     }
     else if(jet_type == _Gaussian)
     {
-        lc_struct(t, nu, Fnu, N, E_iso_core, theta_h_core, 
-                theta_h_wing, NULL, NULL, res_cones, &f_E_Gaussian, fp);
+        lc_struct(t, nu, Fnu, moment, N, E_iso_core, theta_h_core, 
+                  theta_h_wing, NULL, NULL, res_cones, &f_E_Gaussian, fp);
     }
     else if(jet_type == _powerlaw)
     {
-        lc_struct(t, nu, Fnu, N, E_iso_core, theta_h_core, 
-                theta_h_wing, NULL, NULL, res_cones, &f_E_powerlaw, fp);
+        lc_struct(t, nu, Fnu, moment, N, E_iso_core, theta_h_core, 
+                  theta_h_wing, NULL, NULL, res_cones, &f_E_powerlaw, fp);
     }
     else if(jet_type == _twocomponent)
     {
-        lc_struct(t, nu, Fnu, N, E_iso_core, theta_h_core, 
+        lc_struct(t, nu, Fnu, moment, N, E_iso_core, theta_h_core, 
                 theta_h_wing, NULL, NULL, res_cones, &f_E_twocomponent, fp);
     }
     else if(jet_type == _Gaussian_core)
     {
-        lc_structCore(t, nu, Fnu, N, E_iso_core, theta_h_core, 
+        lc_structCore(t, nu, Fnu, moment, N, E_iso_core, theta_h_core, 
                 theta_h_wing, NULL, NULL, res_cones, &f_E_GaussianCore, fp);
     }
     else if(jet_type == _powerlaw_core)
     {
-        lc_structCore(t, nu, Fnu, N, E_iso_core, theta_h_core, 
+        lc_structCore(t, nu, Fnu, moment, N, E_iso_core, theta_h_core, 
                 theta_h_wing, NULL, NULL, res_cones, &f_E_powerlawCore, fp);
     }
     else if(jet_type == _exponential)
     {
-        lc_structCore(t, nu, Fnu, N, E_iso_core, theta_h_core, 
+        lc_structCore(t, nu, Fnu, moment, N, E_iso_core, theta_h_core, 
                 theta_h_wing, NULL, NULL, res_cones, &f_E_exponential, fp);
     }
     else if(jet_type == _exponential2)
     {
-        lc_structCore(t, nu, Fnu, N, E_iso_core, theta_h_core, 
+        lc_structCore(t, nu, Fnu, moment, N, E_iso_core, theta_h_core, 
                 theta_h_wing, NULL, NULL, res_cones, &f_E_exponential2, fp);
     }
 
@@ -2196,12 +2245,14 @@ void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void set_obs_params(struct fluxParams *pars, double t_obs, double nu_obs,
+void set_obs_params(struct fluxParams *pars,
+                        double t_obs, double nu_obs, int moment,
                         double theta_obs_cur, double current_theta_cone_hi, 
                         double current_theta_cone_low)
 {
     pars->t_obs = t_obs;
     pars->nu_obs = nu_obs;
+    pars->moment = moment;
     pars->theta_obs_cur = theta_obs_cur;
     pars->cto = cos(theta_obs_cur);
     pars->sto = sin(theta_obs_cur);
