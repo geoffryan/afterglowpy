@@ -13,6 +13,10 @@
 #define ERR_CHK_DBL(pars) if(pars->error){ return 0.0;}
 #define MSG_LEN 4096
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 // some physical and mathematical constants
 #define PI          3.14159265358979323846
 #define v_light     2.99792458e10   // speed of light in cm / s
