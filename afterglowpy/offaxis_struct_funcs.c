@@ -2225,95 +2225,113 @@ void set_error(struct fluxParams *pars, char msg[])
     pars->error = 1;
 
     int msglen = (int)strlen(msg);
-    const int dumplenmax = 16384;  // overkill: 200 lines * 80c per line = 16000
-    char dump[16384];
-    int c = snprintf(dump, dumplenmax, "fluxParamsDump\n{\n");
-    c += snprintf(dump+c, dumplenmax-c, "    theta: %.12lg\n", pars->theta);
-    c += snprintf(dump+c, dumplenmax-c, "    phi: %.12lg\n", pars->phi);
-    c += snprintf(dump+c, dumplenmax-c, "    cp: %.12lg\n", pars->cp);
-    c += snprintf(dump+c, dumplenmax-c, "    ct: %.12lg\n", pars->ct);
-    c += snprintf(dump+c, dumplenmax-c, "    st: %.12lg\n", pars->st);
-    c += snprintf(dump+c, dumplenmax-c, "    cto: %.12lg\n", pars->cto);
-    c += snprintf(dump+c, dumplenmax-c, "    sto: %.12lg\n", pars->sto);
-    c += snprintf(dump+c, dumplenmax-c, "    theta_obs: %.12lg\n",
+    char dump[DUMP_MSG_LEN_MAX];
+    int c = snprintf(dump, DUMP_MSG_LEN_MAX, "fluxParamsDump\n{\n");
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    theta: %.12lg\n",
+            pars->theta);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    phi: %.12lg\n", pars->phi);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    cp: %.12lg\n", pars->cp);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    ct: %.12lg\n", pars->ct);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    st: %.12lg\n", pars->st);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    cto: %.12lg\n", pars->cto);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    sto: %.12lg\n", pars->sto);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    theta_obs: %.12lg\n",
             pars->theta_obs);
-    c += snprintf(dump+c, dumplenmax-c, "    t_obs: %.12lg\n", pars->t_obs);
-    c += snprintf(dump+c, dumplenmax-c, "    nu_obs: %.12lg\n", pars->nu_obs);
-    c += snprintf(dump+c, dumplenmax-c, "    d_L: %.12lg\n", pars->d_L);
-    c += snprintf(dump+c, dumplenmax-c, "    E_iso: %.12lg\n", pars->E_iso);
-    c += snprintf(dump+c, dumplenmax-c, "    n_0: %.12lg\n", pars->n_0);
-    c += snprintf(dump+c, dumplenmax-c, "    g_init: %.12lg\n", pars->g_init);
-    c += snprintf(dump+c, dumplenmax-c, "    p: %.12lg\n", pars->p);
-    c += snprintf(dump+c, dumplenmax-c, "    epsilon_E: %.12lg\n",
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    t_obs: %.12lg\n",
+            pars->t_obs);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    nu_obs: %.12lg\n",
+            pars->nu_obs);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    d_L: %.12lg\n", pars->d_L);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    E_iso: %.12lg\n",
+            pars->E_iso);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    n_0: %.12lg\n", pars->n_0);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    g_init: %.12lg\n",
+            pars->g_init);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    p: %.12lg\n", pars->p);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    epsilon_E: %.12lg\n",
                 pars->epsilon_E);
-    c += snprintf(dump+c, dumplenmax-c, "    epsilon_B: %.12lg\n",
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    epsilon_B: %.12lg\n",
             pars->epsilon_B);
-    c += snprintf(dump+c, dumplenmax-c, "    ksi_N: %.12lg\n", pars->ksi_N);
-    c += snprintf(dump+c, dumplenmax-c, "    theta_h: %.12lg\n",
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    ksi_N: %.12lg\n",
+            pars->ksi_N);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    theta_h: %.12lg\n",
             pars->theta_h);
-    c += snprintf(dump+c, dumplenmax-c, "    E_iso_core: %.12lg\n",
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    E_iso_core: %.12lg\n",
             pars->E_iso_core);
-    c += snprintf(dump+c, dumplenmax-c, "    theta_core: %.12lg\n",
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    theta_core: %.12lg\n",
             pars->theta_core);
-    c += snprintf(dump+c, dumplenmax-c, "    theta_wing: %.12lg\n",
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    theta_wing: %.12lg\n",
             pars->theta_wing);
-    c += snprintf(dump+c, dumplenmax-c, "    b: %.12lg\n", pars->b);
-    c += snprintf(dump+c, dumplenmax-c, "    E_tot: %.12lg\n", pars->E_tot);
-    c += snprintf(dump+c, dumplenmax-c, "    g_core: %.12lg\n", pars->g_core);
-    c += snprintf(dump+c, dumplenmax-c, "    E_core_global: %.12lg\n",
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    b: %.12lg\n", pars->b);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    E_tot: %.12lg\n",
+            pars->E_tot);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    g_core: %.12lg\n",
+            pars->g_core);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    E_core_global: %.12lg\n",
             pars->E_core_global);
-    c += snprintf(dump+c, dumplenmax-c, "    theta_core_global: %.12lg\n",
-                 pars->theta_core_global);
-    c += snprintf(dump+c, dumplenmax-c, "    envType: %d\n", pars->envType);
-    c += snprintf(dump+c, dumplenmax-c, "    As: %.12lg\n", pars->As);
-    c += snprintf(dump+c, dumplenmax-c, "    Rwind: %.12lg\n", pars->Rwind);
-    c += snprintf(dump+c, dumplenmax-c, "    L0: %.12lg\n", pars->L0);
-    c += snprintf(dump+c, dumplenmax-c, "    q: %.12lg\n", pars->q);
-    c += snprintf(dump+c, dumplenmax-c, "    ts: %.12lg\n", pars->ts);
-    c += snprintf(dump+c, dumplenmax-c, "    current_theta_cone_hi: %.12lg\n",
-                 pars->current_theta_cone_hi);
-    c += snprintf(dump+c, dumplenmax-c, "    current_theta_cone_low: %.12lg\n",
-                 pars->current_theta_cone_low);
-    c += snprintf(dump+c, dumplenmax-c, "    theta_obs_cur: %.12lg\n",
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c,
+            "    theta_core_global: %.12lg\n", pars->theta_core_global);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    envType: %d\n",
+            pars->envType);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    As: %.12lg\n", pars->As);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    Rwind: %.12lg\n",
+            pars->Rwind);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    L0: %.12lg\n", pars->L0);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    q: %.12lg\n", pars->q);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    ts: %.12lg\n", pars->ts);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c,
+            "    current_theta_cone_hi: %.12lg\n",
+            pars->current_theta_cone_hi);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c,
+            "    current_theta_cone_low: %.12lg\n", 
+            pars->current_theta_cone_low);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    theta_obs_cur: %.12lg\n",
             pars->theta_obs_cur);
-    c += snprintf(dump+c, dumplenmax-c, "    tRes: %d\n", pars->tRes);
-    c += snprintf(dump+c, dumplenmax-c, "    latRes: %d\n", pars->latRes);
-    c += snprintf(dump+c, dumplenmax-c, "    spread: %d\n", pars->spread);
-    c += snprintf(dump+c, dumplenmax-c, "    counterjet: %d\n",
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    tRes: %d\n", pars->tRes);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    latRes: %d\n",
+            pars->latRes);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    spread: %d\n",
+            pars->spread);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    counterjet: %d\n",
             pars->counterjet);
-    c += snprintf(dump+c, dumplenmax-c, "    int_type: %d\n", pars->int_type);
-    c += snprintf(dump+c, dumplenmax-c, "    rtol_struct: %.12lg\n",
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    int_type: %d\n",
+            pars->int_type);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    rtol_struct: %.12lg\n",
             pars->rtol_struct);
-    c += snprintf(dump+c, dumplenmax-c, "    rtol_theta: %.12lg\n",
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    rtol_theta: %.12lg\n",
             pars->rtol_theta);
-    c += snprintf(dump+c, dumplenmax-c, "    rtol_phi: %.12lg\n",
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    rtol_phi: %.12lg\n",
             pars->rtol_phi);
-    c += snprintf(dump+c, dumplenmax-c, "    nmax_theta: %d\n",
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    nmax_theta: %d\n",
             pars->nmax_theta);
-    c += snprintf(dump+c, dumplenmax-c, "    nmax_phi: %d\n", pars->nmax_phi);
-    c += snprintf(dump+c, dumplenmax-c, "    atol_theta: %.12lg\n",
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    nmax_phi: %d\n",
+            pars->nmax_phi);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    atol_theta: %.12lg\n",
             pars->atol_theta);
-    c += snprintf(dump+c, dumplenmax-c, "    Rt0: %.12lg\n", pars->Rt0);
-    c += snprintf(dump+c, dumplenmax-c, "    Rt1: %.12lg\n", pars->Rt1);
-    c += snprintf(dump+c, dumplenmax-c, "    ta: %.12lg\n", pars->ta);
-    c += snprintf(dump+c, dumplenmax-c, "    tb: %.12lg\n", pars->tb);
-    c += snprintf(dump+c, dumplenmax-c, "    C_BMsqrd: %.12lg\n",
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    Rt0: %.12lg\n", pars->Rt0);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    Rt1: %.12lg\n", pars->Rt1);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    ta: %.12lg\n", pars->ta);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    tb: %.12lg\n", pars->tb);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    C_BMsqrd: %.12lg\n",
             pars->C_BMsqrd);
-    c += snprintf(dump+c, dumplenmax-c, "    C_STsqrd: %.12lg\n",
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    C_STsqrd: %.12lg\n",
             pars->C_STsqrd);
-    c += snprintf(dump+c, dumplenmax-c, "    t_NR: %.12lg\n", pars->t_NR);
-    c += snprintf(dump+c, dumplenmax-c, "    table_entries: %d\n",
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    t_NR: %.12lg\n",
+            pars->t_NR);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    table_entries: %d\n",
             pars->table_entries);
-    c += snprintf(dump+c, dumplenmax-c, "    table_entries_inner: %d\n",
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    table_entries_inner: %d\n",
             pars->table_entries_inner);
-    c += snprintf(dump+c, dumplenmax-c, "    spec_type: %d\n",
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    spec_type: %d\n",
             pars->spec_type);
-    c += snprintf(dump+c, dumplenmax-c, "    gamma_type: %d\n",
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    gamma_type: %d\n",
             pars->gamma_type);
-    c += snprintf(dump+c, dumplenmax-c, "    nmask: %d\n", pars->nmask);
-    c += snprintf(dump+c, dumplenmax-c, "    nevals: %ld\n", pars->nevals);
-    c += snprintf(dump+c, dumplenmax-c, "    error: %d\n", pars->error);
-    c += snprintf(dump+c, dumplenmax-c, "}\n");
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    nmask: %d\n",
+            pars->nmask);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    nevals: %ld\n",
+            pars->nevals);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "    error: %d\n", pars->error);
+    c += snprintf(dump+c, DUMP_MSG_LEN_MAX-c, "}\n");
 
     int dumplen = strlen(dump);
     int len = msglen + dumplen + 1;

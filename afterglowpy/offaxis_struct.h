@@ -12,6 +12,7 @@
 #define ERR_CHK_INT(pars) if(pars->error){ return 0;}
 #define ERR_CHK_DBL(pars) if(pars->error){ return 0.0;}
 #define MSG_LEN 4096
+#define DUMP_MSG_LEN_MAX 16384  //overkill: 200 lines * 80c per line = 16000
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846

@@ -5,6 +5,9 @@
 
 #define KMAX 20
 
+#define MAX_GAUSS_N 10  //Largest number of Gauss Points used. 10 for the
+                        //Gauss-Kronrod 21 quadrature (10 Gauss, 11 Kronrod)
+
 static const double g4x[4] = {-0.86113631159405257522,
                               -0.33998104358485626480,
                               0.33998104358485626480,
@@ -1121,8 +1124,8 @@ int gk_compute(double (*f)(double, void *), void *args, int (*errf)(void *),
 
     int nk = ng + 1;
 
-    double fg[ng];
-    double fk[nk];
+    double fg[MAX_GAUSS_N];
+    double fk[MAX_GAUSS_N];
 
     int n;
 
