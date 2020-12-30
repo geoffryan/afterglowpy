@@ -2226,8 +2226,7 @@ void set_error(struct fluxParams *pars, char msg[])
 
     int msglen = (int)strlen(msg);
     const int dumplenmax = 16384;  // overkill: 200 lines * 80c per line = 16000
-
-    char dump[dumplenmax];
+    char dump[16384];
     int c = snprintf(dump, dumplenmax, "fluxParamsDump\n{\n");
     c += snprintf(dump+c, dumplenmax-c, "    theta: %.12lg\n", pars->theta);
     c += snprintf(dump+c, dumplenmax-c, "    phi: %.12lg\n", pars->phi);
