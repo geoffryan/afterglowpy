@@ -18,7 +18,7 @@ JET_DEFAULT = {
     "epsilon_B":        0.01,
     "ksiN":             1.0,
     "dL":               1.0e27,
-    "g0":               1.0e3,
+    "g0":               -1.0,
     "E0Global":         1.0e53,
     "thetaCoreGlobal":  0.1,
     "tRes":             1000,
@@ -58,20 +58,20 @@ def fluxDensity(t, nu, jetType=-1, specType=0,
         Code for type of spectrum.  Options are: 0 broken power law
         (Ryan+ 2019), 1 broken power law w/ inverse Compton cooling. Default: 0
     thetaObs: float
-        Viewing angle in radians. umax, maximum 4-velocity of outflow, if
+        Viewing angle in radians. uMax, maximum 4-velocity of outflow, if
         jetType = 3. Default: 0.0.
     E0: float
-        Isotropic-equivalent energy along the jet axis in ergs. umin, minimum
+        Isotropic-equivalent energy along the jet axis in ergs. uMin, minimum
         4-velocity of outflow, if jetType = 3. Default: 1.0e53.
     thetaCore: float
-        Half opening angle of jet core in radians. Ei, normalization of
+        Half opening angle of jet core in radians. Er, normalization of
         outflow's energy distribution in ergs, if jetType = 3. Default 0.1.
     thetaWing: float
         Truncation angle of the jet in radians. k, power law index of
         outflow's energy distribution, if jetType = 3. Default 0.4.
     b: float
         Power law index of jet angular energy distribution, only used if
-        jetType = 4. Mej_solar, mass of material at u_max in solar masses,
+        jetType = 4. MFast_solar, mass of material at u_max in solar masses,
         if jetType = 3.  Default: 4.
     L0: float
         Luminosity of energy injection, in erg/s.  Default 0.0.
@@ -97,24 +97,8 @@ def fluxDensity(t, nu, jetType=-1, specType=0,
     dL: float
         Luminosity distance to burst, in cm. Default 1.0e27.
     g0: float, optional
-        Initial Lorentz factor of outflow along jet axis, defaults to inf.
-    LR: float, optional
-        Additional constant source-frame radio luminosity to add to the jet
-        component.  Applied uniformly for nu < 300 GHz. L_nu
-        normalized with 10 GHz bandwidth: L_nu = L / 10 GHz.
-        Non-negative, erg/s.
-    LO: float, optional
-        Additional constant source-frame optical luminosity to add to the jet
-        component.  Applied uniformly for 300 GHz < nu < 0.1 keV (~2.4e16 Hz).
-        L_nu normalized with 2324.78 A bandwidth (FWHM of F606W):
-        L_nu = L * 2324.78 A / c. Non-negative, erg/s.
-    LX: float, optional
-        Additional constant source-frame X-ray luminosity to add to the jet
-        component.  Applied uniformly for nu > 0.1 keV (~2.4e16 Hz).
-        L_nu normalized with 0.3 keV - 10 keV bandwidth: L_nu = L / 9.7 keV.
-        Non-negative, erg/s.
-    tAdd: float, optional
-        Time at which additional luminosities begin, in seconds.
+        EXPERIMENTAL.  Initial Lorentz factor of outflow along jet axis,
+        defaults to -1 (unset, jet has deceleration radius 0).
     z: float, optional
         Redshift of burst, defaults to 0.
 
@@ -159,6 +143,16 @@ def fluxDensity(t, nu, jetType=-1, specType=0,
     t, nu = checkTNu(t, nu)
 
     if jetType == jet.Spherical:
+        if 'uMax' not in argsDict.keys():
+            argsDict['uMax'] = argsDict.pop('thetaObs')
+        if 'uMin' not in argsDict.keys():
+            argsDict['uMin'] = argsDict.pop('E0')
+        if 'Er' not in argsDict.keys():
+            argsDict['Er'] = argsDict.pop('thetaCore')
+        if 'k' not in argsDict.keys():
+            argsDict['k'] = argsDict.pop('thetaWing')
+        if 'MFast_solar' not in argsDict.keys():
+            argsDict['MFast_solar'] = argsDict.pop('b')
         checkCocoonArgs(**argsDict)
     else:
         checkJetArgs(**argsDict)
@@ -264,20 +258,20 @@ def intensity(theta, phi, t, nu, jetType=-1, specType=0,
         Code for type of spectrum.  Options are: 0 broken power law
         (Ryan+ 2019), 1 broken power law + inverse Compton.
     thetaObs: float
-        Viewing angle in radians. umax, maximum 4-velocity of outflow, if
+        Viewing angle in radians. uMax, maximum 4-velocity of outflow, if
         jetType = 3.
     E0: float
-        Isotropic-equivalent energy along the jet axis in ergs. umin, minimum
+        Isotropic-equivalent energy along the jet axis in ergs. uMin, minimum
         4-velocity of outflow, if jetType = 3.
     thetaCore: float
-        Half opening angle of jet core in radians. Ei, normalization of
+        Half opening angle of jet core in radians. Er, normalization of
         outflow's energy distribution in ergs, if jetType = 3.
     thetaWing: float
         Truncation angle of the jet in radians. k, power law index of
         outflow's energy distribution, if jetType = 3.
     b: float
         Power law index of jet angular energy distribution, only used if
-        jetType = 4. Mej_solar, mass of material at u_max in solar masses,
+        jetType = 4. MFast_solar, mass of material at u_max in solar masses,
         if jetType = 3.
     L0: float
         Luminosity of energy injection, in erg/s.
