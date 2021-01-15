@@ -25,13 +25,13 @@ def fluxDensity(t, nu, *args, **kwargs):
 
         Fnu = fluxDensity(t, nu, jetType, specType, thetaObs, E0, thetaCore,
                           thetaWing, b, L0, q, ts, n0, p, epsilon_e, epsilon_B,
-                          ksiN, dL, **Z)
+                          xi_N, d_L, **Z)
 
     To call a spherical refreshed shock model with positional arguments::
 
         Fnu = fluxDensity(t, nu, jet.Spherical, specType, uMax, uMin, Er, k,
                           MFast_solar, L0, q, ts, n0, p, epsilon_e, epsilon_B,
-                          ksiN, dL, **Z)
+                          xi_N, d_L, **Z)
 
 
     Parameters 
@@ -48,6 +48,19 @@ def fluxDensity(t, nu, *args, **kwargs):
     specType : int
         Code for type of spectrum.  Options are: 0 broken power law
         (Ryan+ 2020), 1 broken power law w/ inverse Compton cooling. Default: 0
+    thetaObs : float
+        Viewing angle in radians. Jet models only.
+    E0: float
+        Isotropic-equivalent energy along the jet axis in ergs. Jet models
+        only.
+    thetaCore: float
+        Half opening angle of jet core in radians. Jet models only.
+    thetaWing: float
+        Outer truncation angle of the jet in radians. Ignored by
+        ``jet.TopHat``, jet models only.
+    b: float
+        Power law index of jet angular energy distribution. Only used by
+        ``jet.PowerLaw`` and ``jet.PowerLawCore``.
     n0 : float
         Number density of protons in circumburst medium in cm^{-3}.
     p : float
@@ -57,9 +70,9 @@ def fluxDensity(t, nu, *args, **kwargs):
         Fraction of thermal energy in relativistic electrons, epsilon_e <= 1.
     epsilon_B : float
         Fraction of thermal energy in magnetic field, epsilon_B <= 1.
-    ksiN : float
-        Fraction of electrons that get accelerated, ksiN <= 1.
-    dL : float
+    xi_N : float
+        Fraction of electrons that get accelerated, xi_N <= 1.
+    d_L : float
         Luminosity distance to burst, in cm.
     z : float, optional
         Redshift of burst, defaults to 0.
@@ -71,41 +84,24 @@ def fluxDensity(t, nu, *args, **kwargs):
         Default 0.0.
     ts: float, optional
         Time energy injection ends in burster frame, in seconds. Default 0.0.
-
-    Parameters for Jet Models
-    -------------------------
-
-    thetaObs : float
-        Viewing angle in radians. 
-    E0: float
-        Isotropic-equivalent energy along the jet axis in ergs.
-    thetaCore: float
-        Half opening angle of jet core in radians.
-    thetaWing: float
-        Outer truncation angle of the jet in radians. Ignored by
-        ``jet.TopHat``.
-    b: float
-        Power law index of jet angular energy distribution, only used by
-        ``jet.PowerLaw`` and ``jet.PowerLawCore``.
     g0 : float, optional
         EXPERIMENTAL.  Initial Lorentz factor of outflow along jet axis,
         defaults to -1 (unset, jet has deceleration radius 0). Do not use with
         jet spreading enabled.
 
-    Parameters for Spherical model
-    ------------------------------
-
     uMax : float
-        Maximum 4-velocity of outflow.
+        Maximum 4-velocity of outflow. Only for spherical models.
     uMin : float
-        Minimum 4-velocity of outflow.
+        Minimum 4-velocity of outflow. Only for spherical models
     Er : float
-        Normalization of outflow's energy distribution in ergs.
+        Normalization of outflow's energy distribution in ergs. Only for
+        spherical models.
         E(u>U) = Er * U^{-k}
     k : float
-        Power law index of outflow's energy distribution.
+        Power law index of outflow's energy distribution. Only for spherical
+        models
     MFast_solar : float
-        Mass of material at u_max in solar masses.
+        Mass of material at u_max in solar masses. Only for spherical models.
 
     Other Parameters
     ----------------
@@ -198,7 +194,7 @@ def fluxDensity(t, nu, *args, **kwargs):
 
     
     # Adding background luminosities.
-    L_to_flux = cocoon.cgs2mJy / (4*np.pi * argsDict['dL']**2)
+    L_to_flux = cocoon.cgs2mJy / (4*np.pi * argsDict['d_L']**2)
 
 
     if LR > 0.0:
@@ -250,7 +246,7 @@ def intensity(theta, phi, t, nu, *args, **kwargs):
 
         Inu = fluxDensity(theta, phi, t, nu, jetType, specType, thetaObs, E0,
                           thetaCore, thetaWing, b, L0, q, ts, n0, p, epsilon_e,
-                          epsilon_B, ksiN, dL, **Z)
+                          epsilon_B, xi_N, d_L, **Z)
 
     This is currently only implemented for jetted models. Do not use with
     ``jetType=jet.Spherical``.
@@ -276,6 +272,19 @@ def intensity(theta, phi, t, nu, *args, **kwargs):
     specType : int
         Code for type of spectrum.  Options are: 0 broken power law
         (Ryan+ 2020), 1 broken power law w/ inverse Compton cooling. Default: 0
+    thetaObs : float
+        Viewing angle in radians. Jet models only.
+    E0: float
+        Isotropic-equivalent energy along the jet axis in ergs. Jet models
+        only.
+    thetaCore: float
+        Half opening angle of jet core in radians. Jet models only.
+    thetaWing: float
+        Outer truncation angle of the jet in radians. Ignored by
+        ``jet.TopHat``, jet models only.
+    b: float
+        Power law index of jet angular energy distribution. Only used by
+        ``jet.PowerLaw`` and ``jet.PowerLawCore``.
     n0 : float
         Number density of protons in circumburst medium in cm^{-3}.
     p : float
@@ -285,9 +294,9 @@ def intensity(theta, phi, t, nu, *args, **kwargs):
         Fraction of thermal energy in relativistic electrons, epsilon_e <= 1.
     epsilon_B : float
         Fraction of thermal energy in magnetic field, epsilon_B <= 1.
-    ksiN : float
-        Fraction of electrons that get accelerated, ksiN <= 1.
-    dL : float
+    xi_N : float
+        Fraction of electrons that get accelerated, xi_N <= 1.
+    d_L : float
         Luminosity distance to burst, in cm.
     z : float, optional
         Redshift of burst, defaults to 0.
@@ -299,22 +308,6 @@ def intensity(theta, phi, t, nu, *args, **kwargs):
         Default 0.0.
     ts: float, optional
         Time energy injection ends in burster frame, in seconds. Default 0.0.
-
-    Parameters for Jet Models
-    -------------------------
-
-    thetaObs : float
-        Viewing angle in radians. 
-    E0: float
-        Isotropic-equivalent energy along the jet axis in ergs.
-    thetaCore: float
-        Half opening angle of jet core in radians.
-    thetaWing: float
-        Outer truncation angle of the jet in radians. Ignored by
-        ``jet.TopHat``.
-    b: float
-        Power law index of jet angular energy distribution, only used by
-        ``jet.PowerLaw`` and ``jet.PowerLawCore``.
     g0 : float, optional
         EXPERIMENTAL.  Initial Lorentz factor of outflow along jet axis,
         defaults to -1 (unset, jet has deceleration radius 0). Do not use with
@@ -500,8 +493,8 @@ def checkJetArgs(**argsDict):
     p = argsDict['p']
     epse = argsDict['epsilon_e']
     epsB = argsDict['epsilon_B']
-    xiN = argsDict['ksiN']
-    dL = argsDict['dL']
+    xiN = argsDict['xi_N']
+    dL = argsDict['d_L']
 
     # More-or-less universal bounds
     if theta_obs < 0.0 or theta_obs > 0.5*np.pi:
@@ -525,7 +518,7 @@ def checkJetArgs(**argsDict):
     if xiN <= 0.0 or xiN > 1.0:
         raise ValueError("xi_N must be in (0, 1]")
     if dL <= 0.0:
-        raise ValueError("dL must be positive")
+        raise ValueError("d_L must be positive")
 
     # Bounds on optional parameters
 
@@ -597,8 +590,8 @@ def checkCocoonArgs(**argsDict):
     p = argsDict['p']
     epse = argsDict['epsilon_e']
     epsB = argsDict['epsilon_B']
-    xiN = argsDict['ksiN']
-    dL = argsDict['dL']
+    xiN = argsDict['xi_N']
+    dL = argsDict['d_L']
 
     if u_max <= 0.0:
         raise ValueError("u_max must be positive")
@@ -621,7 +614,7 @@ def checkCocoonArgs(**argsDict):
     if xiN <= 0.0 or xiN > 1.0:
         raise ValueError("xi_N must be in (0, 1]")
     if dL <= 0.0:
-        raise ValueError("dL must be positive")
+        raise ValueError("d_L must be positive")
 
     if 'z' in argsDict:
         if argsDict['z'] < 0.0:
@@ -676,10 +669,10 @@ def parseArgs(args, kwargs):
 
     jetKeys = ['jetType', 'specType', 'thetaObs', 'E0', 'thetaCore',
                'thetaWing', 'b', 'L0', 'q', 'ts', 'n0', 'p', 'epsilon_e',
-               'epsilon_B', 'ksiN', 'dL', 'g0', 'LR', 'LO', 'LX', 'tAdd', 'z']
+               'epsilon_B', 'xi_N', 'd_L', 'g0', 'LR', 'LO', 'LX', 'tAdd', 'z']
     sphKeys = ['jetType', 'specType', 'uMax', 'uMin', 'Er',
                'k', 'MFast_solar', 'L0', 'q', 'ts', 'n0', 'p', 'epsilon_e',
-               'epsilon_B', 'ksiN', 'dL', 'g0', 'LR', 'LO', 'LX', 'tAdd', 'z']
+               'epsilon_B', 'xi_N', 'd_L', 'g0', 'LR', 'LO', 'LX', 'tAdd', 'z']
 
     jetType = args[0]
 

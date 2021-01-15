@@ -65,8 +65,8 @@ def fluxDensity(t, nu, **kwargs):
     p = kwargs['p']
     epsilon_e = kwargs['epsilon_e']
     epsilon_B = kwargs['epsilon_B']
-    ksiN = kwargs['ksiN']
-    dL = kwargs['dL']
+    ksiN = kwargs['xi_N']
+    dL = kwargs['d_L']
 
     # Energy injection variables (off by default)
     L0 = kwargs['L0'] if 'L0' in kwargs else 0.0

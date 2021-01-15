@@ -243,7 +243,7 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     static char *kwlist[] = {"t", "nu", "jetType", "specType",
                                 "thetaObs", "E0", "thetaCore", "thetaWing",
                                     "b", "L0", "q", "ts", "n0", "p",
-                                    "epsilon_e", "epsilon_B", "ksiN", "dL",
+                                    "epsilon_e", "epsilon_B", "xi_N", "d_L",
                                     "g0",
                                 "E0Global", "thetaCoreGlobal",
                                 "tRes", "latRes", "intType", "rtolStruct",
@@ -443,12 +443,12 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
 static PyObject *jet_emissivity(PyObject *self, PyObject *args)
 {
     int spec_type = 0;
-    double nu, R, mu, te, u, us, n0, p, epse, epsB, ksiN;
+    double nu, R, mu, te, u, us, n0, p, epse, epsB, xi_N;
 
 
     //Parse Arguments
     if(!PyArg_ParseTuple(args, "ddddddddddd|i", &nu, &R, &mu, &te,
-                            &u, &us, &n0, &p, &epse, &epsB, &ksiN, &spec_type))
+                            &u, &us, &n0, &p, &epse, &epsB, &xi_N, &spec_type))
     {
         //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
         return NULL;
@@ -456,7 +456,7 @@ static PyObject *jet_emissivity(PyObject *self, PyObject *args)
 
     // Calculate it!
     double em = emissivity(nu, R, mu, te, u, us, n0, p, epse, epsB, 
-                            ksiN, spec_type);
+                            xi_N, spec_type);
 
     //Build output
     PyObject *ret = Py_BuildValue("d", em);
@@ -509,7 +509,7 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
     static char *kwlist[] = {"theta", "phi", "t", "nu", "jetType", "specType",
                                 "thetaObs", "E0", "thetaCore", "thetaWing",
                                     "b", "L0", "q", "ts", "n0", "p",
-                                    "epsilon_e", "epsilon_B", "ksiN", "dL",
+                                    "epsilon_e", "epsilon_B", "xi_N", "d_L",
                                     "g0",
                                 "E0Global", "thetaCoreGlobal",
                                 "tRes", "latRes", "intType", "rtolStruct",
@@ -746,7 +746,7 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
     static char *kwlist[] = {"theta", "phi", "t", "jetType", "specType",
                                 "thetaObs", "E0", "thetaCore", "thetaWing",
                                     "b", "L0", "q", "ts", "n0", "p",
-                                    "epsilon_e", "epsilon_B", "ksiN", "dL",
+                                    "epsilon_e", "epsilon_B", "xi_N", "d_L",
                                     "g0",
                                 "E0Global", "thetaCoreGlobal",
                                 "tRes", "latRes", "intType", "rtolStruct",
