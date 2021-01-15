@@ -3,21 +3,20 @@ import matplotlib.pyplot as plt
 import afterglowpy as grb
 
 # Jet Parameters
-jetType = 0
-specType = 0
-thV = 0.5
-E0 = 1.0e53
-thC = 0.08
-thW = 0.3
-b = 0
-n0 = 1.0e-2
-p = 2.15
-epse = 1.0e-1
-epsB = 1.0e-2
-ksiN = 1.0
-dL = 1.23e26
+Z = {'jetType':     grb.jet.Gaussian,     # Gaussian jet
+     'specType':    0,                  # Basic Synchrotron Emission Spectrum
 
-Y = np.array([thV, E0, thC, thW, b, 0, 0, 0, n0, p, epse, epsB, ksiN, dL])
+     'thetaObs':    0.3,   # Viewing angle in radians
+     'E0':          1.0e53, # Isotropic-equivalent energy in erg
+     'thetaCore':   0.05,    # Half-opening angle in radians
+     'thetaWing':   0.4,    # Outer truncation angle
+     'n0':          1.0e-3,    # circumburst density in cm^{-3}
+     'p':           2.2,    # electron energy distribution index
+     'epsilon_e':   0.1,    # epsilon_e
+     'epsilon_B':   0.0001,   # epsilon_B
+     'xi_N':        1.0,    # Fraction of electrons accelerated
+     'd_L':         1.36e26, # Luminosity distance in cm
+     'z':           0.01}   # redshift
 
 # Time and Frequencies
 Nt = 100
@@ -38,7 +37,7 @@ nu[:, 2] = nuX
 
 # Calculate!
 print("Calculate!")
-Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y)
+Fnu = grb.fluxDensity(t, nu, **Z)
 
 # Plot!
 print("Plot")

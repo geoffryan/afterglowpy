@@ -2,71 +2,50 @@ import numpy as np
 import matplotlib.pyplot as plt
 import afterglowpy as grb
 
-jetType = -1
-specType = 0
-thV = 0.08
-E0 = 1.0e52
-thC = 0.06
-thW = 0.6
-b = 6
-L0 = 0.0
-q = 0.0
-ts = 0.0
-n0 = 1.0e-3
-p = 2.15
-epse = 1.0e-1
-epsB = 1.0e-2
-ksiN = 1.0
-dL = 1.23e26
+# For convenience, place arguments into a dict.
+Z = {'jetType':     grb.jet.TopHat,     # Top-Hat jet
+     'specType':    0,                  # Basic Synchrotron Emission Spectrum
 
-Y = np.array([thV, E0, thC, thW, b, L0, q, ts, n0, p, epse, epsB, ksiN, dL])
+     'thetaObs':    0.05,   # Viewing angle in radians
+     'E0':          1.0e53, # Isotropic-equivalent energy in erg
+     'thetaCore':   0.1,    # Half-opening angle in radians
+     'n0':          1.0,    # circumburst density in cm^{-3}
+     'p':           2.2,    # electron energy distribution index
+     'epsilon_e':   0.1,    # epsilon_e
+     'epsilon_B':   0.01,   # epsilon_B
+     'xi_N':        1.0,    # Fraction of electrons accelerated
+     'd_L':         1.0e28, # Luminosity distance in cm
+     'z':           0.55}   # redshift
 
-Z0 = {'thetaObs': thV, 'E0': E0, 'thetaCore': thC, 'n0': n0, 'p': p,
-      'epsilon_e': epse, 'epsilon_B': epsB, 'ksiN': ksiN, 'dL': dL}
-Z1 = {'thetaObs': thV, 'E0': E0, 'thetaCore': thC, 'thetaWing': thW,
-      'b': b, 'n0': n0, 'p': p,
-      'epsilon_e': epse, 'epsilon_B': epsB, 'ksiN': ksiN, 'dL': dL}
+# Space time points geometrically, from 10^3 s to 10^7 s
+t = np.geomspace(1.0e3, 1.0e7, 300)
 
-ta = 1.0e-3 * grb.day2sec
-tb = 1.0e2 * grb.day2sec
+# Calculate flux in a single X-ray band (all times have same frequency)
+nu = np.empty(t.shape)
+nu[:] = 1.0e18
 
-t = np.geomspace(ta, tb, num=200)
-nu = 2.0e14
+# Calculate!
 
-print("Calculating")
-Fnu = grb.fluxDensity(t, nu, jetType, specType, *Y, spread=False, latRes=5,
-                      g0=100)
-print("Calculating")
-Fnu0 = grb.fluxDensity(t, nu, jetType, specType, **Z0, spread=False, latRes=5,
-                      g0=100)
-print("Calculating")
-Fnu1 = grb.fluxDensity(t, nu, jetType, specType, **Z1, spread=False, latRes=5,
-                      g0=100)
-print("Calculating")
-Fnu00 = grb.fluxDensity(t, nu, spread=False, latRes=5,
-                      g0=100)
+Fnu = grb.fluxDensity(t, nu, **Z)
+
+# Write to a file
 
 print("Writing lc.txt")
-f = open("lc.txt", 'w')
-f.write("# nu " + str(nu) + '\n')
-f.write("# jetType " + str(jetType) + " specType " + str(specType)+"\n")
-f.write("# " + " ".join([str(y) for y in Y]) + "\n")
-for i in range(len(t)):
-    f.write("{0:.6e} {1:.6e}\n".format(t[i], Fnu[i]))
-f.close()
+with open("lc.txt", 'w') as f:
+    f.write("# nu " + str(nu) + '\n')
+    f.write("# t(s)     Fnu(mJy)\n")
+    for i in range(len(t)):
+        f.write("{0:.6e} {1:.6e}\n".format(t[i], Fnu[i]))
+
+# Plot!
 
 print("Plotting")
 fig, ax = plt.subplots(1, 1)
 
-ax.plot(t/grb.day2sec, Fnu)
-ax.plot(t/grb.day2sec, Fnu00)
-ax.plot(t/grb.day2sec, Fnu0)
-ax.plot(t/grb.day2sec, Fnu1)
+ax.plot(t, Fnu)
 
-ax.set_xscale('log')
-ax.set_yscale('log')
-ax.set_xlabel(r'$t$ (d)')
-ax.set_ylabel(r'$F_\nu$[1keV] (mJy)')
+ax.set(xscale='log', xlabel=r'$t$ (s)',
+       yscale='log', ylabel=r'$F_\nu$[$10^{18}$ Hz] (mJy)')
 
 fig.tight_layout()
 print("Saving figure lc.png")

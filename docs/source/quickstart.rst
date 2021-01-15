@@ -16,8 +16,8 @@ A light curve from a top-hat jet may be created with::
     import afterglowpy as grb
 
     # For convenience, place arguments into a dict.
-    Z = {'jetType':     grb.jet.TopHat  # Top-Hat jet
-         'specType':    0               # Basic Synchrotron Emission Spectrum
+    Z = {'jetType':     grb.jet.TopHat,     # Top-Hat jet
+         'specType':    0,                  # Basic Synchrotron Spectrum
 
          'thetaObs':    0.05,   # Viewing angle in radians
          'E0':          1.0e53, # Isotropic-equivalent energy in erg
