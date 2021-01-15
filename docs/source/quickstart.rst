@@ -8,8 +8,7 @@ Quickstart
 3. ``jetType``: an integer specifying which jet model to use (top-hat: -1, Gaussian: 0, power law: 4).
 4. ``specType``: an integer specifying which spectral model to use (must be 0).
 5. Model Parameters (keywords): A model-dependent set of parameters, such as E\ :sub:`iso`, n\ :sub:`0`, etc.
-6. Numerical Parameters (keywords): A model-dependent set of keyword arguments specifying numerical settings, such as `tRes` (resolution of time integration),
-and `spread` (whether or not to include jet spreading).
+6. Numerical Parameters (keywords): A model-dependent set of keyword arguments specifying numerical settings, such as `tRes` (resolution of time integration), and `spread` (whether or not to include jet spreading).
 
 A light curve from a top-hat jet may be created with::
     
@@ -17,7 +16,7 @@ A light curve from a top-hat jet may be created with::
     import afterglowpy as grb
 
     # For convenience, place arguments into a dict.
-    Z = {'jetType':     grb.Jet.TopHat  # Top-Hat jet
+    Z = {'jetType':     grb.jet.TopHat  # Top-Hat jet
          'specType':    0               # Basic Synchrotron Emission Spectrum
 
          'thetaObs':    0.05,   # Viewing angle in radians
@@ -40,7 +39,7 @@ A light curve from a top-hat jet may be created with::
 
     # Calculate!
 
-    Fnu = grb.fluxDensity(t, nu, jetType, 0, *Y, **Z)
+    Fnu = grb.fluxDensity(t, nu, **Z)
 
 ``Fnu`` is now an array, same size as ``t`` and ``nu``, containing the observed flux in mJy at each time and frequency.
 
