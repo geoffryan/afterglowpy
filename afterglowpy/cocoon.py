@@ -51,11 +51,32 @@ def dP(costheta, amu, ate, au, ar, nu, n0, p, epsE, epsB, ksiN, specType):
     return 2*np.pi * em
 
 
-def fluxDensity(t, nu, jetType, specType, uMax, uMin, Er, k, MFast_solar, L0, q,
-                ts, n0, p, epsilon_e, epsilon_B, ksiN, dL, tRes=1000, latRes=0,
-                rtol=1.0e-3, **kwargs):
+def fluxDensity(t, nu, **kwargs):
 
     t = np.array(t)
+
+    specType = kwargs['specType']
+    uMax = kwargs['uMax']
+    uMin = kwargs['uMin']
+    Er = kwargs['Er']
+    k = kwargs['k']
+    MFast_solar = kwargs['MFast_solar']
+    n0 = kwargs['n0']
+    p = kwargs['p']
+    epsilon_e = kwargs['epsilon_e']
+    epsilon_B = kwargs['epsilon_B']
+    ksiN = kwargs['ksiN']
+    dL = kwargs['dL']
+
+    # Energy injection variables (off by default)
+    L0 = kwargs['L0'] if 'L0' in kwargs else 0.0
+    q = kwargs['q'] if 'q' in kwargs else 0.0
+    ts = kwargs['ts'] if 'ts' in kwargs else 0.0
+   
+    # Numerical integration variables
+    rtol = kwargs['rtol'] if 'rtol' in kwargs else 1.0e-3
+    tRes = kwargs['tRes'] if 'tRes' in kwargs else 1000
+    latRes = kwargs['latRes'] if 'latRes' in kwargs else 0
 
     rho0 = mp * n0
     Mej = MFast_solar * Msun
