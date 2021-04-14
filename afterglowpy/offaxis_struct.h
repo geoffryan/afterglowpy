@@ -12,6 +12,11 @@
 #define ERR_CHK_INT(pars) if(pars->error){ return 0;}
 #define ERR_CHK_DBL(pars) if(pars->error){ return 0.0;}
 #define MSG_LEN 4096
+#define DUMP_MSG_LEN_MAX 16384  //overkill: 200 lines * 80c per line = 16000
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 // some physical and mathematical constants
 #define PI          3.14159265358979323846
@@ -51,6 +56,7 @@
 #define EPS_E_BAR_FLAG  2
 #define SSA_SMOOTH_FLAG 4
 #define SSA_SHARP_FLAG  8
+#define NO_COOLING_FLAG  16
 
 enum{INT_TRAP_FIXED, INT_TRAP_ADAPT, INT_SIMP_FIXED, INT_SIMP_ADAPT,
      INT_ROMB_ADAPT, INT_TRAP_NL, INT_HYBRID, INT_CADRE,
@@ -99,12 +105,14 @@ struct fluxParams
     double theta_core_global;
 
     int envType;
-    double As;
-    double Rwind;
+    double R0_env;
+    double k_env;
+    double rho1_env;
 
-    double L0;
-    double q;
-    double ts;
+    double L0_inj;
+    double q_inj;
+    double t0_inj;
+    double ts_inj;
     
     double current_theta_cone_hi;
     double current_theta_cone_low;
@@ -185,8 +193,9 @@ double find_jet_edge(double phi, double cto, double sto, double theta0,
 double costheta_integrand(double a_theta, void* params); // inner integral
 double phi_integrand(double a_phi, void* params); // outer integral
 double emissivity(double nu, double R, double mu, double te,
-                    double u, double us, double n0, double p, double epse,
-                    double epsB, double ksiN, int specType); //emissivity of
+                    double u, double us, double rho0, double Msw, double p,
+                    double epse, double epsB, double ksiN,
+                    int specType); //emissivity of
                                                              // a zone.
 double flux(struct fluxParams *pars, double atol); // determine flux for a given t_obs
 
@@ -265,13 +274,15 @@ void setup_fluxParams(struct fluxParams *pars,
                     double d_L,
                     double theta_obs,
                     double E_iso_core, double theta_core, double theta_wing,
-                    double b, double L0, double q, double ts, 
+                    double b,
+                    double L0_inj, double q_inj, double t0_inj, double ts_inj, 
                     double n_0,
                     double p,
                     double epsilon_E,
                     double epsilon_B, 
                     double ksi_N,
                     double g0,
+                    int envType, double R0_env, double k_env, double rho1_env, 
                     double E_core_global,
                     double theta_core_global,
                     double ta, double tb,

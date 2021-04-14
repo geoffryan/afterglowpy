@@ -3,7 +3,7 @@ afterglowpy
 
 *afterglowpy* is a Python package for modelling Gamma-ray burst afterglows. It computes synchrotron radiation from an external shock and is capable of handling both structured jets and off-axis observers.
 
-For details of the physics, approximations, and numerical implementation please see `Ryan et al. 2019 <https://arxiv.org/abs/1909.11691>`_.
+For details of the physics, approximations, and numerical implementation please see `Ryan et al. 2020 <https://arxiv.org/abs/1909.11691>`_.
 
 You can install *afterglowpy* with pip::
 
@@ -14,13 +14,13 @@ This documentation is still a little thin.  Please read the Quickstart, check ou
 Attribution
 +++++++++++
 
-If you use *afterglowpy* in your work, please refer to the package by name and cite the paper `Ryan et al. 2019 <https://arxiv.org/abs/1909.11691>`_.
+If you use *afterglowpy* in your work, please refer to the package by name and cite the paper `Ryan et al. 2020 <https://arxiv.org/abs/1909.11691>`_.
 
 Contents
 ^^^^^^^^
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    quickstart.rst
    modules.rst

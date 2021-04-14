@@ -70,6 +70,65 @@ double t_inj(double te, double t0, double te0, double L0, double q, double ts)
     return t0*pow(1 + 16*(te-te0)/((2-q)*t0), 0.25*(2-q));
 }
 
+
+double envDensityPar(double R, struct shockParams *par)
+{
+    return envDensity(R, par->envType, par->rho0_env, par->R0_env, par->k_env,
+                      par->rho1_env);
+}
+
+double envMassPar(double R, struct shockParams *par)
+{
+    return envMass(R, par->envType, par->rho0_env, par->R0_env, par->k_env,
+                   par->rho1_env);
+}
+
+double envRadiusPar(double M, struct shockParams *par)
+{
+    return envRadius(M, par->envType, par->rho0_env, par->R0_env, par->k_env,
+                     par->rho1_env);
+}
+
+double envDensity(double R, int envType, double rho0, double R0, double k,
+                  double rho1)
+{
+    if(envType == ENV_ISM)
+        return rho0;
+    else if(envType == ENV_WIND)
+        return rho0 * R0*R0/(R*R);
+    else if(envType == ENV_PL)
+        return rho0 * pow(R/R0, -k);
+    else
+        return 0;
+}
+
+double envMass(double R, int envType, double rho0, double R0, double k,
+               double rho1)
+{
+    if(envType == ENV_ISM)
+        return 4.0/3.0 * M_PI * rho0 * R*R*R;
+    else if(envType == ENV_WIND)
+        return 4.0*M_PI * rho0 * R0*R0 * R;
+    else if(envType == ENV_PL)
+        return 4.0*M_PI / (3.0-k) * rho0 * pow(R/R0, 3-k) * R0*R0*R0;
+    else
+        return 0;
+}
+
+double envRadius(double M, int envType, double rho0, double R0, double k,
+                 double rho1)
+{
+    if(envType == ENV_ISM)
+        return pow(0.75 * M / (M_PI * rho0), 1.0/3.0);
+    else if(envType == ENV_WIND)
+        return M / (4.0*M_PI * rho0 * R0*R0);
+    else if(envType == ENV_PL)
+        return R0 * pow((3.0-k) * M / (4.0*M_PI * rho0 * R0*R0*R0), 1.0/(3-k));
+    else
+        return 0;
+}
+
+
 void shockInitDecel(double t0, double *R0, double *u0, void *argv)
 {
     double *args = (double *)argv;
@@ -172,13 +231,133 @@ void shockInitDecel(double t0, double *R0, double *u0, void *argv)
 
 void shockInitFind(double t0, double *R0, double *u0, double tRes, void *argv)
 {
-    double *args = (double *)argv;
-    double E0 = args[0];
-    double Mej = args[1];
-    double rho0 = args[2];
-    double L0 = args[6];
-    double q = args[7];
-    double ts = args[8];
+    struct shockParams *par = (struct shockParams *)argv;
+    if(par->envType == ENV_ISM)
+    {
+        shockInitFindISM(t0, R0, u0, tRes, argv);
+        return;
+    }
+
+
+    double E0 = par->E0;
+    double Mej = par->Mej;
+    double c2 = v_light * v_light;
+
+    double t00, R00, u00;
+
+    if(Mej > 0.0)
+    {
+        double gm1_coast = E0 / (Mej * c2);
+        double g_coast = gm1_coast + 1;
+        double u2_coast = gm1_coast * (gm1_coast + 2);
+        double be2_coast = u2_coast / (g_coast * g_coast);
+
+        double Msw = 3.0 * E0 / ((4*u2_coast + 3) * be2_coast * c2);
+
+        //Rough deceleration radius
+        double Rd = envRadiusPar(Msw, par);
+
+        //shock 4-velocity
+        double u_coast = sqrt(u2_coast);
+        double uS = shockVel(u_coast);
+        double beS = uS / sqrt(uS*uS + 1);
+        double td = Rd / (beS * v_light);
+
+        if(t0 < 0.001*td)
+        {
+            *R0 = beS * v_light * t0;
+            *u0 = u_coast;
+            return;
+        }
+
+        t00 = 0.001*td;
+        R00 = beS * v_light * t00;
+        u00 = u_coast;
+    }
+    else
+    {
+        //Setting ref ultra-relativistic velocity
+        double u_UR = 1000;
+        double g2_UR = u_UR*u_UR + 1;
+        double be2_UR = u_UR*u_UR / g2_UR;
+
+        //swept mass at u_UR;
+        double M_UR = 3.0 * E0 / ((4*u_UR*u_UR + 3) * be2_UR * c2);
+
+        //Rough UR radius
+        double R_UR = envRadiusPar(M_UR, par);
+        double rho_UR = envDensityPar(R_UR, par);
+
+        // = 3-k for a power law rho ~ R^-k
+        double volIdx = 4*M_PI * R_UR*R_UR*R_UR * rho_UR / M_UR;
+
+        double t_UR = R_UR/v_light * (1.0 + 1.0/(4*(1+volIdx) * g2_UR));
+
+        if(t0 < t_UR)
+        {
+            double R_apprx = v_light * t0;
+            double M0 = envMassPar(R_apprx, par);
+            double g2 = 0.75 * E0 / (M0 * c2);
+            *R0 = R_apprx * (1 - 1.0/(4 * (1+volIdx) * g2));
+            *u0 = sqrt(g2 - 1.0);
+            return;
+        }
+
+        t00 = t_UR;
+        R00 = R_UR;
+        u00 = u_UR;
+    }
+
+    double dt, x[2], x0[2], k1[2], k2[2], k3[2], k4[2];
+
+    x[0] = R00;
+    x[1] = u00;
+
+    double t = t00;
+    double fac = pow(10, 1.0/tRes);
+    int j;
+
+    while(t < t0)
+    {
+        dt = (fac-1)*t;
+        if(fac*t >= t0)
+            dt = t0-t;
+        x0[0] = x[0];
+        x0[1] = x[1];
+        Rudot2D(t, x, argv, k1);
+        
+        for(j=0; j<2; j++)
+            x[j] = x0[j] + 0.5*dt*k1[j];
+        Rudot2D(t, x, argv, k2);
+        
+        for(j=0; j<2; j++)
+            x[j] = x0[j] + 0.5*dt*k2[j];
+        Rudot2D(t, x, argv, k3);
+        
+        for(j=0; j<2; j++)
+            x[j] = x0[j] + dt*k3[j];
+        Rudot2D(t, x, argv, k4);
+        
+        for(j=0; j<2; j++)
+            x[j] = x0[j] + dt*(k1[j]+2*k2[j]+2*k3[j]+k4[j])/6.0;
+        t *= fac;
+    }
+
+    *R0 = x[0];
+    *u0 = x[1];
+}
+
+void shockInitFindISM(double t0, double *R0, double *u0, double tRes,
+                      void *argv)
+{
+    struct shockParams *par = (struct shockParams *)argv;
+
+    double E0 = par->E0;
+    double Mej = par->Mej;
+    double rho0 = par->rho0_env;
+    double L0 = par->L0_inj;
+    double q = par->q_inj;
+    double ts = par->ts_inj;
 
     //printf("shockInitFind: t0=%.6lg E0=%.6lg Mej=%.6lg rho0=%.6lg\n",
     //        t0, E0, Mej, rho0);
@@ -280,19 +459,19 @@ void shockInitFind(double t0, double *R0, double *u0, double tRes, void *argv)
             dt = t0-t;
         x0[0] = x[0];
         x0[1] = x[1];
-        Rudot2D(t, x, args, k1);
+        Rudot2D(t, x, argv, k1);
         
         for(j=0; j<2; j++)
             x[j] = x0[j] + 0.5*dt*k1[j];
-        Rudot2D(t, x, args, k2);
+        Rudot2D(t, x, argv, k2);
         
         for(j=0; j<2; j++)
             x[j] = x0[j] + 0.5*dt*k2[j];
-        Rudot2D(t, x, args, k3);
+        Rudot2D(t, x, argv, k3);
         
         for(j=0; j<2; j++)
             x[j] = x0[j] + dt*k3[j];
-        Rudot2D(t, x, args, k4);
+        Rudot2D(t, x, argv, k4);
         
         for(j=0; j<2; j++)
             x[j] = x0[j] + dt*(k1[j]+2*k2[j]+2*k3[j]+k4[j])/6.0;
@@ -305,16 +484,15 @@ void shockInitFind(double t0, double *R0, double *u0, double tRes, void *argv)
 
 void Rudot2D(double t, double *x, void *argv, double *xdot)
 {
-    double *args = (double *)argv;
+    struct shockParams *par = (struct shockParams *)argv;
 
-    double Mej = args[1];
-    double rho0 = args[2];
-    double Einj = args[3];
-    double k = args[4];
-    double umin = args[5];
-    double L0 = args[6];
-    double q = args[7];
-    double ts = args[8];
+    double Mej = par->Mej;
+    double Einj = par->E0_refresh;
+    double k = par->k_refresh;
+    double umin = par->umin_refresh;
+    double L0 = par->L0_inj;
+    double q = par->q_inj;
+    double ts = par->ts_inj;
 
     double R = x[0];
     double u = x[1];
@@ -338,31 +516,42 @@ void Rudot2D(double t, double *x, void *argv, double *xdot)
         dEdt = L_inj(te, L0, q, ts) / (gs2*(1+bes)); // Doppler factor (1-bes)
     }
 
-    double num = -16*M_PI/3.0 * rho0*R*R * be*u*u * v_light
-                    + dEdt/(v_light*v_light);
-    double denom = be*Mej + 8*M_PI*rho0*R*R*R*u*(2*u*u+1)*(2*u*u+3)/(9*g*g*g*g)
-                    - dEdu/(v_light*v_light);
-    double dudt = num/denom;
+    double rho = envDensityPar(R, par);
+    double M = envMassPar(R, par);
+
+    double dR_Esh = 4*M_PI/3.0 * (4*u*u+3)*be*be * rho * R*R * v_light*v_light;
+    double du_Esh = 2.0 * (2*u*u+1)*(2*u*u+3)*u * M * v_light*v_light
+                    / (3.0 * g*g*g*g);
+    double du_Eej = be * Mej * v_light*v_light;
+    double dudt = (-dR_Esh * dRdt + dEdt) / (du_Eej + du_Esh - dEdu);
+
+    //double num = -16*M_PI/3.0 * rho0*R*R * be*u*u * v_light
+    //                + dEdt/(v_light*v_light);
+    //double denom = be*Mej
+    //                + 8*M_PI*rho0*R*R*R*u*(2*u*u+1)*(2*u*u+3)/(9*g*g*g*g)
+    //                - dEdu/(v_light*v_light);
+    //double dudt = num/denom;
 
     xdot[0] = dRdt;
     xdot[1] = dudt;
 }
 
-void RuThdot3D(double t, double *x, void *argv, double *xdot, int spread)
+void RuThdot3D(double t, double *x, void *argv, double *xdot)
 {
-    double *args = (double *)argv;
+    struct shockParams *par = (struct shockParams *)argv;
 
-    double Mej = args[1];
-    double rho0 = args[2];
-    double Einj = args[3];
-    double k = args[4];
-    double umin = args[5];
-    double L0 = args[6];
-    double q = args[7];
-    double ts = args[8];
-    double thC = args[9];
-    double th0 = args[10];
-    double thCg = args[11];
+    double Mej = par->Mej;
+    //double rho0 = par->rho0_env;
+    double Einj = par->E0_refresh;
+    double k = par->k_refresh;
+    double umin = par->umin_refresh;
+    double L0 = par->L0_inj;
+    double q = par->q_inj;
+    double ts = par->ts_inj;
+    double thC = par->thetaCore;
+    double th0 = par->theta0;
+    double thCg = par->thetaCoreGlobal;
+    int spread = par->spread;
 
     double R = x[0];
     double u = x[1];
@@ -530,6 +719,18 @@ void RuThdot3D(double t, double *x, void *argv, double *xdot, int spread)
         dEdt = L_inj(te, L0, q, ts) / (gs2*(1+bes)); // Doppler factor (1-bes)
     }
 
+    double rho = envDensityPar(R, par);
+    double M = envMassPar(R, par);
+    double c2 = v_light*v_light;
+
+    double dR_Esh = 4*M_PI/3.0 * (4*u*u+3)*be*be * rho * R*R * om * c2;
+    double du_Esh = 2.0*(2*u*u+1)*(2*u*u+3)*u * M * om * c2 / (3.0 * g*g*g*g);
+    double dTh_Esh = (4*u*u+3)*be*be * M * 2*sinth*costh * c2 / 3.0;
+    double du_Eej = be * Mej * c2;
+    double dudt = (-dR_Esh * dRdt - dTh_Esh * dThdt + dEdt)
+                   / (du_Eej + du_Esh - dEdu);
+
+    /*
     double num = -16*M_PI/3.0 * om*rho0*R*R * be*u*u * v_light
                  -8*M_PI/9.0*rho0*R*R*R*(4*u*u+3)*be*be*sinth*costh*dThdt
                     + om*dEdt/(v_light*v_light);
@@ -537,6 +738,7 @@ void RuThdot3D(double t, double *x, void *argv, double *xdot, int spread)
                     + 8*M_PI*om*rho0*R*R*R*u*(2*u*u+1)*(2*u*u+3)/(9*g*g*g*g)
                     - dEdu/(v_light*v_light);
     double dudt = num/denom;
+    */
 
     xdot[0] = dRdt;
     xdot[1] = dudt;
@@ -580,8 +782,7 @@ void shockEvolveRK4(double *t, double *R, double *u, int N, double R0,
     }
 }
 void shockEvolveSpreadRK4(double *t, double *R, double *u, double *th, int N,
-                            double R0, double u0, double th0, void *args,
-                            int spread)
+                            double R0, double u0, double th0, void *args)
 {
     int i,j;
 
@@ -597,19 +798,19 @@ void shockEvolveSpreadRK4(double *t, double *R, double *u, double *th, int N,
         x0[0] = R[i];
         x0[1] = u[i];
         x0[2] = th[i];
-        RuThdot3D(t[i], x0, args, k1, spread);
+        RuThdot3D(t[i], x0, args, k1);
         
         for(j=0; j<3; j++)
             x[j] = x0[j] + 0.5*dt*k1[j];
-        RuThdot3D(t[i], x, args, k2, spread);
+        RuThdot3D(t[i], x, args, k2);
         
         for(j=0; j<3; j++)
             x[j] = x0[j] + 0.5*dt*k2[j];
-        RuThdot3D(t[i], x, args, k3, spread);
+        RuThdot3D(t[i], x, args, k3);
         
         for(j=0; j<3; j++)
             x[j] = x0[j] + dt*k3[j];
-        RuThdot3D(t[i], x, args, k4, spread);
+        RuThdot3D(t[i], x, args, k4);
         
         for(j=0; j<3; j++)
             x[j] = x0[j] + dt*(k1[j]+2*k2[j]+2*k3[j]+k4[j])/6.0;
@@ -621,4 +822,34 @@ void shockEvolveSpreadRK4(double *t, double *R, double *u, double *th, int N,
         else
             th[i+1] = x[2];
     }
+}
+
+void setup_shockParams(struct shockParams *pars, int spread,
+                       double E0, double Mej,
+                       int envType, double rho0_env, double R0_env,
+                       double k_env, double rho1_env,
+                       double L0_inj, double q_inj, double t0_inj,
+                       double ts_inj,
+                       double E0_refresh, double k_refresh, double umin_refresh,
+                       double thetaCore, double theta0,
+                       double thetaCoreGlobal)
+{
+    pars->spread = spread;
+    pars->E0 = E0;
+    pars->Mej = Mej;
+    pars->envType = envType;
+    pars->rho0_env = rho0_env;
+    pars->R0_env = R0_env;
+    pars->k_env = k_env;
+    pars->rho1_env = rho1_env;
+    pars->L0_inj = L0_inj;
+    pars->q_inj = q_inj;
+    pars->t0_inj = t0_inj;
+    pars->ts_inj = ts_inj;
+    pars->E0_refresh = E0_refresh;
+    pars->k_refresh = k_refresh;
+    pars->umin_refresh = umin_refresh;
+    pars->thetaCore = thetaCore;
+    pars->theta0 = theta0;
+    pars->thetaCoreGlobal = thetaCoreGlobal;
 }

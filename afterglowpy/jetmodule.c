@@ -3,6 +3,7 @@
 #include <numpy/arrayobject.h>
 #include <time.h>
 #include "offaxis_struct.h"
+#include "shockEvolution.h"
 
 #define PROFILE
 #define PROFILE1
@@ -16,9 +17,10 @@ static const double E_iso_core_default = 1.0e53;
 static const double theta_h_core_default = 0.1;
 static const double theta_h_wing_default = 0.4;
 static const double b_default = 0.0;
-static const double L0_default = 0.0;
-static const double q_default = 0.0;
-static const double ts_default = 0.0; 
+static const double L0_inj_default = 0.0;
+static const double q_inj_default = 0.0;
+static const double ts_inj_default = 0.0; 
+static const double t0_inj_default = 1.0e3; 
 static const double n_0_default = 1.0;
 static const double p_default = 2.2;
 static const double epsilon_E_default = 0.1;
@@ -32,6 +34,12 @@ static const int spread_default = 7;
 static const int counterjet_default = 0;
 static const int gamma_type_default = GAMMA_INF;
 static const double g0_default = -1.0;
+
+static const int envType_default = ENV_ISM;
+static const double R0_env_default = 1e18;
+static const double k_env_default = 0.0;
+static const double rho1_env_default = 1.0;
+
 static const double E_core_global_default = 0.0;
 static const double theta_h_core_global_default = 0.0;
 
@@ -177,6 +185,10 @@ void initjet(void)
     PyModule_AddIntConstant(module, "EpsEBar", EPS_E_BAR_FLAG);
     PyModule_AddIntConstant(module, "SSASmooth", SSA_SMOOTH_FLAG);
     PyModule_AddIntConstant(module, "SSASharp", SSA_SHARP_FLAG);
+    PyModule_AddIntConstant(module, "NoCooling", NO_COOLING_FLAG);
+    PyModule_AddIntConstant(module, "EnvISM", ENV_ISM);
+    PyModule_AddIntConstant(module, "EnvWind", ENV_WIND);
+    PyModule_AddIntConstant(module, "EnvPL", ENV_PL);
     PyModule_AddIntConstant(module, "MOM_0", MOM_0);
     PyModule_AddIntConstant(module, "MOM_X", MOM_X);
     PyModule_AddIntConstant(module, "MOM_Y", MOM_Y);
@@ -224,9 +236,10 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     double theta_h_core = theta_h_core_default;
     double theta_h_wing = theta_h_wing_default;
     double b = b_default;
-    double L0 = L0_default;
-    double q = q_default;
-    double ts = ts_default; 
+    double L0_inj = L0_inj_default;
+    double q_inj = q_inj_default;
+    double t0_inj = t0_inj_default; 
+    double ts_inj = ts_inj_default; 
     double n_0 = n_0_default;
     double p = p_default;
     double epsilon_E = epsilon_E_default;
@@ -237,6 +250,12 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     int latRes = latRes_default;
     int tRes = tRes_default;
     double g0 = g0_default;
+    
+    int envType = envType_default;
+    double R0_env = R0_env_default;
+    double k_env = k_env_default;
+    double rho1_env = rho1_env_default;
+    
     double E_core_global = E_core_global_default;
     double theta_h_core_global = theta_h_core_global_default;
 
@@ -253,9 +272,13 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
 
     static char *kwlist[] = {"t", "nu", "jetType", "specType",
                                 "thetaObs", "E0", "thetaCore", "thetaWing",
-                                    "b", "L0", "q", "ts", "n0", "p",
-                                    "epsilon_e", "epsilon_B", "ksiN", "dL",
+                                    "b",
+                                    "L0", "q", "ts",
+                                    "n0", "p",
+                                    "epsilon_e", "epsilon_B", "xi_N", "d_L",
                                     "g0",
+                                "envType", "R0Env", "kEnv", "rho1Env",
+                                "t0_inj",
                                 "E0Global", "thetaCoreGlobal",
                                 "tRes", "latRes", "intType", "rtolStruct",
                                     "rtolPhi", "rtolTheta", "NPhi", "NTheta",
@@ -266,13 +289,16 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     printf("About to parse args\n");
     //Parse Arguments
     if(!PyArg_ParseTupleAndKeywords(args, kwargs,
-                "OO|ii""ddddddddddddddd""dd""iiidddii""O""iii""O",
-                //"OO|ii ddddddddddddddd dd iiidddii O iii",
+                "OO|ii""ddddddddddddddd""iddd""d""dd""iiidddii""O""iii""O",
                 kwlist,
-                &t_obj, &nu_obj, &jet_type, &spec_type,
-                &theta_obs, &E_iso_core, &theta_h_core, &theta_h_wing, &b, &L0,
-                    &q, &ts, &n_0, &p, &epsilon_E, &epsilon_B, &ksi_N, &d_L,
+                &t_obj, &nu_obj,
+                &jet_type, &spec_type,
+                &theta_obs, &E_iso_core, &theta_h_core, &theta_h_wing, &b,
+                    &L0_inj, &q_inj, &ts_inj,
+                    &n_0, &p, &epsilon_E, &epsilon_B, &ksi_N, &d_L,
                     &g0,
+                &envType, &R0_env, &k_env, &rho1_env,
+                &t0_inj,
                 &E_core_global, &theta_h_core_global,
                 &tRes, &latRes, &int_type, &rtol_struct, &rtol_phi,
                     &rtol_theta, &nmax_phi, &nmax_theta,
@@ -437,8 +463,9 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     struct fluxParams fp;
     setup_fluxParams(&fp, d_L, theta_obs, E_iso_core, theta_h_core,
                         theta_h_wing, b,
-                        L0, q, ts,
+                        L0_inj, q_inj, t0_inj, ts_inj,
                         n_0, p, epsilon_E, epsilon_B, ksi_N, g0, 
+                        envType, R0_env, k_env, rho1_env,
                         E_core_global, theta_h_core_global, ta, tb,
                         tRes, latRes, int_type,
                         rtol_struct, rtol_phi, rtol_theta,
@@ -508,20 +535,21 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
 static PyObject *jet_emissivity(PyObject *self, PyObject *args)
 {
     int spec_type = 0;
-    double nu, R, mu, te, u, us, n0, p, epse, epsB, ksiN;
+    double nu, R, mu, te, u, us, rho0, Msw, p, epse, epsB, xi_N;
 
 
     //Parse Arguments
-    if(!PyArg_ParseTuple(args, "ddddddddddd|i", &nu, &R, &mu, &te,
-                            &u, &us, &n0, &p, &epse, &epsB, &ksiN, &spec_type))
+    if(!PyArg_ParseTuple(args, "dddddddddddd|i", &nu, &R, &mu, &te,
+                            &u, &us, &rho0, &Msw, &p, &epse, &epsB, &xi_N,
+                            &spec_type))
     {
         //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
         return NULL;
     }
 
     // Calculate it!
-    double em = emissivity(nu, R, mu, te, u, us, n0, p, epse, epsB, 
-                            ksiN, spec_type);
+    double em = emissivity(nu, R, mu, te, u, us, rho0, Msw, p, epse, epsB, 
+                           xi_N, spec_type);
 
     //Build output
     PyObject *ret = Py_BuildValue("d", em);
@@ -544,9 +572,10 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
     double theta_h_core = theta_h_core_default;
     double theta_h_wing = theta_h_wing_default;
     double b = b_default;
-    double L0 = L0_default;
-    double q = q_default;
-    double ts = ts_default; 
+    double L0_inj = L0_inj_default;
+    double q_inj = q_inj_default;
+    double t0_inj = t0_inj_default; 
+    double ts_inj = ts_inj_default; 
     double n_0 = n_0_default;
     double p = p_default;
     double epsilon_E = epsilon_E_default;
@@ -557,6 +586,12 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
     int latRes = latRes_default;
     int tRes = tRes_default;
     double g0 = g0_default;
+    
+    int envType = envType_default;
+    double R0_env = R0_env_default;
+    double k_env = k_env_default;
+    double rho1_env = rho1_env_default;
+    
     double E_core_global = E_core_global_default;
     double theta_h_core_global = theta_h_core_global_default;
 
@@ -574,8 +609,10 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
     static char *kwlist[] = {"theta", "phi", "t", "nu", "jetType", "specType",
                                 "thetaObs", "E0", "thetaCore", "thetaWing",
                                     "b", "L0", "q", "ts", "n0", "p",
-                                    "epsilon_e", "epsilon_B", "ksiN", "dL",
+                                    "epsilon_e", "epsilon_B", "xi_N", "d_L",
                                     "g0",
+                                "envType", "R0Env", "kEnv", "rho1Env",
+                                "t0_inj",
                                 "E0Global", "thetaCoreGlobal",
                                 "tRes", "latRes", "intType", "rtolStruct",
                                     "rtolPhi", "rtolTheta", "NPhi", "NTheta",
@@ -585,12 +622,15 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
 
     //Parse Arguments
     if(!PyArg_ParseTupleAndKeywords(args, kwargs,
-                "OOOO|ii""ddddddddddddddd""dd""iiidddii""O""iii",
+                "OOOO|ii""ddddddddddddddd""iddd""d""dd""iiidddii""O""iii",
                 kwlist,
                 &theta_obj, &phi_obj, &t_obj, &nu_obj, &jet_type, &spec_type,
-                &theta_obs, &E_iso_core, &theta_h_core, &theta_h_wing, &b, &L0,
-                    &q, &ts, &n_0, &p, &epsilon_E, &epsilon_B, &ksi_N, &d_L,
+                &theta_obs, &E_iso_core, &theta_h_core, &theta_h_wing, &b,
+                    &L0_inj, &q_inj, &ts_inj,
+                    &n_0, &p, &epsilon_E, &epsilon_B, &ksi_N, &d_L,
                     &g0,
+                &envType, &R0_env, &k_env, &rho1_env,
+                    &t0_inj,
                 &E_core_global, &theta_h_core_global,
                 &tRes, &latRes, &int_type, &rtol_struct, &rtol_phi,
                     &rtol_theta, &nmax_phi, &nmax_theta,
@@ -732,8 +772,9 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
     struct fluxParams fp;
     setup_fluxParams(&fp, d_L, theta_obs, E_iso_core, theta_h_core,
                         theta_h_wing, b,
-                        L0, q, ts,
+                        L0_inj, q_inj, t0_inj, ts_inj,
                         n_0, p, epsilon_E, epsilon_B, ksi_N, g0, 
+                        envType, R0_env, k_env, rho1_env,
                         E_core_global, theta_h_core_global, ta, tb,
                         tRes, latRes, int_type,
                         rtol_struct, rtol_phi, rtol_theta,
@@ -781,9 +822,10 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
     double theta_h_core = theta_h_core_default;
     double theta_h_wing = theta_h_wing_default;
     double b = b_default;
-    double L0 = L0_default;
-    double q = q_default;
-    double ts = ts_default; 
+    double L0_inj = L0_inj_default;
+    double q_inj = q_inj_default;
+    double t0_inj = t0_inj_default; 
+    double ts_inj = ts_inj_default; 
     double n_0 = n_0_default;
     double p = p_default;
     double epsilon_E = epsilon_E_default;
@@ -798,6 +840,12 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
     int gamma_type = gamma_type_default;
     int spec_type = spec_type_default;
     double g0 = g0_default;
+
+    int envType = envType_default;
+    double R0_env = R0_env_default;
+    double k_env = k_env_default;
+    double rho1_env = rho1_env_default;
+    
     double E_core_global = E_core_global_default;
     double theta_h_core_global = theta_h_core_global_default;
 
@@ -811,8 +859,10 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
     static char *kwlist[] = {"theta", "phi", "t", "jetType", "specType",
                                 "thetaObs", "E0", "thetaCore", "thetaWing",
                                     "b", "L0", "q", "ts", "n0", "p",
-                                    "epsilon_e", "epsilon_B", "ksiN", "dL",
+                                    "epsilon_e", "epsilon_B", "xi_N", "d_L",
                                     "g0",
+                                "envType", "R0Env", "kEnv", "rho1Env",
+                                "t0_inj",
                                 "E0Global", "thetaCoreGlobal",
                                 "tRes", "latRes", "intType", "rtolStruct",
                                     "rtolPhi", "rtolTheta", "NPhi", "NTheta",
@@ -822,12 +872,15 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
 
     //Parse Arguments
     if(!PyArg_ParseTupleAndKeywords(args, kwargs,
-                "OOO|ii""ddddddddddddddd""dd""iiidddii""O""iii",
+                "OOO|ii""ddddddddddddddd""iddd""d""dd""iiidddii""O""iii",
                 kwlist,
                 &theta_obj, &phi_obj, &t_obj, &jet_type, &spec_type,
-                &theta_obs, &E_iso_core, &theta_h_core, &theta_h_wing, &b, &L0,
-                    &q, &ts, &n_0, &p, &epsilon_E, &epsilon_B, &ksi_N, &d_L,
+                &theta_obs, &E_iso_core, &theta_h_core, &theta_h_wing, &b,
+                    &L0_inj, &q_inj, &ts_inj, &n_0, &p, &epsilon_E, &epsilon_B,
+                    &ksi_N, &d_L,
                     &g0,
+                &envType, &R0_env, &k_env, &rho1_env,
+                &t0_inj,
                 &E_core_global, &theta_h_core_global,
                 &tRes, &latRes, &int_type, &rtol_struct, &rtol_phi,
                     &rtol_theta, &nmax_phi, &nmax_theta,
@@ -966,8 +1019,9 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
     struct fluxParams fp;
     setup_fluxParams(&fp, d_L, theta_obs, E_iso_core, theta_h_core,
                         theta_h_wing, b,
-                        L0, q, ts,
+                        L0_inj, q_inj, t0_inj, ts_inj,
                         n_0, p, epsilon_E, epsilon_B, ksi_N, g0, 
+                        envType, R0_env, k_env, rho1_env,
                         E_core_global, theta_h_core_global, ta, tb,
                         tRes, latRes, int_type,
                         rtol_struct, rtol_phi, rtol_theta,
@@ -1022,9 +1076,10 @@ static PyObject *jet_shock(PyObject *self, PyObject *args)
     pars.ta = ta;
     pars.tb = tb;
     pars.n_0 = n0;
-    pars.L0 = L0;
-    pars.q = q;
-    pars.ts = ts;
+    pars.L0_inj = L0;
+    pars.q_inj = q;
+    pars.t0_inj = t0_inj_default;
+    pars.ts_inj = ts;
     pars.tRes = tRes;
     pars.E_tot = -1.0;
     pars.t_table = NULL;
@@ -1109,9 +1164,10 @@ static PyObject *jet_shockObs(PyObject *self, PyObject *args)
     pars.ta = ta;
     pars.tb = tb;
     pars.n_0 = n0;
-    pars.L0 = L0;
-    pars.q = q;
-    pars.ts = ts;
+    pars.L0_inj = L0;
+    pars.q_inj = q;
+    pars.t0_inj = t0_inj_default;
+    pars.ts_inj = ts;
     pars.tRes = tRes;
     pars.E_tot = -1.0;
     pars.t_table = NULL;
