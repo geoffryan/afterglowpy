@@ -98,6 +98,8 @@ double envDensity(double R, int envType, double rho0, double R0, double k,
         return rho0 * R0*R0/(R*R);
     else if(envType == ENV_PL)
         return rho0 * pow(R/R0, -k);
+    else if(envType == ENV_STEP)
+        return R < R0 ? rho0 : rho1;
     else
         return 0;
 }
@@ -111,6 +113,14 @@ double envMass(double R, int envType, double rho0, double R0, double k,
         return 4.0*M_PI * rho0 * R0*R0 * R;
     else if(envType == ENV_PL)
         return 4.0*M_PI / (3.0-k) * rho0 * pow(R/R0, 3-k) * R0*R0*R0;
+    else if (envType == ENV_STEP)
+    {
+        if(R < R0)
+            return 4.0/3.0 * M_PI * rho0 * R*R*R;
+        else
+            return 4.0/3.0 * M_PI * (rho0 * R0*R0*R0
+                                     + rho1 * (R-R0)*(R-R0)*(R-R0));
+    }
     else
         return 0;
 }
@@ -124,6 +134,14 @@ double envRadius(double M, int envType, double rho0, double R0, double k,
         return M / (4.0*M_PI * rho0 * R0*R0);
     else if(envType == ENV_PL)
         return R0 * pow((3.0-k) * M / (4.0*M_PI * rho0 * R0*R0*R0), 1.0/(3-k));
+    else if(envType == ENV_STEP)
+    {
+        double M0 = 4.0/3.0 * M_PI * rho0 * R0*R0*R0;
+        if(M <= M0)
+            return pow(0.75 * M / (M_PI * rho0), 1.0/3.0);
+        else
+            return R0 + pow(0.75 * (M-M0) / (M_PI * rho1), 1.0/3.0);
+    }
     else
         return 0;
 }

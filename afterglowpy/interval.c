@@ -480,8 +480,11 @@ void mesh9Free(struct Mesh9 *m)
 {
     m->totalSize = 0;
     m->N = 0;
-    free(m->heap);
-    m->heap = NULL;
+    if(m->heap != NULL)
+    {
+        free(m->heap);
+        m->heap = NULL;
+    }
 }
 
 void mesh9Insert(struct Mesh9 *m, struct Interval9 *i)
@@ -622,7 +625,7 @@ void interval9Write(struct Interval9 *i, FILE *stream)
 {
     fprintf(stream, "(%.3le, %.3le)  %.12le +/- %.3le   %d\n",
             i->a, i->b, i->I, i->err, i->refinement);
-    fprintf(stream, "   [%.3le %.3le %.3le %.3le %.3le %.3le"
-                    " %.3le %.3le %.3le]\n", i->fa, i->fll, i->fl, i->flr,
+    fprintf(stream, "   [%.6le %.6le %.6le %.6le %.6le %.6le"
+                    " %.6le %.6le %.6le]\n", i->fa, i->fll, i->fl, i->flr,
                     i->fm, i->frl, i->fr, i->frr, i->fb);
 }

@@ -1,7 +1,7 @@
 #ifndef AFTERGLOWPY_SHOCK
 #define AFTERGLOWPY_SHOCK
 
-enum{ENV_ISM, ENV_WIND, ENV_PL};
+enum{ENV_ISM, ENV_WIND, ENV_PL, ENV_STEP};
 
 static const double T0_inj = 1.0e3;
 

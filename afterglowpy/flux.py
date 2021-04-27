@@ -148,15 +148,11 @@ def fluxDensity(t, nu, *args, **kwargs):
         If t, nu are the wrong shape or arguments take illegal values.
     """
 
-    print("In Flux")
     argsDict = parseArgs(args, kwargs)
-
-    print("Checking t, nu")
 
     # Check Arguments, will raise ValueError if args are bad
     t, nu = checkTNu(t, nu)
     
-    print("Checking args")
 
     jetType = argsDict['jetType']
 
@@ -165,7 +161,6 @@ def fluxDensity(t, nu, *args, **kwargs):
     else:
         checkJetArgs(**argsDict)
 
-    print("Dealing with z")
 
     # arguments are good, full steam ahead!
     z = argsDict.pop('z') if 'z' in argsDict else 0.0
@@ -173,7 +168,6 @@ def fluxDensity(t, nu, *args, **kwargs):
     tz = t / (1+z)
     nuz = nu * (1+z)
 
-    print("Setting spread")
 
     # Default spreading method
     if 'spread' in argsDict:
@@ -192,10 +186,8 @@ def fluxDensity(t, nu, *args, **kwargs):
 
     # timeA = time.time()
 
-    print("Allocate Fnu")
     Fnu = np.empty(tz.shape)
 
-    print("Calculate Fnu")
     if jetType == jet.Spherical:
         Fnu.flat[:] = cocoon.fluxDensity(tz.flat, nuz.flat, **argsDict)
     else:
@@ -203,7 +195,6 @@ def fluxDensity(t, nu, *args, **kwargs):
     # timeB = time.time()
     # print("Eval took: {0:f} s".format(timeB - timeA))
 
-    print("add Lums back")
     
     # Adding background luminosities.
     L_to_flux = cocoon.cgs2mJy / (4*np.pi * argsDict['d_L']**2)
@@ -223,12 +214,9 @@ def fluxDensity(t, nu, *args, **kwargs):
         Lnu = LX / (9.7e3 * cocoon.eV2Hz)  # 9.7 keV bandwidth
         Fnu[xry] += Lnu*L_to_flux
 
-    print("K-correct")
     # K-correct the flux
     Fnu *= 1+z
     
-    print("return")
-
     return Fnu
 
 
@@ -492,6 +480,8 @@ def checkThetaPhiTNu(theta, phi, t, nu):
 
 
 def checkJetArgs(**argsDict):
+
+    return
 
     jetType = argsDict['jetType']
     specType = argsDict['specType']

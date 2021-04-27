@@ -186,9 +186,11 @@ void initjet(void)
     PyModule_AddIntConstant(module, "SSASmooth", SSA_SMOOTH_FLAG);
     PyModule_AddIntConstant(module, "SSASharp", SSA_SHARP_FLAG);
     PyModule_AddIntConstant(module, "NoCooling", NO_COOLING_FLAG);
+    PyModule_AddIntConstant(module, "DeepNewtonian", DEEP_NEWTONIAN_FLAG);
     PyModule_AddIntConstant(module, "EnvISM", ENV_ISM);
     PyModule_AddIntConstant(module, "EnvWind", ENV_WIND);
     PyModule_AddIntConstant(module, "EnvPL", ENV_PL);
+    PyModule_AddIntConstant(module, "EnvStep", ENV_STEP);
     PyModule_AddIntConstant(module, "MOM_0", MOM_0);
     PyModule_AddIntConstant(module, "MOM_X", MOM_X);
     PyModule_AddIntConstant(module, "MOM_Y", MOM_Y);
@@ -286,7 +288,7 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
                                 "spread", "counterjet", "gammaType", "moment",
                                 NULL};
 
-    printf("About to parse args\n");
+    //printf("About to parse args\n");
     //Parse Arguments
     if(!PyArg_ParseTupleAndKeywords(args, kwargs,
                 "OO|ii""ddddddddddddddd""iddd""d""dd""iiidddii""O""iii""O",
@@ -309,7 +311,7 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
         return NULL;
     }
 
-    printf("Args loaded\n");
+    //printf("Args loaded\n");
 
     if(int_type < 0 || int_type >= INT_UNDEFINED)
     {
@@ -318,7 +320,7 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
         return NULL;
     }
 
-    printf("Args parsed\n");
+    //printf("Args parsed\n");
 
     //Grab NUMPY arrays
     PyArrayObject *t_arr;
@@ -351,7 +353,7 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
         return NULL;
     }
     
-    printf("Arrays grabbed\n");
+    //printf("Arrays grabbed\n");
 
     int t_ndim = (int) PyArray_NDIM(t_arr);
     int nu_ndim = (int) PyArray_NDIM(nu_arr);
@@ -375,7 +377,7 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
         return NULL;
     }
     
-    printf("NDims checked\n");
+    //printf("NDims checked\n");
 
     int N = (int)PyArray_DIM(t_arr, 0);
     int Nnu = (int)PyArray_DIM(nu_arr, 0);
@@ -409,7 +411,7 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
         return NULL;
     }
     
-    printf("Dims checked\n");
+    //printf("Dims checked\n");
 
     double *t = (double *)PyArray_DATA(t_arr);
     double *nu = (double *)PyArray_DATA(nu_arr);
@@ -420,9 +422,9 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     
     long *moment = NULL;
     if(moment_arr != NULL)
-        moment = (int *)PyArray_DATA(moment_arr);
+        moment = (long *)PyArray_DATA(moment_arr);
 
-    printf("Data got\n");
+    //printf("Data got\n");
 
     //Allocate output array
 
@@ -473,12 +475,12 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
                         spec_type, mask, masklen,
                         spread, counterjet, gamma_type);
 
-    printf("Ready to go!\n");
+    //printf("Ready to go!\n");
 
     // Calculate the flux!
     calc_flux_density(jet_type, spec_type, t, nu, Fnu, moment, N, &fp);
     
-    printf("Gone!\n");
+    //printf("Gone!\n");
    
     if(fp.error)
     {
@@ -490,7 +492,7 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
 
     //Free the parameters!
     free_fluxParams(&fp);
-    printf("Freed params!\n");
+    //printf("Freed params!\n");
 
 #ifdef PROFILE2
     //Profile 2
@@ -506,12 +508,12 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     if(moment_obj != NULL)
         Py_DECREF(moment_arr);
     
-    printf("Decref'ed inputs!\n");
+    //printf("Decref'ed inputs!\n");
 
     //Build output
     PyObject *ret = Py_BuildValue("N", Fnu_obj);
     
-    printf("Built outputs!\n");
+    //printf("Built outputs!\n");
     
 #ifdef PROFILE1
     //Profile 1 and output
@@ -1184,7 +1186,7 @@ static PyObject *jet_shockObs(PyObject *self, PyObject *args)
     pars.table_entries_inner = 0;
     pars.spread = spread;
 
-    printf("set_jet_params\n");
+    //printf("set_jet_params\n");
     set_jet_params(&pars, E0, thetah);
     if(pars.error)
     {
@@ -1192,7 +1194,7 @@ static PyObject *jet_shockObs(PyObject *self, PyObject *args)
         free_fluxParams(&pars);
         return NULL;
     }
-    printf("done\n");
+    //printf("done\n");
 
     //Allocate output arrays
     int N = pars.table_entries;

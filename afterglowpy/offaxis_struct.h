@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <math.h>
 #include "integrate.h"
+#include "interval.h"
 
 #define ERR_CHK_VOID(pars) if(pars->error){ return;}
 #define ERR_CHK_INT(pars) if(pars->error){ return 0;}
@@ -57,6 +58,7 @@
 #define SSA_SMOOTH_FLAG 4
 #define SSA_SHARP_FLAG  8
 #define NO_COOLING_FLAG  16
+#define DEEP_NEWTONIAN_FLAG  32
 
 enum{INT_TRAP_FIXED, INT_TRAP_ADAPT, INT_SIMP_FIXED, INT_SIMP_ADAPT,
      INT_ROMB_ADAPT, INT_TRAP_NL, INT_HYBRID, INT_CADRE,
@@ -116,6 +118,8 @@ struct fluxParams
     
     double current_theta_cone_hi;
     double current_theta_cone_low;
+    double current_theta_b;
+    double current_theta_a;
     double theta_obs_cur;
     int tRes;
     int latRes;
@@ -140,6 +144,7 @@ struct fluxParams
     double C_STsqrd;
 
     double t_NR;
+    int cur_entry;
 
     double *t_table;
     double *R_table;
@@ -154,6 +159,9 @@ struct fluxParams
     double *th_table_inner;
     double *mu_table_inner;
     int table_entries_inner;
+
+    Mesh9 phi_mesh;
+    Mesh9 theta_mesh;
 
     int spec_type;
     int gamma_type;

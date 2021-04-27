@@ -347,12 +347,15 @@ double hybrid_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
 double cadre_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
                   double atol, double rtol, void *args, int *Neval,
                   double *eps, int verbose, int (*errf)(void *),
-                  double *pfa, double *pfb)
+                  double *pfa, double *pfb, Mesh9 *mout)
 {
     double I = m9_adapt(f, xa, xb, Nmax, cadreInitInterval,
                         cadreProcessInterval, cadreSplitInterval,
-                        atol, rtol, args, Neval, eps, NULL, verbose, errf,
+                        atol, rtol, args, Neval, eps, mout, verbose, errf,
                         pfa, pfb);
+
+    
+
     return I;
 }
 
@@ -808,7 +811,8 @@ int cadreProcessInterval(double (*f)(double, void *), void *args,
                 return count;
             }
         }
-        else if(R0 >= 4+scaleTol || R0 < 2-scaleTol || R0 != R0)
+        //else if(R0 >= 4+scaleTol || R0 < 2-scaleTol || R0 != R0)
+        else if(R0 >= 4+scaleTol || R0 < 2 || R0 != R0)
         {
             // We're in a strange regime.  Proceed with caution and
             // just use vanilla Trapezoid rule with over-estimated error.
@@ -1464,14 +1468,20 @@ double m9_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
     int n = initInterval(f, args, &i, errf, pfa, pfb);
     if(errf(args))
     {
-        mesh9Free(&m);
+        if(mout == NULL)
+            mesh9Free(&m);
+        else
+            mout = &m;
         return 0.0;
     }
 
     n += processInterval(f, args, &i, errf);
     if(errf(args))
     {
-        mesh9Free(&m);
+        if(mout == NULL)
+            mesh9Free(&m);
+        else
+            mout = &m;
         return 0.0;
     }
 
@@ -1508,7 +1518,10 @@ double m9_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
             n += processInterval(f, args, &i, errf);
             if(errf(args))
             {
-                mesh9Free(&m);
+                if(mout == NULL)
+                    mesh9Free(&m);
+                else
+                    mout = &m;
                 return 0.0;
             }
             mesh9Insert(&m, &i);
@@ -1526,7 +1539,10 @@ double m9_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
             n += splitInterval(f, args, &i, &i1, &i2, errf);
             if(errf(args))
             {
-                mesh9Free(&m);
+                if(mout == NULL)
+                    mesh9Free(&m);
+                else
+                    mout = &m;
                 return 0.0;
             }
             mesh9Insert(&m, &i1);
@@ -1567,6 +1583,19 @@ double m9_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
         err = mesh9TotalError(&m);
         *eps = err;
     }
+
+    // DEBUG DELETE LATER
+    /*
+    char *meshStr;
+    mesh9Write(&m, &meshStr);
+    FILE *fp = fopen("afterglowpy_int_dump.txt", "w");
+    fprintf(fp, "%s\n", meshStr);
+    int idx;
+    for(idx=0; idx<m.N; idx++)
+        interval9Write(m.heap+idx, fp);
+    fclose(fp);
+    free(meshStr);
+    */
 
     if(mout == NULL)
         mesh9Free(&m);
