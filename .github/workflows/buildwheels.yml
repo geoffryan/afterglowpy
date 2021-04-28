@@ -1,5 +1,9 @@
 name: Build wheels
 on: [push]
+
+env:
+    CIBW_SKIP: cp2* pp2*
+
 jobs:
     build_wheels:
         name: Build wheels on ${{ matrix.os }}
