@@ -1,18 +1,22 @@
 name: Github Actions Demo
 on: [push]
 jobs:
-    Explore-Github-Actions:
+    build:
         runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                python-version: [3.5, 3.6, 3.7, 3.8, 3.9]
         steps:
-            - run: echo "The jobs was automatically triggered by a ${{ github.event_name}} event."
-            - run: echo "This job is now runnning on a ${{ runner.os }} server hosted by Github!"
-            - run: echo "The name of this branch is ${{ github.ref }} and the repo os ${{github.repository}}."
-            - name: Check out repo code
-              uses: actions/checkout@v2
-            - run: echo " The ${{ github.repository }} repo has been cloned to the runner."
-            - run: echo "The workflow is now ready to test your code."
-            - name: List files in the repo
+            - uses: actions/checkout@v2
+            - name: Set up Python ${{matrix.python-version}}
+              uses: actions/setup-python@v2
+              with:
+                  python-version: ${{matrix.python-version}}
+            - name: Install dependencies
               run: |
-                  ls ${{ github.workspace }}
-            - run: echo "This job's status is ${{ job.status }}."
+                  python -m pip install --upgrade pip
+                  pip install --upgrade setuptools wheel build pytest
+            - name: Test with pytest
+              run: |
+                  pytest
 
