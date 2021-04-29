@@ -811,7 +811,6 @@ int cadreProcessInterval(double (*f)(double, void *), void *args,
                 return count;
             }
         }
-        //else if(R0 >= 4+scaleTol || R0 < 2-scaleTol || R0 != R0)
         else if(R0 >= 4+scaleTol || R0 < 2 || R0 != R0)
         {
             // We're in a strange regime.  Proceed with caution and
