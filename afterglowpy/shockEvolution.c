@@ -585,6 +585,10 @@ void RuThdot3D(double t, double *x, void *argv, double *xdot)
 
     double dRdt = 4*u*g/(4*u*u+3) * v_light;
 
+    double rho = envDensityPar(R, par);
+    double M = envMassPar(R, par);
+    double env3mk = 4*M_PI*rho*R*R*R / M;
+
     double dThdt = 0.0;
     //TODO: verify spreading procedure 190401
     //if(spread && th < 0.5*M_PI && u < 1)
@@ -697,8 +701,22 @@ void RuThdot3D(double t, double *x, void *argv, double *xdot)
         }
         else if(spread == 7)
         {
-            double Q0 = 2.0;
-            double Q = sqrt(2.0)*3.0;
+            // envFac is 0 for k=0 (ISM), 1 for k=3 (super wind), 2/3 for k=2. 
+            double envFac = (3-env3mk)/3.0;
+            double Q = sqrt(2.0)*env3mk;
+            //double Q0 = Q * envFac  + 2.0 * (1-envFac); //2.0;
+            //double Q0 = 2.0 * (1 - envFac);
+            //double Q0 = 2.0 * (1 - envFac*envFac);
+            //double Q0 = (1-envFac)*((3*sqrt(2)-4)*envFac*envFac
+            //                        + 2*envFac + 2);
+            //double Q0_1 = 2.0;
+            //double Q0_2 = Q;
+            //double Q0 = pow(1.0/(Q0_1*Q0_1*Q0_1) + 1.0/(Q0_2*Q0_2*Q0_2),
+            //                -1.0/3.0);
+            //double Q0 = -0.5*(3*sqrt(2)-4)*envFac*envFac*envFac*envFac
+            //            + 0.5*(8-3*sqrt(2))*envFac*envFac + 2;
+            double Q0 = 2 + envFac*envFac*(-3*(3*sqrt(2)+4)
+                        + envFac*((5*3*sqrt(2)+16) - 2*(3*sqrt(2)+3)*envFac));
 
             if(th < 0.5*M_PI && Q0*u*thC < 1)
             {
@@ -712,7 +730,7 @@ void RuThdot3D(double t, double *x, void *argv, double *xdot)
         else if(spread == 8)
         {
             double Q0 = 2.0;
-            double Q = sqrt(2.0)*3.0;
+            double Q = sqrt(2.0)*env3mk;
 
             if(th < 0.5*M_PI && Q0*u*thCg < 1)
             {
@@ -737,8 +755,6 @@ void RuThdot3D(double t, double *x, void *argv, double *xdot)
         dEdt = L_inj(te, L0, q, ts) / (gs2*(1+bes)); // Doppler factor (1-bes)
     }
 
-    double rho = envDensityPar(R, par);
-    double M = envMassPar(R, par);
     double c2 = v_light*v_light;
 
     double dR_Esh = 4*M_PI/3.0 * (4*u*u+3)*be*be * rho * R*R * om * c2;

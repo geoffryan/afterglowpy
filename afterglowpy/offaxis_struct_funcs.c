@@ -395,7 +395,6 @@ double emissivity(double nu, double R, double mu, double te,
     //double DR = R / (12.0 * g*g * ashock);
     if (DR < 0.0) DR *= -1.0; // DR is function of the absolute value of mu
 
-
     double epsebar;
     if(specType & EPS_E_BAR_FLAG)
         epsebar = epse;
@@ -456,6 +455,8 @@ double emissivity(double nu, double R, double mu, double te,
                 / (nprime * g_m * m_e * v_light*v_light);
   
     double freq = 0.0; // frequency dependent part of emissivity
+    double back_pow = 10.0;
+    double eff_k = 3 - Msw / (4*M_PI*R*R*R*rho0);
 
     if(specType & NO_COOLING_FLAG)
         nu_c = 1.0e200;
@@ -463,22 +464,40 @@ double emissivity(double nu, double R, double mu, double te,
     // set frequency dependence
     if (nu_c > nu_m)
     {
-        if (nuprime < nu_m) 
+        if (nuprime < nu_m)
+        {
             freq = pow(nuprime / nu_m, 1.0 / 3.0 );
+            back_pow = (28-11*eff_k)/(9*(4-eff_k));
+        }
         else if (nuprime < nu_c)
+        {
             freq = pow(nuprime / nu_m, 0.5 * (1.0 - p));
+            back_pow = (33+13*p - (15-p)*eff_k)/(12*(4-eff_k));
+        }
         else
+        {
             freq = pow(nu_c / nu_m, 0.5 * (1.0 - p))
                     * pow(nuprime / nu_c, -0.5*p);
+            back_pow = (-6+13*p - (6-p)*eff_k)/(12*(4-eff_k));
+        }
     }
     else
     {
         if (nuprime < nu_c)
+        {
             freq = pow(nuprime / nu_c, 1.0/3.0);
+            back_pow = (18-5*eff_k)/(3*(4-eff_k));
+        }
         else if (nuprime < nu_m)
+        {
             freq = sqrt(nu_c / nuprime);
+            back_pow = (7-5*eff_k)/(12*(4-eff_k));
+        }
         else
+        {
             freq = sqrt(nu_c/nu_m) * pow(nuprime / nu_m, -0.5 * p);
+            back_pow = (-6+13*p - (6-p)*eff_k)/(12*(4-eff_k));
+        }
     }
 
     if(em != em || em < 0.0)
@@ -575,6 +594,17 @@ double emissivity(double nu, double R, double mu, double te,
     }
     if(specType < 0)
         em_lab = 1.0;
+
+    if(specType & BULK_BM_FLAG)
+    {
+        double d0 = DR / R;
+        double chi_peak = g*g*(1-mu*mu);
+        if(chi_peak > 1.0)
+        {
+            double d = d0 * (pow(chi_peak, 1-back_pow)-back_pow) / (1-back_pow);
+            DR = R * d;
+        }
+    }
 
     return R * R * DR * em_lab;
 }

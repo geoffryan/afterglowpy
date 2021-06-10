@@ -187,6 +187,7 @@ void initjet(void)
     PyModule_AddIntConstant(module, "SSASharp", SSA_SHARP_FLAG);
     PyModule_AddIntConstant(module, "NoCooling", NO_COOLING_FLAG);
     PyModule_AddIntConstant(module, "DeepNewtonian", DEEP_NEWTONIAN_FLAG);
+    PyModule_AddIntConstant(module, "BulkBM", BULK_BM_FLAG);
     PyModule_AddIntConstant(module, "EnvISM", ENV_ISM);
     PyModule_AddIntConstant(module, "EnvWind", ENV_WIND);
     PyModule_AddIntConstant(module, "EnvPL", ENV_PL);
