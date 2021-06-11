@@ -701,22 +701,13 @@ void RuThdot3D(double t, double *x, void *argv, double *xdot)
         }
         else if(spread == 7)
         {
-            // envFac is 0 for k=0 (ISM), 1 for k=3 (super wind), 2/3 for k=2. 
-            double envFac = (3-env3mk)/3.0;
+            double envk = 3 - env3mk;
             double Q = sqrt(2.0)*env3mk;
-            //double Q0 = Q * envFac  + 2.0 * (1-envFac); //2.0;
-            //double Q0 = 2.0 * (1 - envFac);
-            //double Q0 = 2.0 * (1 - envFac*envFac);
-            //double Q0 = (1-envFac)*((3*sqrt(2)-4)*envFac*envFac
-            //                        + 2*envFac + 2);
-            //double Q0_1 = 2.0;
-            //double Q0_2 = Q;
-            //double Q0 = pow(1.0/(Q0_1*Q0_1*Q0_1) + 1.0/(Q0_2*Q0_2*Q0_2),
-            //                -1.0/3.0);
-            //double Q0 = -0.5*(3*sqrt(2)-4)*envFac*envFac*envFac*envFac
-            //            + 0.5*(8-3*sqrt(2))*envFac*envFac + 2;
-            double Q0 = 2 + envFac*envFac*(-3*(3*sqrt(2)+4)
-                        + envFac*((5*3*sqrt(2)+16) - 2*(3*sqrt(2)+3)*envFac));
+            double Q0;
+            if(envk < 2.0)
+                Q0 = 0.5 * (2.0 * (2.0 - envk) + 1.4 * envk);
+            else
+                Q0 = 1.4 * (3.0 - envk);
 
             if(th < 0.5*M_PI && Q0*u*thC < 1)
             {
@@ -729,8 +720,13 @@ void RuThdot3D(double t, double *x, void *argv, double *xdot)
         }
         else if(spread == 8)
         {
-            double Q0 = 2.0;
+            double envk = 3 - env3mk;
             double Q = sqrt(2.0)*env3mk;
+            double Q0;
+            if(envk < 2.0)
+                Q0 = 0.5 * (2.0 * (2.0 - envk) + 1.4 * envk);
+            else
+                Q0 = 1.4 * (3.0 - envk);
 
             if(th < 0.5*M_PI && Q0*u*thCg < 1)
             {
