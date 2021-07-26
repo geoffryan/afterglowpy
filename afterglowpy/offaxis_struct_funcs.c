@@ -452,7 +452,7 @@ double emissivity(double nu, double R, double mu, double te,
 
     if(specType & DEEP_NEWTONIAN_FLAG)
         em *= epsebar * e_th 
-                / (nprime * g_m * m_e * v_light*v_light);
+                / (ksiN*nprime * g_m * m_e * v_light*v_light);
   
     double freq = 0.0; // frequency dependent part of emissivity
     double back_pow = 10.0;
