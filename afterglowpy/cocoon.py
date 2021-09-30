@@ -45,7 +45,10 @@ def dP(costheta, amu, ate, au, ar, nu, n0, p, epsE, epsB, ksiN, specType):
 
     us = 4*u*g / math.sqrt(8*u*u+9)
 
-    em = jet.emissivity(nu, r, mu, te, u, us, n0, p, epsE,
+    rho0 = n0 * mp
+    Msw = rho0 * 4.0/3.0 * np.pi * r**3
+
+    em = jet.emissivity(nu, r, mu, te, u, us, rho0, Msw, p, epsE,
                         epsB, ksiN, specType)
 
     return 2*np.pi * em
@@ -78,6 +81,12 @@ def fluxDensity(t, nu, **kwargs):
     tRes = kwargs['tRes'] if 'tRes' in kwargs else 1000
     latRes = kwargs['latRes'] if 'latRes' in kwargs else 0
 
+    # Environment Variables
+    envType = kwargs['envType'] if 'envType' in kwargs else jet.EnvISM
+    R0Env = kwargs['R0Env'] if 'R0Env' in kwargs else 1.0e18
+    kEnv = kwargs['kEnv'] if 'kEnv' in kwargs else 0.0
+    rho1Env = kwargs['rho1Env'] if 'rho1Env' in kwargs else 1.0
+
     rho0 = mp * n0
     Mej = MFast_solar * Msun
     u0 = uMax
@@ -99,7 +108,9 @@ def fluxDensity(t, nu, **kwargs):
     ate = np.logspace(math.log10(t0), math.log10(t1), num=NT, base=10.0)
 
     ar, au = shock.shockEvolRK4(ate, r0, uMax,
-                                MFast_solar*Msun, rho0, Er, k, uMin, L0, q, ts)
+                                MFast_solar*Msun,
+                                envType, rho0, R0Env, kEnv, rho1Env,
+                                Er, k, uMin, L0, q, ts)
 
     P = np.zeros(t.shape)
 
