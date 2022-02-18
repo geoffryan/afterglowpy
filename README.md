@@ -10,7 +10,7 @@ If you use this code in a publication, please refer to the package by name and c
 
 ## Acknowledgements
 
-This work is funded in part the European Union’s Horizon 2020 Programme under the AHEAD2020 project (grant agreement n. 871158).
+This work is funded in part by the European Union’s Horizon 2020 Programme under the AHEAD2020 project (grant agreement n. 871158).
 
 ## Features
 
