@@ -6,7 +6,11 @@ Documentation available at <https://afterglowpy.readthedocs.io/>
 
 ## Attribution
 
-If you use this code in a publication, please refer to the package by name and cite "Ryan, G., van Eerten, H., Piro, L. and Troja, E., 2019, arXiv:1910.11691" [arXiv link](https://arxiv.org/abs/1909.11691). This work is funded in part the European Union’s Horizon 2020 Programme under the AHEAD2020 project (grant agreement n. 871158).
+If you use this code in a publication, please refer to the package by name and cite "Ryan, G., van Eerten, H., Piro, L. and Troja, E., 2019, arXiv:1910.11691" [arXiv link](https://arxiv.org/abs/1909.11691). 
+
+## Acknowledgements
+
+This work is funded in part the European Union’s Horizon 2020 Programme under the AHEAD2020 project (grant agreement n. 871158).
 
 ## Features
 
