@@ -40,7 +40,7 @@ setup(
     name='afterglowpy',
     version=version['__version__'],
     author="Geoffrey Ryan",
-    author_email="gsryan@umd.edu",
+    author_email="gryan@perimeterinstitute.ca",
     description='GRB Afterglow Models',
     long_description=long_description,
     long_description_content_type='text/markdown',

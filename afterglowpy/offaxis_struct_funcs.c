@@ -397,7 +397,10 @@ double emissivity(double nu, double R, double mu, double te,
 
     double epsebar;
     if(specType & EPS_E_BAR_FLAG)
+    {
         epsebar = epse;
+        epse = (p-1) / (p-2) * epsebar;
+    }
     else
         epsebar = (2.0-p) / (1.0-p) * epse;
 
@@ -409,7 +412,7 @@ double emissivity(double nu, double R, double mu, double te,
     if((specType & DEEP_NEWTONIAN_FLAG) && g_m < 1.0)
         g_m = 1.0;
 
-    //Inverse Compton adjustment of lfac_c
+    //Inverse Compton adjustment of g_c
     if(specType & IC_COOLING_FLAG)
     {
         double gr = g_c / g_m;
@@ -605,6 +608,9 @@ double emissivity(double nu, double R, double mu, double te,
             DR = R * d;
         }
     }
+
+    if(specType & FIXED_PL_FLAG)
+        em_lab = epse/(g*g*a*a) * pow(nuprime, p-4);
 
     return R * R * DR * em_lab;
 }

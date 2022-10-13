@@ -737,6 +737,41 @@ void RuThdot3D(double t, double *x, void *argv, double *xdot)
                 dThdt = fac * bew * v_light / R;
             }
         }
+        else if(spread == 9)
+        {
+            //Fernandez & Lamb 2021 spreading.
+            if(th < 0.5*M_PI && u*thC < 100)
+            {
+                double gs = 1 / sqrt((1-bes)*(1+bes));
+                double fac = 1.0;
+                if (th0 < thC)
+                    fac *= tan(0.5*th0)/tan(0.5*thC); //th0/thC;
+                dThdt = fac / (gs*gs * th) * dRdt / R;
+            }
+        }
+        else if(spread == 11)
+        {
+            double envk = 3 - env3mk;
+            double Q = sqrt(2.0)*env3mk;
+            double Q0;
+            if(envk < 2.0)
+                Q0 = 0.5 * (2.0 * (2.0 - envk) + 1.4 * envk);
+            else
+                Q0 = 1.4 * (3.0 - envk);
+
+            if(th < 0.5*M_PI && Q0*u*thC < 1)
+            {
+                double bew = 0.5*sqrt((2*u*u+3)/(4*u*u+3))*bes/g;
+                double fac = u*thC*Q < 1.0 ? 1.0 : Q*(1-Q0*u*thC) / (Q-Q0);
+                if (th0 < thC)
+                    fac *= tan(0.5*th0)/tan(0.5*thC); //th0/thC;
+                double gs = 1.0 / sqrt((1-bes)*(1+bes));
+                double dThdt_lum = fac * v_light / (R * g);
+                dThdt = 4.0 * fac * bew * v_light / R;
+                if(dThdt > dThdt_lum)
+                    dThdt = dThdt_lum;
+            }
+        }
     }
 
     double dEdu = 0.0;
