@@ -8,6 +8,10 @@ Documentation available at <https://afterglowpy.readthedocs.io/>
 
 If you use this code in a publication, please refer to the package by name and cite "Ryan, G., van Eerten, H., Piro, L. and Troja, E., 2020, Astrophysical Journal *896*, 166 (2020)" [arXiv link](https://arxiv.org/abs/1909.11691).
 
+## Acknowledgements
+
+This work is funded in part by the European Union’s Horizon 2020 Programme under the AHEAD2020 project (grant agreement n. 871158).
+
 ## Features
 
 _afterglowpy_ computes synchrotron emission from the forward shock of a relativistic blast wave.  It includes:
