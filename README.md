@@ -53,7 +53,7 @@ $ pip install -e .
 
 In your python code, import the library with `import afterglowpy as grb`.  
 
-The main function of interest is`grb.fluxDensity(t, nu, jetType, specType, **kwargs)`.  See `tests/plotLC.py` for a simple example.
+The main function of interest is`grb.fluxDensity(t, nu, jetType, specType, **kwargs)`.  See `examples/plotLightCurve.py` for a simple example.
 
 `jetType` is an integer code setting the jet structure. It can be `grb.jet.TopHat` (-1, top hat), `grb.jet.Gaussian` (0, Gaussian), `grb.jet.PowerLawCore` (1, Power Law w/ core), `grb.jet.GaussianCore` (2, Gaussian w/ core), `grb.jet.Spherical` (3, Spherical Cocoon), or `grb.jet.PowerLaw` (4, Smooth Power Law).  
 
