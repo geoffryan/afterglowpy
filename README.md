@@ -59,7 +59,7 @@ The main function of interest is`grb.fluxDensity(t, nu, jetType, specType, **kwa
 
 `specType` can be 0 (global cooling time, no inverse compton) or 1 (global cooling time, inverse compton).
 
-For jet-like afterglows (`jetTypes` -2, -1, 0, 1, 2, and 4) `pars` has 11 required keyword arguments:
+For jet-like afterglows (`jetTypes` -2, -1, 0, 1, 2, and 4) `kwargs` has 11 required keyword arguments:
 - `thetaObs` viewing angle in radians
 - `E0` on-axis isotropic equivalent energy in erg
 - `thetaCore` half-width of the jet core in radians (jetType specific)
@@ -72,7 +72,7 @@ For jet-like afterglows (`jetTypes` -2, -1, 0, 1, 2, and 4) `pars` has 11 requir
 - `xi_N` Fraction of electrons that get accelerated
 - `d_L` Luminosity distance in cm
 
-For cocoon-like afterglows (`jetType` 3) `pars` has 14 positional arguments:
+For cocoon-like afterglows (`jetType` 3) `kwargs` has 11 required keyword arguments:
 - `uMax` Initial maximum outflow 4-velocity
 - `uMin` Minium outflow 4-velocity
 - `Er` Fiducial energy in velocity distribution, E(>u) = E<sub>i</sub>  u<sup>-k</sup>.
