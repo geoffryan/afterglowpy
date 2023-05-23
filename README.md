@@ -75,7 +75,7 @@ For jet-like afterglows (`jetTypes` -2, -1, 0, 1, 2, and 4) `kwargs` has 11 requ
 For cocoon-like afterglows (`jetType` 3) `kwargs` has 11 required keyword arguments:
 - `uMax` Initial maximum outflow 4-velocity
 - `uMin` Minium outflow 4-velocity
-- `Er` Fiducial energy in velocity distribution, E(>u) = E<sub>i</sub>  u<sup>-k</sup>.
+- `Er` Fiducial energy in velocity distribution, E(>u) = E<sub>r</sub>  u<sup>-k</sup>.
 - `k` Power-law index of energy velocity distribution  
 - `MFast_solar` Mass of material at `uMax' in solar masses
 - `n0` Number density of ISM, in cm<sup>-3</sup>
