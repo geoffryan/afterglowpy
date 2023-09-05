@@ -364,6 +364,123 @@ void make_R_table(struct fluxParams *pars)
         return;
     }
 }
+double absorption_integral_core(double a, double b, int order)
+{
+    /*
+     * Evaluates \int_0^1  (1-a*x)^2 * \exp(-b*x) dx
+     *
+     * with an approximation encoded by "order"
+     */
+
+    double dV = 3 - 3*a + a*a;
+    double I = dV / (3 + dV*b);
+    
+    if(order  >= 1)
+    {
+        double A = dV/3.0;
+        double B = -(0.5 - 2*a/3.0 + 0.25*a*a);
+        double D = 1.0;
+        double E = -2*a;
+
+        I = (A*(D*D+A*E) + (A*A+B*D)*D*b) / (
+                D*D+A*E + (A*D-B*E)*b + (A*A+B*D)*b*b);
+    }
+
+    return I;
+}
+
+double absorption_integral(double Rb, double dR, double taua, double taub,
+                           int order)
+{
+    /*
+     * Evaluates the integral \int_Ra^Rb R^2 \exp(-tau(R)) dR
+     *
+     * where tau(R) = (Rb-R)/dR * taua  +  (R-Ra)/dR * taub
+     * and Ra = Rb-dR
+     *
+     * this function is mainly to swap arguments depending on whether
+     * tau(Ra) < tau(Rb), as the approximation used to evaluate the integral
+     * requires the argument to the exponential to be negative.
+     */
+
+    if(taub < taua)
+    {
+        return Rb*Rb*dR * exp(-taub)
+                * absorption_integral_core(dR/Rb, taua - taub, order);
+    }
+    else
+    {
+        double Ra = Rb - dR;
+        return Ra*Ra*dR * exp(-taua)
+                * absorption_integral_core(dR/Ra, taub - taua, order);
+    }
+}
+
+void calc_absorption_length(double R, double mu, double delta,
+                              double betaS, double uS,
+                              double *length_back, double *length_front)
+{
+    // betaI = (1-delta) * betaS
+    //
+    // ==> uI = (1-delta) * uS / sqrt(1 + (2-delta)*delta * uS^2)
+
+    double gS = sqrt(1 + uS*uS);
+    
+    double uI = (1-delta) * uS / sqrt(1 + (2-delta)*delta * uS*uS);
+    double gI = sqrt(1 + uI*uI);
+    double betaI = uI / gI;
+
+    double dl_delta = sqrt((2-delta)*delta);
+
+    double dcos1 = gS*((1-delta)*mu - betaS);
+
+    double dl_sphere_front = mu > betaS ? 0.0 : 2*R*gS*gS*(betaS-mu);
+    double dl_sphere_back = 0.0;
+
+    if(dcos1 >= -dl_delta)
+        dl_sphere_back = R*gS*gS * (1-betaS*mu)/(1-betaI*mu)
+                    * (2-delta)*delta
+                    / (gS*(dcos1 + sqrt(dcos1*dcos1 + (2-delta)*delta)));
+    else
+        dl_sphere_back = R*gS * (1-betaS*mu)/(1-betaI*mu)
+                    * (sqrt(dcos1*dcos1 + (2-delta)*delta) - dcos1);
+
+    double dl_cavity_front = 0.0;
+    double dl_cavity_back = mu  > betaI ? 0.0 : 
+            2*R*gI*gI*(1-betaS*mu)/(1-betaI*mu) * (1-delta) * (betaI-mu);
+
+    
+    if(mu < (1-delta)*betaI - dl_delta/gI)
+    {
+        double dcos2 = gI * (mu - (1-delta)*betaI);
+        dl_cavity_front = 2*R*gI * sqrt((dcos2-dl_delta) * (dcos2+dl_delta));
+    }
+
+    /* 
+    if(mu >= betaS)
+        printf("AAA\n");
+    else if(mu >= betaI)
+        printf("BBB\n");
+    else if(mu >= (1-delta)*betaI - dl_delta/gI)
+        printf("CCC\n");
+    else
+        printf("DDD\n");
+
+    printf("betaS=%.3le uS=%.3le gS=%.3le, 1-bS=%.3le, 1-mu*bS=%.3le\n",
+            betaS, uS, gS, 1-betaS, 1-mu*betaS);
+    printf("betaI=%.3le uI=%.3le gI=%.3le, 1-bI=%.3le, 1-mu*bI=%.3le\n",
+            betaI, betaI*gI, gI, 1-betaI, 1-mu*betaI);
+    printf("mu=%.3le d=%.3le\n", mu, gS, delta);
+    printf("dcos1=%.6le\n", dcos1);
+    printf("%.6le  %.6le  %.6le  %.6le\n", dl_sphere_back, dl_sphere_front,
+            dl_cavity_back, dl_cavity_front);
+    */
+
+    *length_back = dl_sphere_back - dl_cavity_back;
+    *length_front = dl_sphere_front - dl_cavity_front;
+
+    //printf("%.6le    %.6le\n", *length_back, *length_front);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -534,6 +651,18 @@ double emissivity(double nu, double R, double mu, double te,
         // Lab frame absorption coefficient
         double abs = abs_com_P * abs_com_freq * a*g;
 
+        double la = 0.0;
+        double lb = 0.0;
+
+        calc_absorption_length(R, mu, DR0/R, betaS, us, &la, &lb);
+
+        if(la < 0.0 || lb < 0.0)
+            return -1.0;
+
+        double taua = la * abs;
+        double taub = lb * abs;
+
+        /*
         // (Signed) Optical depth through this shell.
         // if negative, face is oriented away from observer.
         double dtau;
@@ -541,6 +670,7 @@ double emissivity(double nu, double R, double mu, double te,
             dtau = 1.0e100; // HUGE VAL, just in case
         else
             dtau = abs * DR * (1 - mu*betaS) / (mu - betaS);
+        */
 
 
         // Now that we know the optical depth, we apply it in a way
@@ -549,10 +679,26 @@ double emissivity(double nu, double R, double mu, double te,
         if((specType & SSA_SMOOTH_FLAG) && (specType & SSA_SHARP_FLAG))
         {
             //Special case: use the optically thick limit *everywhere*
+
+            double tau1 = taub;
+            double dtau = taua - taub;
+            double R_correction = 1.0;
+
+            if(taua < taub)
+            {
+                tau1 = taua;
+                dtau = taub - taua;
+                R_correction = (R-DR)/R;
+            }
+
+            em_lab *= R_correction*R_correction*exp(-tau1)/dtau;
+
+            /*
             if(dtau <= 0.0)
                 em_lab = 0.0;
             else
                 em_lab /= dtau;
+            */
         }
         else if(specType & SSA_SMOOTH_FLAG)
         {
@@ -564,6 +710,7 @@ double emissivity(double nu, double R, double mu, double te,
             // back face has extra factor ~ e^-betaS/(mu-betaS)
             //
             // for now ignoring shadowing by the front face.
+            /*
             double abs_fac;
             if(dtau == 0.0)
                 abs_fac = 1.0;
@@ -571,10 +718,17 @@ double emissivity(double nu, double R, double mu, double te,
                 abs_fac = -expm1(-dtau) / dtau;
             else
             {
-                abs_fac = expm1(dtau) / dtau; //* exp(
+                abs_fac = expm1(dtau) / dtau; // * exp(
                             //abs * DR * betaS*mu / (mu - betaS));
             }
+            */
 
+            double abs_fac = absorption_integral(R, DR, taua, taub, 0) 
+                                / (R*R*DR);
+
+            //printf("F %.6le %.6le %.6le %.6le %.6le %.6le\n", abs,
+            //        la, lb, taua, taub, abs_fac);
+                    
             em_lab *= abs_fac;
         }
         else if(specType & SSA_SHARP_FLAG)
@@ -586,6 +740,23 @@ double emissivity(double nu, double R, double mu, double te,
             //
             // e.g. use tau->infty limit if tau > 1.0
 
+            double tau1 = taub;
+            double dtau = taua - taub;
+            double R_correction = 1.0;
+
+            if(taua < taub)
+            {
+                tau1 = taua;
+                dtau = taub - taua;
+                R_correction = (R-DR)/R;
+            }
+
+            double abs_fac = R_correction*R_correction*exp(-tau1)/dtau;
+
+            if(abs_fac < 1.0)
+                em_lab *= abs_fac;
+
+            /*
             // "Forward" face
             if(dtau > 1.0)
                 em_lab /= dtau;
@@ -593,6 +764,7 @@ double emissivity(double nu, double R, double mu, double te,
             // "Back" face --> assume shadowed by front
             else if(dtau < -1.0)
                 em_lab = 0.0;
+            */
         }
     }
     if(specType < 0)
@@ -613,6 +785,17 @@ double emissivity(double nu, double R, double mu, double te,
         em_lab = epse/(g*g*a*a) * pow(nuprime, p-4);
 
     return R * R * DR * em_lab;
+}
+
+double get_u(double mu, struct fluxParams *pars)
+{
+    int ia = searchSorted(mu, pars->mu_table, pars->table_entries);
+    int ib = ia+1;
+    double t_e = interpolateLin(ia, ib, mu, pars->mu_table, pars->t_table, 
+                            pars->table_entries);
+    double u = interpolateLog(ia, ib, t_e, pars->t_table, pars->u_table,
+                                    pars->table_entries);
+    return u;
 }
 
 double costheta_integrand(double aomct, void* params) // inner integral
@@ -926,10 +1109,61 @@ double phi_integrand(double a_phi, void* params) // outer integral
         mesh9Free(&(pars->theta_mesh));
         //printf("Start.  phi = %.16lf  (%.16lg, %.16lg)\n", a_phi,
         //       theta_0, theta_1);
-        result = cadre_adapt(&costheta_integrand, omct0, omct1,
-                              pars->nmax_theta, pars->atol_theta,
-                              pars->rtol_theta, params, NULL, NULL, 0,
-                              check_error, NULL, NULL, &(pars->theta_mesh));
+       
+        double theta_obs = pars->theta_obs;
+
+        if(theta_obs > theta_0 && theta_obs < theta_1)
+        {
+            //double acto = 1 - omcto;
+            //double asto = sqrt(omcto * (1+acto));
+            //double mu = asto * (pars->cp) * (pars->sto) + acto * (pars->cto);
+
+            double u = get_u(1.0, pars);
+            double g = sqrt(1 + u*u);
+
+            if(a_phi * g < 4.0)
+            {
+                double shto = sin(0.5*theta_obs);
+                double omcto = 2 * shto*shto;
+
+                //printf("In middle  %le %le %le\n", theta_0, theta_obs, theta_1);
+                //printf("           %le %le %le\n", omct0, omcto, omct1);
+                
+                double result1 = cadre_adapt(&costheta_integrand, omct0, omcto,
+                                      pars->nmax_theta, pars->atol_theta,
+                                      pars->rtol_theta, params, NULL, NULL, 0,
+                                      check_error, NULL, NULL, &(pars->theta_mesh));
+                mesh9Free(&(pars->theta_mesh));
+                ERR_CHK_DBL(pars)
+                double result2 = cadre_adapt(&costheta_integrand, omcto, omct1,
+                                      pars->nmax_theta, pars->atol_theta,
+                                      pars->rtol_theta, params, NULL, NULL, 0,
+                                      check_error, NULL, NULL, &(pars->theta_mesh));
+                mesh9Free(&(pars->theta_mesh));
+                ERR_CHK_DBL(pars)
+                double result0 = cadre_adapt(&costheta_integrand, omct0, omct1,
+                                      pars->nmax_theta, pars->atol_theta,
+                                      pars->rtol_theta, params, NULL, NULL, 0,
+                                      check_error, NULL, NULL, &(pars->theta_mesh));
+                //printf("           %le %le %le\n", result0, result1, result2);
+                result = result1 + result2;
+            }
+            else
+            {
+                result = cadre_adapt(&costheta_integrand, omct0, omct1,
+                                      pars->nmax_theta, pars->atol_theta,
+                                      pars->rtol_theta, params, NULL, NULL, 0,
+                                      check_error, NULL, NULL, &(pars->theta_mesh));
+            }
+        }
+        else
+        {
+            result = cadre_adapt(&costheta_integrand, omct0, omct1,
+                                  pars->nmax_theta, pars->atol_theta,
+                                  pars->rtol_theta, params, NULL, NULL, 0,
+                                  check_error, NULL, NULL, &(pars->theta_mesh));
+        }
+        //printf("           %le  %le\n", pars->nu_obs, result);
         //printf("End.\n");
     }
     else if(pars->int_type == INT_GK49_ADAPT)
@@ -1285,7 +1519,7 @@ void lc_struct(double *t, double *nu, double *F, long *moment, int Nt,
 void lc_structCore(double *t, double *nu, double *F, long *moment, int Nt,
                         double E_iso_core, 
                         double theta_h_core, double theta_h_wing,
-                        double *theta_c_arr, double *E_iso_arr,
+                                double *theta_c_arr, double *E_iso_arr,
                         int res_cones, double (*f_E)(double,void *),
                         struct fluxParams *pars)
 {
@@ -1360,7 +1594,7 @@ double flux_cone(double t_obs, double nu_obs, long moment,
     //Counter-jet
     if(pars->counterjet)
     {
-        theta_obs_cur = 180*deg2rad - theta_obs;
+        theta_obs_cur = 180*deg2rad + theta_obs;
         set_obs_params(pars, t_obs, nu_obs, moment, theta_obs_cur, 
                         theta_cone_hi, theta_cone_low);
         F2 = flux(pars, atol);

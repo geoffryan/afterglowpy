@@ -207,6 +207,14 @@ double emissivity(double nu, double R, double mu, double te,
                     double epse, double epsB, double ksiN,
                     int specType); //emissivity of
                                                              // a zone.
+
+void calc_absorption_length(double R, double mu, double delta,
+                              double betaS, double uS,
+                              double *length_back, double *length_front);
+double absorption_integral(double Rb, double dR, double taua, double taub,
+                           int order);
+double absorption_integral_core(double a, double b, int order);
+
 double flux(struct fluxParams *pars, double atol); // determine flux for a given t_obs
 
 double flux_cone(double t_obs, double nu_obs, long moment,
