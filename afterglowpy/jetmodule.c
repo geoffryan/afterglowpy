@@ -166,6 +166,7 @@ void initjet(void)
     PyModule_AddIntConstant(module, "Exponential", _exponential);
     PyModule_AddIntConstant(module, "TwoComponent", _twocomponent);
     PyModule_AddIntConstant(module, "Spherical", _spherical);
+    
     PyModule_AddIntConstant(module, "TrapFixed", INT_TRAP_FIXED);
     PyModule_AddIntConstant(module, "TrapAdapt", INT_TRAP_ADAPT);
     PyModule_AddIntConstant(module, "SimpFixed", INT_SIMP_FIXED);
@@ -177,10 +178,13 @@ void initjet(void)
     PyModule_AddIntConstant(module, "GK49Adapt", INT_GK49_ADAPT);
     PyModule_AddIntConstant(module, "GK715Adapt", INT_GK715_ADAPT);
     PyModule_AddIntConstant(module, "GK1021Adapt", INT_GK1021_ADAPT);
+    
     PyModule_AddIntConstant(module, "GammaInf", GAMMA_INF);
     PyModule_AddIntConstant(module, "GammaFlat", GAMMA_FLAT);
     PyModule_AddIntConstant(module, "GammaEvenMass", GAMMA_EVENMASS);
     PyModule_AddIntConstant(module, "GammaStruct", GAMMA_STRUCT);
+
+    PyModule_AddIntConstant(module, "SimpleSpec", SIMPLE_SPEC);
     PyModule_AddIntConstant(module, "ICCooling", IC_COOLING_FLAG);
     PyModule_AddIntConstant(module, "EpsEBar", EPS_E_BAR_FLAG);
     PyModule_AddIntConstant(module, "SSASmooth", SSA_SMOOTH_FLAG);

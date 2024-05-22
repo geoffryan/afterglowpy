@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import afterglowpy as grb
 
 Z = {'jetType':     grb.jet.TopHat,     # Top-Hat jet
-     'specType':    0,                  # Basic Synchrotron Emission Spectrum
+     'specType':    grb.jet.SimpleSpec, # Basic Synchrotron Emission Spectrum
 
      'thetaObs':    0.05,   # Viewing angle in radians
      'E0':          1.0e53, # Isotropic-equivalent energy in erg

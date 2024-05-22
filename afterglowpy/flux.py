@@ -46,8 +46,12 @@ def fluxDensity(t, nu, *args, **kwargs):
         ``jet.PowerLaw``, ``jet.GaussianCore``, ``jet.PowerLawCore``, and
         ``jet.Spherical``.
     specType : int
-        Code for type of spectrum.  Options are: 0 broken power law
-        (Ryan+ 2020), 1 broken power law w/ inverse Compton cooling. Default: 0
+        Flags for type of spectrum/emissivity function. Spectrum flags are
+        available in ``afterglowpy.jet`` and include: ``jet.SimpleSpec``
+        broken power law with nu_m and nu_c (Ryan+ 2020, default),
+        ``jet.ICCooling`` simple inverse-compton contribution to cooling,
+        ``jet.DeepNewtonian`` better handling of late-time emission when 
+        some electrons become non-relativistic (e.g. Sironi+ 2013).
     thetaObs : float
         Viewing angle in radians. Jet models only.
     E0: float
@@ -110,6 +114,14 @@ def fluxDensity(t, nu, *args, **kwargs):
         Whether to include jet spreading. Defaults to True.
     counterjet : {'True', 'False'}, optional
         Whether to include counterjet emission. Defaults to False.
+    moment : array_like, optional
+        An integer array the same shape as the larger of `t` or `nu`. Selects
+        which image moment to compute. Observer's sky is on the x-y plane, 
+        with the jet propagating in the x-direction.  Moments are in terms of
+        proper length (in cm) Options are: `jet.MOM_0` Flux, default,
+        `jet.MOM_X` x^1 moment, `jet.MOM_Y` y^1 moment, `jet.MOM_Z` z^1 moment,
+        `jet.MOM_XX` x^2 moment, `jet.MOM_YY` y^2 moment, `jet.MOM_ZZ`, z^2
+        moment, `jet.MOM_XY` x^1 y^1, `jet.MOM_YZ`, `jet.MOM_XZ`.
     tRes : int, optional
         Time resolution, number of points per decade in t, for shock evolution.
         Defaults to 1000.

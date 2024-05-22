@@ -40,16 +40,16 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            - name: Install Python
-              uses: actions/setup-python@v4
-              with:
-                  python-version: '3.8'
+              # - name: Install Python
+              # uses: actions/setup-python@v4
+              # with:
+              #     python-version: '3.8'
             
             - name: Install afterglowpy
-              run: pip install .
+              run: pipx run build --sdist
 
-            - name: Build sdist
-              run: python setup.py sdist
+                # - name: Build sdist
+                # run: python setup.py sdist
 
             - name: Upload sdist
               uses: actions/upload-artifact@v4

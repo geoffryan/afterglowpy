@@ -53,6 +53,7 @@
 #define _twocomponent 6
 #define _exponential2 7
 
+#define SIMPLE_SPEC 0
 #define IC_COOLING_FLAG 1
 #define EPS_E_BAR_FLAG  2
 #define SSA_SMOOTH_FLAG 4
