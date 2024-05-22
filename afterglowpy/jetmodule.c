@@ -1239,14 +1239,15 @@ static PyObject *jet_shockObs(PyObject *self, PyObject *args)
 static PyObject *jet_find_jet_edge(PyObject *self, PyObject *args)
 {
     double tobs, phi, theta_obs, theta_0;
+    int funcVer;
     PyObject *t_obj = NULL;
     PyObject *R_obj = NULL;
     PyObject *thj_obj = NULL;
     
 
     //Parse Arguments
-    if(!PyArg_ParseTuple(args, "OOOdddd", &t_obj, &R_obj, &thj_obj, &tobs,
-                         &phi, &theta_obs, &theta_0))
+    if(!PyArg_ParseTuple(args, "OOOddddi", &t_obj, &R_obj, &thj_obj, &tobs,
+                         &phi, &theta_obs, &theta_0, &funcVer))
     {
         //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
         return NULL;
@@ -1306,10 +1307,33 @@ static PyObject *jet_find_jet_edge(PyObject *self, PyObject *args)
     for(i=0; i<N; i++)
         mu[i] = (t[i] - tobs) * v_light / R[i];
 
-    double th = find_jet_edge(phi, cos(theta_obs), sin(theta_obs), theta_0,
-                              mu, thj, N);
+    double *cth = (double *)malloc(N * sizeof(double));
+    double *sth = (double *)malloc(N * sizeof(double));
+    for(i=0; i<N; i++)
+    {
+        cth[i] = cos(thj[i]);
+        sth[i] = sin(thj[i]);
+    }
+
+    int idx_mu_neg1 = searchSorted(-1.0, mu, N);
+    if(idx_mu_neg1 > 0)
+        idx_mu_neg1--;
+    
+    int idx_mu_pos1 = searchSorted(1.0, mu, N);
+    if(idx_mu_pos1 + 1 < N)
+        idx_mu_pos1++;
+
+    double th;
+    if(funcVer)
+        th = find_jet_edge(phi, cos(theta_obs), sin(theta_obs), theta_0,
+                              mu, thj, N, idx_mu_neg1, idx_mu_pos1, cth, sth);
+    else
+        th = find_jet_edge_old(phi, cos(theta_obs), sin(theta_obs), theta_0,
+                              mu, thj, N, idx_mu_neg1, idx_mu_pos1, cth, sth);
 
     free(mu);
+    free(cth);
+    free(sth);
 
     PyObject *ret = Py_BuildValue("d", th);
     

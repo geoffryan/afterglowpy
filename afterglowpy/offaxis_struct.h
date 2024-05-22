@@ -153,6 +153,8 @@ struct fluxParams
     double *u_table;
     double *th_table;
     double *mu_table;
+    double *cth_table;
+    double *sth_table;
     int table_entries;
 
     double *t_table_inner;
@@ -160,7 +162,14 @@ struct fluxParams
     double *u_table_inner;
     double *th_table_inner;
     double *mu_table_inner;
+    double *cth_table_inner;
+    double *sth_table_inner;
     int table_entries_inner;
+
+    int idx_mu_neg1;
+    int idx_mu_pos1;
+    int idx_mu_neg1_inner;
+    int idx_mu_pos1_inner;
 
     Mesh9 phi_mesh;
     Mesh9 theta_mesh;
@@ -195,11 +204,17 @@ double f_Etot_powerlaw(void *params);
 void make_R_table(struct fluxParams *pars);
 void make_mu_table(struct fluxParams *pars);
 double check_t_e(double t_e, double mu, double t_obs, double *mu_table, int N);
-int searchSorted(double x, double *arr, int N);
+int searchSorted(double x, const double *arr, int N);
 double interpolateLin(int a, int b, double x, double *X, double *Y, int N);
 double interpolateLog(int a, int b, double x, double *X, double *Y, int N);
+double find_jet_edge_old(double phi, double cto, double sto, double theta0,
+                     const double *a_mu, const double *a_thj, int N,
+                     int idx_mu_neg1, int idx_mu_pos1,
+                     const double *a_cthj, const double *a_sthj);
 double find_jet_edge(double phi, double cto, double sto, double theta0,
-                     double *a_mu, double *a_thj, int N);
+                      const double *a_mu, const double *a_thj, int N,
+                      int idx_mu_neg1, int idx_mu_pos1,
+                      const double *a_cthj, const double *a_sthj);
 double costheta_integrand(double a_theta, void* params); // inner integral
 double phi_integrand(double a_phi, void* params); // outer integral
 double emissivity(double nu, double R, double mu, double te,
