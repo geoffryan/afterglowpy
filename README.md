@@ -22,11 +22,12 @@ _afterglowpy_ computes synchrotron emission from the forward shock of a relativi
 - Angularly structured jets, ie. E(&theta;)
 - Spherical velocity-stratified outflows, ie. E(u)
 - Counter-jet emission.
+- Deep Newtonian emission.
+- Image moments suitable for astrometry: centroid position and image size.
 
 It has limited support (these should be considered experimental) for:
 - Initial energy injection
 - Inverse comption spectra
-- Spatially-resolved intensity maps
 - Early coasting phase
 
 It does not include (yet):
@@ -53,13 +54,12 @@ $ pip install -e .
 
 In your python code, import the library with `import afterglowpy as grb`.  
 
-The main function of interest is`grb.fluxDensity(t, nu, jetType, specType, **kwargs)`.  See `examples/plotLightCurve.py` for a simple example.
+The main function of interest is`grb.fluxDensity(t, nu, **kwargs)`.  See `examples/plotLightCurve.py` for a simple example.
 
-`jetType` is an integer code setting the jet structure. It can be `grb.jet.TopHat` (-1, top hat), `grb.jet.Gaussian` (0, Gaussian), `grb.jet.PowerLawCore` (1, Power Law w/ core), `grb.jet.GaussianCore` (2, Gaussian w/ core), `grb.jet.Spherical` (3, Spherical Cocoon), or `grb.jet.PowerLaw` (4, Smooth Power Law).  
+For jet-like afterglows there are up to 13 required keyword arguments:
 
-`specType` can be 0 (global cooling time, no inverse compton) or 1 (global cooling time, inverse compton).
-
-For jet-like afterglows (`jetTypes` -2, -1, 0, 1, 2, and 4) `kwargs` has 11 required keyword arguments:
+- `jetType` an integer code setting the jet structure. It can be `grb.jet.TopHat`, `grb.jet.Gaussian`, `grb.jet.PowerLawCore`, `grb.jet.GaussianCore`, `grb.jet.Spherical`, or `grb.jet.PowerLaw`.  
+- `specType` an integer code specifying flags for the emissivity function and spectrum. Can be `grb.jet.SimpleSpec` (basic spectrum with &nu;<sub>m</sub> and &nu;<sub>c</sub>), `grb.jet.DeepNewtonian`, `grb.jet.ICCooling` (simple inverse Compton effects on the cooling frequency, experimental).
 - `thetaObs` viewing angle in radians
 - `E0` on-axis isotropic equivalent energy in erg
 - `thetaCore` half-width of the jet core in radians (jetType specific)
@@ -72,28 +72,17 @@ For jet-like afterglows (`jetTypes` -2, -1, 0, 1, 2, and 4) `kwargs` has 11 requ
 - `xi_N` Fraction of electrons that get accelerated
 - `d_L` Luminosity distance in cm
 
-For cocoon-like afterglows (`jetType` 3) `kwargs` has 11 required keyword arguments:
-- `uMax` Initial maximum outflow 4-velocity
-- `uMin` Minium outflow 4-velocity
-- `Er` Fiducial energy in velocity distribution, E(>u) = E<sub>r</sub>  u<sup>-k</sup>.
-- `k` Power-law index of energy velocity distribution  
-- `MFast_solar` Mass of material at `uMax' in solar masses
-- `n0` Number density of ISM, in cm<sup>-3</sup>
-- `p` Electron distribution power-law index (p>2)
-- `epsilon_e` Thermal energy fraction in electrons
-- `epsilon_B` Thermal energy fraction in magnetic field
-- `xi_N` Fraction of electrons that get accelerated
-- `d_L` Luminosity distance in cm
-
 Optional keyword arguments for all models are:
 - `z` redshift (defaults to 0)
+- `spread` boolean (defaults to True), whether to allow the jet to spread.
+- `counterjet` boolean (defaults to False), whether to include the counterjet
+- `moment` array (integer dtype, same shape as t and nu) which sky moment to compute.
 - `L0` Fiducial luminosity for energy injection, in erg/s, default 0.0.
 - `q` Temporal power-law index for energy injection, default 0.0.
 - `ts` Fiducial time-scale for energy injection, in seconds, default 0.
 - `tRes` time resolution of shock-evolution scheme, number of sample points per decade in time
 - `latRes` latitudinal resolution for structured jets, number of shells per `thetaC`
 - `rtol` target relative tolerance of flux integration
-- `spread` boolean (defaults to True), whether to allow the jet to spread.
 
 
 

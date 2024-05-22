@@ -4,7 +4,7 @@ import afterglowpy as grb
 
 # Jet Parameters
 Z = {'jetType':     grb.jet.Gaussian,     # Gaussian jet
-     'specType':    0,                  # Basic Synchrotron Emission Spectrum
+     'specType':    grb.jet.SimpleSpec,   # Basic Synchrotron Emission Spectrum
 
      'thetaObs':    0.3,   # Viewing angle in radians
      'E0':          1.0e53, # Isotropic-equivalent energy in erg

@@ -56,7 +56,7 @@ setup(
         "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",
         "Topic :: Scientific/Engineering :: Astronomy"],
-    install_requires=['numpy>=1.10', 'scipy>=0.14'],
+    install_requires=['numpy>=1.13', 'scipy>=0.14'],
     extras_require={
         'docs': ['numpydoc']
         },

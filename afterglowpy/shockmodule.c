@@ -100,11 +100,16 @@ static PyObject *shock_shockEvolRK4(PyObject *self, PyObject *args)
     PyObject *t_obj = NULL;
 
     double R0, u0;
-    double Mej, rho0, Einj, k, umin, L0, q, ts;
+    double Mej, rho0_env, R0_env, k_env, rho1_env, Einj, k, umin, L0, q, ts;
+    int envType;
 
     //Parse Arguments
-    if(!PyArg_ParseTuple(args, "Odddddddddd", &t_obj, &R0, &u0, &Mej, &rho0,
-                                            &Einj, &k, &umin, &L0, &q, &ts))
+    if(!PyArg_ParseTuple(args, "Odd""d""idddd""ddd""ddd",
+                         &t_obj, &R0, &u0,
+                         &Mej,
+                         &envType, &rho0_env, &R0_env, &k_env, &rho1_env,
+                         &Einj, &k, &umin,
+                         &L0, &q, &ts))
     {
         PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
         return NULL;
@@ -151,8 +156,14 @@ static PyObject *shock_shockEvolRK4(PyObject *self, PyObject *args)
     double *u = PyArray_DATA((PyArrayObject *) u_obj);
 
     // Evolve the shock!
-    double shockArgs[9] = {u0, Mej, rho0, Einj, k, umin, L0, q, ts};
-    shockEvolveRK4(t, R, u, N, R0, u0, shockArgs);
+    struct shockParams shock_pars;
+    setup_shockParams(&shock_pars, 0, 0.0, Mej,
+                      envType, rho0_env, R0_env, k_env, rho1_env,
+                      L0, q, 1.0e3, ts,
+                      Einj, k, umin,
+                      0.0, 0.0, 0.0);
+    //double shockArgs[9] = {0.0, Mej, rho0, Einj, k, umin, L0, q, ts};
+    shockEvolveRK4(t, R, u, N, R0, u0, &shock_pars);
 
     // Clean up!
     Py_DECREF(t_arr);
@@ -168,12 +179,19 @@ static PyObject *shock_shockEvolSpreadRK4(PyObject *self, PyObject *args)
     PyObject *t_obj = NULL;
 
     double R0, u0, th0;
-    double Mej, rho0, Einj, k, umin, L0, q, ts, thC;
+    double Mej, rho0_env, R0_env, k_env, rho1_env;
+    double Einj, k, umin, L0, q, ts, thC;
+    int envType;
     int spread;
 
     //Parse Arguments
-    if(!PyArg_ParseTuple(args, "Oddddddddddddi", &t_obj, &R0, &u0, &th0, 
-                                &Mej, &rho0, &Einj, &k, &umin, &L0, &q, &ts,
+    if(!PyArg_ParseTuple(args, "Oddd""d""idddd""ddd""ddd""di",
+                                &t_obj, &R0, &u0, &th0, 
+                                &Mej, 
+                                &envType, &rho0_env, &R0_env, &k_env,
+                                    &rho1_env,
+                                &Einj, &k, &umin, 
+                                &L0, &q, &ts,
                                 &thC, &spread))
     {
         PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
@@ -224,9 +242,17 @@ static PyObject *shock_shockEvolSpreadRK4(PyObject *self, PyObject *args)
     double *th = PyArray_DATA((PyArrayObject *) th_obj);
 
     // Evolve the shock!
-    double shockArgs[12] = {u0, Mej, rho0, Einj, k, umin, L0, q, ts, thC, th0,
-                            thC};
-    shockEvolveSpreadRK4(t, R, u, th, N, R0, u0, th0, shockArgs, spread);
+    //double shockArgs[12] = {0.0, Mej, rho0, Einj, k, umin, L0, q, ts, thC, th0,
+    //                        thC};
+    
+    struct shockParams shock_pars;
+    setup_shockParams(&shock_pars, spread, 0.0, Mej,
+                        envType, rho0_env, R0_env, k_env, rho1_env,
+                        L0, q, 1.0e3, ts,
+                        Einj, k, umin,
+                        thC, th0, thC);
+
+    shockEvolveSpreadRK4(t, R, u, th, N, R0, u0, th0, &shock_pars);
 
     // Clean up!
     Py_DECREF(t_arr);

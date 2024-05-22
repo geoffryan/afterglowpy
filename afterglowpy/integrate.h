@@ -47,7 +47,7 @@ double hybrid_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
 double cadre_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
                   double atol, double rtol, void *args, int *Neval,
                   double *eps, int verbose, int (*errf)(void *),
-                  double *pfa, double *pfb);
+                  double *pfa, double *pfb, Mesh9 *mout);
 double gk49_adapt(double (*f)(double, void *), double xa, double xb, int Nmax,
                   double atol, double rtol, void *args, int *Neval,
                   double *eps, int verbose, int (*errf)(void *));

@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <math.h>
 #include "integrate.h"
+#include "interval.h"
 
 #define ERR_CHK_VOID(pars) if(pars->error){ return;}
 #define ERR_CHK_INT(pars) if(pars->error){ return 0;}
@@ -52,10 +53,15 @@
 #define _twocomponent 6
 #define _exponential2 7
 
+#define SIMPLE_SPEC 0
 #define IC_COOLING_FLAG 1
 #define EPS_E_BAR_FLAG  2
 #define SSA_SMOOTH_FLAG 4
 #define SSA_SHARP_FLAG  8
+#define NO_COOLING_FLAG  16
+#define DEEP_NEWTONIAN_FLAG  32
+#define BULK_BM_FLAG  64
+#define FIXED_PL_FLAG  128
 
 enum{INT_TRAP_FIXED, INT_TRAP_ADAPT, INT_SIMP_FIXED, INT_SIMP_ADAPT,
      INT_ROMB_ADAPT, INT_TRAP_NL, INT_HYBRID, INT_CADRE,
@@ -64,11 +70,15 @@ enum{INT_TRAP_FIXED, INT_TRAP_ADAPT, INT_SIMP_FIXED, INT_SIMP_ADAPT,
 
 enum{GAMMA_INF, GAMMA_FLAT, GAMMA_EVENMASS, GAMMA_STRUCT};
 
+enum{MOM_0, MOM_X, MOM_Y, MOM_Z, MOM_XX, MOM_YY, MOM_ZZ,
+     MOM_XY, MOM_YZ, MOM_XZ};
+
 struct fluxParams
 {
     double theta;
     double phi;
     double cp;
+    double sp;
     double ct;
     double st;
     double cto;
@@ -78,6 +88,7 @@ struct fluxParams
     double t_obs;
     double nu_obs;
     double d_L;
+    long moment;
 
     double E_iso;
     double n_0;
@@ -99,15 +110,19 @@ struct fluxParams
     double theta_core_global;
 
     int envType;
-    double As;
-    double Rwind;
+    double R0_env;
+    double k_env;
+    double rho1_env;
 
-    double L0;
-    double q;
-    double ts;
+    double L0_inj;
+    double q_inj;
+    double t0_inj;
+    double ts_inj;
     
     double current_theta_cone_hi;
     double current_theta_cone_low;
+    double current_theta_b;
+    double current_theta_a;
     double theta_obs_cur;
     int tRes;
     int latRes;
@@ -132,12 +147,15 @@ struct fluxParams
     double C_STsqrd;
 
     double t_NR;
+    int cur_entry;
 
     double *t_table;
     double *R_table;
     double *u_table;
     double *th_table;
     double *mu_table;
+    double *cth_table;
+    double *sth_table;
     int table_entries;
 
     double *t_table_inner;
@@ -145,7 +163,17 @@ struct fluxParams
     double *u_table_inner;
     double *th_table_inner;
     double *mu_table_inner;
+    double *cth_table_inner;
+    double *sth_table_inner;
     int table_entries_inner;
+
+    int idx_mu_neg1;
+    int idx_mu_pos1;
+    int idx_mu_neg1_inner;
+    int idx_mu_pos1_inner;
+
+    Mesh9 phi_mesh;
+    Mesh9 theta_mesh;
 
     int spec_type;
     int gamma_type;
@@ -177,20 +205,36 @@ double f_Etot_powerlaw(void *params);
 void make_R_table(struct fluxParams *pars);
 void make_mu_table(struct fluxParams *pars);
 double check_t_e(double t_e, double mu, double t_obs, double *mu_table, int N);
-int searchSorted(double x, double *arr, int N);
+int searchSorted(double x, const double *arr, int N);
 double interpolateLin(int a, int b, double x, double *X, double *Y, int N);
 double interpolateLog(int a, int b, double x, double *X, double *Y, int N);
+double find_jet_edge_old(double phi, double cto, double sto, double theta0,
+                     const double *a_mu, const double *a_thj, int N,
+                     int idx_mu_neg1, int idx_mu_pos1,
+                     const double *a_cthj, const double *a_sthj);
 double find_jet_edge(double phi, double cto, double sto, double theta0,
-                     double *a_mu, double *a_thj, int N);
+                      const double *a_mu, const double *a_thj, int N,
+                      int idx_mu_neg1, int idx_mu_pos1,
+                      const double *a_cthj, const double *a_sthj);
 double costheta_integrand(double a_theta, void* params); // inner integral
 double phi_integrand(double a_phi, void* params); // outer integral
 double emissivity(double nu, double R, double mu, double te,
-                    double u, double us, double n0, double p, double epse,
-                    double epsB, double ksiN, int specType); //emissivity of
+                    double u, double us, double rho0, double Msw, double p,
+                    double epse, double epsB, double ksiN,
+                    int specType); //emissivity of
                                                              // a zone.
+
+void calc_absorption_length(double R, double mu, double delta,
+                              double betaS, double uS,
+                              double *length_back, double *length_front);
+double absorption_integral(double Rb, double dR, double taua, double taub,
+                           int order);
+double absorption_integral_core(double a, double b, int order);
+
 double flux(struct fluxParams *pars, double atol); // determine flux for a given t_obs
 
-double flux_cone(double t_obs, double nu_obs, double E_iso, double theta_h,
+double flux_cone(double t_obs, double nu_obs, long moment,
+                    double E_iso, double theta_h,
                     double theta_cone_low, double theta_cone_hi,
                     double atol, struct fluxParams *pars);
 double intensity(double theta, double phi, double tobs, double nuobs,
@@ -232,34 +276,27 @@ void shockVals_structCore(double *theta, double *phi, double *tobs,
                         double theta_h_core, double theta_h_wing,
                         int res_cones, double (*f_E)(double,void *),
                         struct fluxParams *pars);
-void lc_tophat(double *t, double *nu, double *F, int Nt,
+void lc_tophat(double *t, double *nu, double *F, long *moment, int Nt,
                 double E_iso, double theta_h, struct fluxParams *pars);
-void lc_cone(double *t, double *nu, double *F, int Nt, double E_iso,
-                double theta_h, double theta_wing, struct fluxParams *pars);
-void lc_powerlawCore(double *t, double *nu, double *F, int Nt,
-                    double E_iso_core, double theta_h_core, 
-                    double theta_h_wing, double beta,
-                    double *theta_c_arr, double *E_iso_arr,
-                    int res_cones, struct fluxParams *pars);
-void lc_powerlaw(double *t, double *nu, double *F, int Nt,
-                    double E_iso_core, double theta_h_core, 
-                    double theta_h_wing,
-                    double *theta_c_arr, double *E_iso_arr,
-                    int res_cones, struct fluxParams *pars);
-void lc_Gaussian(double *t, double *nu, double *F, int Nt,
+void lc_cone(double *t, double *nu, double *F, long *moment, int Nt,
+                double E_iso, double theta_h, double theta_wing,
+                struct fluxParams *pars);
+void lc_struct(double *t, double *nu, double *F, long *moment, int Nt,
                         double E_iso_core, 
                         double theta_h_core, double theta_h_wing,
                         double *theta_c_arr, double *E_iso_arr,
-                        int res_cones, struct fluxParams *pars);
-void lc_GaussianCore(double *t, double *nu, double *F, int Nt,
-                        double E_iso_core,
+                        int res_cones, double (*f_E)(double,void *),
+                        struct fluxParams *pars);
+void lc_structCore(double *t, double *nu, double *F, long *moment, int Nt,
+                        double E_iso_core, 
                         double theta_h_core, double theta_h_wing,
                         double *theta_c_arr, double *E_iso_arr,
-                        int res_cones, struct fluxParams *pars);
+                        int res_cones, double (*f_E)(double,void *),
+                        struct fluxParams *pars);
 
 void calc_flux_density(int jet_type, int spec_type, 
-                            double *t, double *nu, double *Fnu, int N,
-                            struct fluxParams *fp);
+                            double *t, double *nu, double *Fnu, long *moment,
+                            int N, struct fluxParams *fp);
 void calc_intensity(int jet_type, int spec_type, double *theta, double *phi,
                             double *t, double *nu, double *Inu, int N,
                             struct fluxParams *fp);
@@ -271,13 +308,15 @@ void setup_fluxParams(struct fluxParams *pars,
                     double d_L,
                     double theta_obs,
                     double E_iso_core, double theta_core, double theta_wing,
-                    double b, double L0, double q, double ts, 
+                    double b,
+                    double L0_inj, double q_inj, double t0_inj, double ts_inj, 
                     double n_0,
                     double p,
                     double epsilon_E,
                     double epsilon_B, 
                     double ksi_N,
                     double g0,
+                    int envType, double R0_env, double k_env, double rho1_env, 
                     double E_core_global,
                     double theta_core_global,
                     double ta, double tb,
@@ -287,8 +326,10 @@ void setup_fluxParams(struct fluxParams *pars,
                     int spec_type,
                     double *mask, int nmask,
                     int spread, int counterjet, int gamma_type);
+
 void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h);
-void set_obs_params(struct fluxParams *pars, double t_obs, double nu_obs,
+void set_obs_params(struct fluxParams *pars,
+                        double t_obs, double nu_obs, long moment,
                         double theta_obs_cur, double current_theta_cone_hi, 
                         double current_theta_cone_low);
 int check_error(void *params);
