@@ -1,5 +1,5 @@
 #include <Python.h>
-#define NPY_NO_DEPRECATED_API NPY_1_11_API_VERSION
+#define NPY_NO_DEPRECATED_API NPY_1_13_API_VERSION
 #include <numpy/arrayobject.h>
 #include <time.h>
 #include "offaxis_struct.h"
