@@ -2,6 +2,8 @@
 #include "offaxis_struct.h"
 #include "shockEvolution.h"
 
+double GAMMA_FUNC_1_3 = 0.0;
+
 double dmin(const double a, const double b)
 {
     if(a <= b)
@@ -618,6 +620,9 @@ double emissivity(double nu, double R, double mu, double te,
     if(specType & NO_COOLING_FLAG)
         nu_c = 1.0e200;
 
+    //TODO: Remove this hack
+    double em_m;
+
     // set frequency dependence
     if (nu_c > nu_m)
     {
@@ -637,6 +642,8 @@ double emissivity(double nu, double R, double mu, double te,
                     * pow(nuprime / nu_c, -0.5*p);
             back_pow = (-6+13*p - (6-p)*eff_k)/(12*(4-eff_k));
         }
+
+        em_m = em;
     }
     else
     {
@@ -655,6 +662,8 @@ double emissivity(double nu, double R, double mu, double te,
             freq = sqrt(nu_c/nu_m) * pow(nuprime / nu_m, -0.5 * p);
             back_pow = (-6+13*p - (6-p)*eff_k)/(12*(4-eff_k));
         }
+
+        em_m = em; // * pow(nu_m / nu_c, -0.5);
     }
 
     if(em != em || em < 0.0)
@@ -676,17 +685,32 @@ double emissivity(double nu, double R, double mu, double te,
     if(specType & (SSA_SMOOTH_FLAG | SSA_SHARP_FLAG))
     {
         // Co-moving frame absorption coefficient
-        double abs_com_P = sqrt(3) * e_e*e_e*e_e * (p-1)*(p+2)*nprime*B
-                            / (16*M_PI * m_e*m_e*v_light*v_light
-                                * g_m * nuprime*nuprime);
+        //double abs_com_P = sqrt(3) * e_e*e_e*e_e * (p-1)*(p+2)*nprime*B*ksiN
+        //                    / (16*M_PI * m_e*m_e*v_light*v_light
+        //                        * g_m * nu_m*nu_m);
+        //TODO quick abs coeff fix?
+        if(GAMMA_FUNC_1_3 <= 0.0)
+            GAMMA_FUNC_1_3 = tgamma(1.0/3.0);
+        double abs_com_P = cbrt(2) * sqrt(3) * GAMMA_FUNC_1_3 * GAMMA_FUNC_1_3
+                            * (p-1) * e_e*e_e*e_e * nprime*B*ksiN
+                            / (10*M_PI * m_e*m_e*v_light*v_light
+                                * (3*p+2) * g_m * nu_m*nu_m);
         double abs_com_freq;
         if(nuprime < nu_m)
-            abs_com_freq = pow(nuprime / nu_m, 1.0/3.0);
+            abs_com_freq = pow(nuprime / nu_m, -5.0/3.0);
         else
-            abs_com_freq = pow(nuprime / nu_m, -0.5*p);
+            abs_com_freq = pow(nuprime / nu_m, -0.5*(p+4));
 
         // Lab frame absorption coefficient
         double abs = abs_com_P * abs_com_freq * a*g;
+
+        //TODO: Remove this HACK
+        /*
+        if(nuprime > nu_m)
+            em_lab = em_m * pow(nuprime/nu_m, 0.5*(1-p)) / (g*g * a*a);
+        else
+            em_lab = em_m * pow(nuprime/nu_m, 1.0/3.0) / (g*g * a*a);
+        */
 
         double la = 0.0;
         double lb = 0.0;
@@ -728,7 +752,20 @@ double emissivity(double nu, double R, double mu, double te,
                 R_correction = (R-DR)/R;
             }
 
-            em_lab *= R_correction*R_correction*exp(-tau1)/dtau;
+            //printf("R: %.18le u: %.18le g: %.18le b: %.18le\n", R, u, g, beta);
+            //printf("  uS: %.18le bS: %.18le\n", us, betaS);
+            //printf("  la: %.18le lb: %.18le abs: %.18le Rcorr: %.18le t1: %.18le ta: %.18le tb: %.18le dt: %.18le et1: %.18le\n", la, lb, abs, R_correction, tau1, taua, taub, dtau, exp(-tau1));
+
+            //em_lab *= R_correction*R_correction*exp(-tau1)/dtau;
+            
+
+            
+            //if(mu > betaS)
+                em_lab *= R_correction*R_correction/taua;
+            //else
+            //    em_lab *= 0.0;
+
+
 
             /*
             if(dtau <= 0.0)
@@ -765,8 +802,19 @@ double emissivity(double nu, double R, double mu, double te,
 
             //printf("F %.6le %.6le %.6le %.6le %.6le %.6le\n", abs,
             //        la, lb, taua, taub, abs_fac);
-                    
-            em_lab *= abs_fac;
+           
+            //TODO: TEST AND CHECK THIS COOLING NONSENSE
+            double sharp_cooling_corr = 1.0;
+            if(nu_c < nu_m)
+                sharp_cooling_corr = pow(nu_c/nu_m, 1.0/3.0);
+
+            double tau = 0.5*(taua + taub);
+
+            double w = 1 / (1 + tau);
+            
+            double cooling_corr = w + (1-w) * sharp_cooling_corr;
+            
+            em_lab *= abs_fac * cooling_corr;
         }
         else if(specType & SSA_SHARP_FLAG)
         {

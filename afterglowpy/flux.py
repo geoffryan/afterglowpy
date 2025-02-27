@@ -169,9 +169,9 @@ def fluxDensity(t, nu, *args, **kwargs):
     jetType = argsDict['jetType']
 
     if jetType == jet.Spherical:
-        checkCocoonArgs(**argsDict)
+        checkCocoonArgs(argsDict)
     else:
-        checkJetArgs(**argsDict)
+        checkJetArgs(argsDict)
 
 
     # arguments are good, full steam ahead!
@@ -376,9 +376,9 @@ def intensity(theta, phi, t, nu, *args, **kwargs):
     jetType = argsDict['jetType']
 
     if jetType == jet.Spherical:
-        checkCocoonArgs(**argsDict)
+        checkCocoonArgs(argsDict)
     else:
-        checkJetArgs(**argsDict)
+        checkJetArgs(argsDict)
 
     # arguments are good, full steam ahead!
 
@@ -491,9 +491,12 @@ def checkThetaPhiTNu(theta, phi, t, nu):
     return theta, phi, t, nu
 
 
-def checkJetArgs(**argsDict):
+def checkJetArgs(argsDict):
 
-    return
+    if 'ignoreBounds' in argsDict:
+        ignore = argsDict.pop('ignoreBounds')
+        if ignore:
+            return
 
     jetType = argsDict['jetType']
     specType = argsDict['specType']
@@ -509,8 +512,8 @@ def checkJetArgs(**argsDict):
     dL = argsDict['d_L']
 
     # More-or-less universal bounds
-    if theta_obs < 0.0 or theta_obs > 0.5*np.pi:
-        raise ValueError("theta_obs must be in [0.0, pi/2]")
+    if theta_obs < 0.0 or theta_obs > np.pi:
+        raise ValueError("theta_obs must be in [0.0, pi]")
     if E0 <= 0.0:
         raise ValueError("E0 must be positive")
     if jetType != jet.Cone and (theta_c <= 0.0 or theta_c > 0.5*np.pi):
@@ -519,9 +522,9 @@ def checkJetArgs(**argsDict):
         raise ValueError("theta_c must be in [0.0, pi/2]")
     if n0 <= 0.0:
         raise ValueError("n0 must be positive")
-    if specType != 2 and p <= 2.0:
+    if (specType & jet.EpsEBar) == 0 and p <= 2.0:
         raise ValueError("p must be in (2, inf)")
-    if specType == 2 and p <= 1.0:
+    if (specType & jet.EpsEBar) != 0 and p <= 1.0:
         raise ValueError("p must be in (1, inf)")
     if epse <= 0.0 or epse > 1.0:
         raise ValueError("epsilon_e must be in (0, 1]")
@@ -586,7 +589,12 @@ def checkJetArgs(**argsDict):
     return
 
 
-def checkCocoonArgs(**argsDict):
+def checkCocoonArgs(argsDict):
+
+    if 'ignoreBounds' in argsDict:
+        ignore = argsDict.pop('ignoreBounds')
+        if ignore:
+            return
 
     for _, x in argsDict.items():
         if not np.isfinite(x):

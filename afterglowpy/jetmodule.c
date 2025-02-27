@@ -36,7 +36,7 @@ static const int gamma_type_default = GAMMA_INF;
 static const double g0_default = -1.0;
 
 static const int envType_default = ENV_ISM;
-static const double R0_env_default = 1e18;
+static const double R0_env_default = 1e17;
 static const double k_env_default = 0.0;
 static const double rho1_env_default = 1.0;
 
