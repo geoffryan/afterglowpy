@@ -23,12 +23,12 @@ libdirs = []
 jetsources = ["afterglowpy/jetmodule.c", "afterglowpy/offaxis_struct_funcs.c",
               "afterglowpy/integrate.c", "afterglowpy/shockEvolution.c",
               "afterglowpy/interval.c"]
-jetdepends = ["afterglowpy/offaxis_struct_funcs.h",
+jetdepends = ["afterglowpy/offaxis_struct.h",
               "afterglowpy/shockEvolution.h", "afterglowpy/interval.h"]
 
 shocksources = ["afterglowpy/shockmodule.c", "afterglowpy/shockEvolution.c"]
 shockdepends = ["afterglowpy/shockEvolution.h",
-                "afterglowpy/offaxis_struct_funcs.h"]
+                "afterglowpy/offaxis_struct.h"]
 
 jetmodule = Extension('afterglowpy.jet', sources=jetsources, include_dirs=inc,
                       depends=jetdepends, extra_compile_args=['-Wall'])

@@ -17,6 +17,8 @@
  * respectively.
  */
 
+#undef I
+
 struct Interval
 {
     double a;

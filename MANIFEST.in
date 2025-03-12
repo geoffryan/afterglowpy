@@ -1,1 +1,1 @@
-include version.py afterglowpy/*.h
+include afterglowpy/version.py afterglowpy/*.h

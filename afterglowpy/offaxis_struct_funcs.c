@@ -620,9 +620,6 @@ double emissivity(double nu, double R, double mu, double te,
     if(specType & NO_COOLING_FLAG)
         nu_c = 1.0e200;
 
-    //TODO: Remove this hack
-    double em_m;
-
     // set frequency dependence
     if (nu_c > nu_m)
     {
@@ -642,8 +639,6 @@ double emissivity(double nu, double R, double mu, double te,
                     * pow(nuprime / nu_c, -0.5*p);
             back_pow = (-6+13*p - (6-p)*eff_k)/(12*(4-eff_k));
         }
-
-        em_m = em;
     }
     else
     {
@@ -662,8 +657,6 @@ double emissivity(double nu, double R, double mu, double te,
             freq = sqrt(nu_c/nu_m) * pow(nuprime / nu_m, -0.5 * p);
             back_pow = (-6+13*p - (6-p)*eff_k)/(12*(4-eff_k));
         }
-
-        em_m = em; // * pow(nu_m / nu_c, -0.5);
     }
 
     if(em != em || em < 0.0)
@@ -704,14 +697,6 @@ double emissivity(double nu, double R, double mu, double te,
         // Lab frame absorption coefficient
         double abs = abs_com_P * abs_com_freq * a*g;
 
-        //TODO: Remove this HACK
-        /*
-        if(nuprime > nu_m)
-            em_lab = em_m * pow(nuprime/nu_m, 0.5*(1-p)) / (g*g * a*a);
-        else
-            em_lab = em_m * pow(nuprime/nu_m, 1.0/3.0) / (g*g * a*a);
-        */
-
         double la = 0.0;
         double lb = 0.0;
 
@@ -723,56 +708,15 @@ double emissivity(double nu, double R, double mu, double te,
         double taua = la * abs;
         double taub = lb * abs;
 
-        /*
-        // (Signed) Optical depth through this shell.
-        // if negative, face is oriented away from observer.
-        double dtau;
-        if(mu == betaS)
-            dtau = 1.0e100; // HUGE VAL, just in case
-        else
-            dtau = abs * DR * (1 - mu*betaS) / (mu - betaS);
-        */
-
-
         // Now that we know the optical depth, we apply it in a way
         // according to the given specType
 
         if((specType & SSA_SMOOTH_FLAG) && (specType & SSA_SHARP_FLAG))
         {
-            //Special case: use the optically thick limit *everywhere*
+            //Special case: -use the optically thick limit *everywhere*
+            //              -ignore shadowing
 
-            double tau1 = taub;
-            double dtau = taua - taub;
-            double R_correction = 1.0;
-
-            if(taua < taub)
-            {
-                tau1 = taua;
-                dtau = taub - taua;
-                R_correction = (R-DR)/R;
-            }
-
-            //printf("R: %.18le u: %.18le g: %.18le b: %.18le\n", R, u, g, beta);
-            //printf("  uS: %.18le bS: %.18le\n", us, betaS);
-            //printf("  la: %.18le lb: %.18le abs: %.18le Rcorr: %.18le t1: %.18le ta: %.18le tb: %.18le dt: %.18le et1: %.18le\n", la, lb, abs, R_correction, tau1, taua, taub, dtau, exp(-tau1));
-
-            //em_lab *= R_correction*R_correction*exp(-tau1)/dtau;
-            
-
-            
-            //if(mu > betaS)
-                em_lab *= R_correction*R_correction/taua;
-            //else
-            //    em_lab *= 0.0;
-
-
-
-            /*
-            if(dtau <= 0.0)
-                em_lab = 0.0;
-            else
-                em_lab /= dtau;
-            */
+            em_lab /= taua;
         }
         else if(specType & SSA_SMOOTH_FLAG)
         {
@@ -825,6 +769,7 @@ double emissivity(double nu, double R, double mu, double te,
             //
             // e.g. use tau->infty limit if tau > 1.0
 
+            /*
             double tau1 = taub;
             double dtau = taua - taub;
             double R_correction = 1.0;
@@ -837,19 +782,28 @@ double emissivity(double nu, double R, double mu, double te,
             }
 
             double abs_fac = R_correction*R_correction*exp(-tau1)/dtau;
-
-            if(abs_fac < 1.0)
-                em_lab *= abs_fac;
-
-            /*
-            // "Forward" face
-            if(dtau > 1.0)
-                em_lab /= dtau;
-            
-            // "Back" face --> assume shadowed by front
-            else if(dtau < -1.0)
-                em_lab = 0.0;
             */
+
+            // Compute flux in optically thick limit
+            // Compute nu_a
+            // Use sharp spectrum explicitly, e.g. Granot & Sari 2002
+            
+           
+            // optical depth at nu_m.
+            //    tau = tau_m * { (nu/nu_m)^(-5/3) if nu < nu
+            //                  { (nu/nu_m)^(-(p+4)/2) if nu < nu
+            double tau_m = taua / abs_com_freq;
+
+            //
+
+            double nu_a;
+            if(tau_m < 1.0)
+                nu_a = nu_m * pow(tau_m, 0.6);
+            else
+                nu_a = nu_m * pow(tau_m, 2.0/(p+4.0));
+
+            //if(abs_fac < 1.0)
+            //    em_lab *= abs_fac;
         }
     }
     if(specType < 0)
