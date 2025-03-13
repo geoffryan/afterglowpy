@@ -6,7 +6,7 @@ import warnings
 
 def fluxDensity(t, nu, *args, **kwargs):
     
-    """
+    r"""
     Compute the flux density F_nu of a GRB afterglow.
 
     Utiliizes the single shell approximation described in Ryan et al 2020
@@ -233,7 +233,7 @@ def fluxDensity(t, nu, *args, **kwargs):
 
 
 def intensity(theta, phi, t, nu, *args, **kwargs):
-    """
+    r"""
     Compute the intensity I_nu of a GRB afterglow.
 
     Utiliizes the single shell approximation described in Ryan et al 2019
@@ -668,7 +668,7 @@ def checkCocoonArgs(argsDict):
 
 
 def parseArgs(args, kwargs):
-    """
+    r"""
     Parse the arguments to fluxDensity() or intensity(). Supports both
     positional and keyword arguments for now.
     """
