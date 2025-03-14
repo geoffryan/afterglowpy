@@ -176,6 +176,8 @@ def fluxDensity(t, nu, *args, **kwargs):
 
     jetType = argsDict['jetType']
 
+    # Check arguments have valid values, raise ValueError if not.
+    # if ignoreBounds is True, these checks will be skipped.
     if jetType == jet.Spherical:
         checkCocoonArgs(argsDict)
     else:
@@ -394,6 +396,8 @@ def intensity(theta, phi, t, nu, *args, **kwargs):
 
     jetType = argsDict['jetType']
 
+    # Check arguments have valid values, raise ValueError if not.
+    # if ignoreBounds is True, these checks will be skipped.
     if jetType == jet.Spherical:
         checkCocoonArgs(argsDict)
     else:
