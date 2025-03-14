@@ -33,7 +33,7 @@ def fluxDensity(t, nu, *args, **kwargs):
                           xi_N, d_L, **Z)
 
 
-    Parameters 
+    Parameters
     ----------
     t : array_like or scalar
         Time since burst in observer frame, measured in seconds.
@@ -49,7 +49,7 @@ def fluxDensity(t, nu, *args, **kwargs):
         available in ``afterglowpy.jet`` and include:
         - ``jet.SimpleSpec`` broken power law with nu_m and nu_c
             (Ryan+ 2020, default),
-        - ``jet.DeepNewtonian`` better handling of late-time emission when 
+        - ``jet.DeepNewtonian`` better handling of late-time emission when
             some electrons become non-relativistic (e.g. Sironi+ 2013),
         - ``jet.EpsEBar`` interpret the epsilon_e parameter as
                 \bar{epsilon_e} = epsilon_e * (p-2) / (p-1)
@@ -123,7 +123,7 @@ def fluxDensity(t, nu, *args, **kwargs):
         Whether to ignore built-in parameter bounds checking.
     moment : array_like, optional
         An integer array the same shape as the larger of `t` or `nu`. Selects
-        which image moment to compute. Observer's sky is on the x-y plane, 
+        which image moment to compute. Observer's sky is on the x-y plane,
         with the jet propagating in the x-direction.  Moments are in terms of
         proper length (in cm) Options are: `jet.MOM_0` Flux, default,
         `jet.MOM_X` x^1 moment, `jet.MOM_Y` y^1 moment, `jet.MOM_Z` z^1 moment,
@@ -171,7 +171,6 @@ def fluxDensity(t, nu, *args, **kwargs):
 
     # Check Arguments, will raise ValueError if args are bad
     t, nu = checkTNu(t, nu)
-    
 
     jetType = argsDict['jetType']
 
@@ -180,23 +179,21 @@ def fluxDensity(t, nu, *args, **kwargs):
     else:
         checkJetArgs(argsDict)
 
-
     # arguments are good, full steam ahead!
     z = argsDict.pop('z') if 'z' in argsDict else 0.0
 
     tz = t / (1+z)
     nuz = nu * (1+z)
 
-
     # Default spreading method
     if 'spread' in argsDict:
-        if argsDict['spread'] == True:
+        if argsDict['spread'] is True:
             if jetType == -2 and 'thetaCoreGlobal' in argsDict:
                 argsDict['spread'] = 8
             else:
                 argsDict['spread'] = 7
 
-    # This was a bad idea to add to this function, but is kept for 
+    # This was a bad idea to add to this function, but is kept for
     # backwards compatibility. Please don't use these.
     LR = argsDict.pop('LR') if 'LR' in argsDict else 0.0
     LO = argsDict.pop('LO') if 'LO' in argsDict else 0.0
@@ -214,10 +211,8 @@ def fluxDensity(t, nu, *args, **kwargs):
     # timeB = time.time()
     # print("Eval took: {0:f} s".format(timeB - timeA))
 
-    
     # Adding background luminosities.
     L_to_flux = cocoon.cgs2mJy / (4*np.pi * argsDict['d_L']**2)
-
 
     if LR > 0.0:
         rad = (nuz < 3.0e11) & (tz > tAdd)  # radio < 300 GHz
@@ -226,7 +221,7 @@ def fluxDensity(t, nu, *args, **kwargs):
     if LO > 0.0:
         # 300GHz<opt<100eV
         opt = (nuz >= 3.0e11) & (nuz < 100*cocoon.eV2Hz) & (tz > tAdd)
-        Lnu = LO * 2.32478e-5 / cocoon.c # 2324.78 A bandwidth
+        Lnu = LO * 2.32478e-5 / cocoon.c  # 2324.78 A bandwidth
         Fnu[opt] += Lnu*L_to_flux
     if LX > 0.0:
         xry = (nuz >= 100*cocoon.eV2Hz) & (tz > tAdd)  # xray > 100eV
@@ -235,7 +230,7 @@ def fluxDensity(t, nu, *args, **kwargs):
 
     # K-correct the flux
     Fnu *= 1+z
-    
+
     return Fnu
 
 
@@ -250,7 +245,7 @@ def intensity(theta, phi, t, nu, *args, **kwargs):
     The returned intensity is that emitted by the blast wave, not that
     directly observed from Earth.  To get the observed flux, integrate over
     the surface of the blast wave in the frame of the burst.
-    
+
         F_nu = \int d\Omega I_nu
 
     Angular coordinates are in a spherical coordinate system, centered on the
@@ -274,7 +269,7 @@ def intensity(theta, phi, t, nu, *args, **kwargs):
     ``jetType=jet.Spherical``.
 
 
-    Parameters 
+    Parameters
     ----------
     theta: array_like or scalar
         Polar angle from jet axis in radians. Scalar, or array of same shape
@@ -296,7 +291,7 @@ def intensity(theta, phi, t, nu, *args, **kwargs):
         available in ``afterglowpy.jet`` and include:
         - ``jet.SimpleSpec`` broken power law with nu_m and nu_c
             (Ryan+ 2020, default),
-        - ``jet.DeepNewtonian`` better handling of late-time emission when 
+        - ``jet.DeepNewtonian`` better handling of late-time emission when
             some electrons become non-relativistic (e.g. Sironi+ 2013),
         - ``jet.EpsEBar`` interpret the epsilon_e parameter as
                 \bar{epsilon_e} = epsilon_e * (p-2) / (p-1)
@@ -386,7 +381,7 @@ def intensity(theta, phi, t, nu, *args, **kwargs):
         If theta, phi, t, nu are the wrong shape or arguments take illegal
         values.
     """
-    
+
     argsDict = parseArgs(args, kwargs)
 
     # Check Arguments, will raise ValueError if args are bad
@@ -413,12 +408,12 @@ def intensity(theta, phi, t, nu, *args, **kwargs):
                 argsDict['spread'] = 8
             else:
                 argsDict['spread'] = 7
-    
+
     # Intercept background luminosities, then ignore them.
-    LR = argsDict.pop('LR') if 'LR' in argsDict else 0.0
-    LO = argsDict.pop('LO') if 'LO' in argsDict else 0.0
-    LX = argsDict.pop('LX') if 'LX' in argsDict else 0.0
-    tAdd = argsDict.pop('tAdd') if 'tAdd' in argsDict else 0.0
+    _ = argsDict.pop('LR') if 'LR' in argsDict else 0.0
+    _ = argsDict.pop('LO') if 'LO' in argsDict else 0.0
+    _ = argsDict.pop('LX') if 'LX' in argsDict else 0.0
+    _ = argsDict.pop('tAdd') if 'tAdd' in argsDict else 0.0
 
     Inu = np.empty(theta.shape)
     Inu.flat[:] = jet.intensity(theta.flat, phi.flat, tz.flat, nuz.flat,
