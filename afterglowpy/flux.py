@@ -57,6 +57,7 @@ def fluxDensity(t, nu, *args, **kwargs):
             (e.g. Granot & Sari 2002),
         - ``jet.ICCooling`` simple inverse-compton contribution to cooling
             (experimental).
+
         Flags can be combined with the | operator.
     thetaObs : float
         Viewing angle in radians. Jet models only.
@@ -290,6 +291,7 @@ def intensity(theta, phi, t, nu, *args, **kwargs):
     specType : int
         Flags for type of spectrum/emissivity function. Spectrum flags are
         available in ``afterglowpy.jet`` and include:
+
         - ``jet.SimpleSpec`` broken power law with nu_m and nu_c
             (Ryan+ 2020, default),
         - ``jet.DeepNewtonian`` better handling of late-time emission when
@@ -299,6 +301,7 @@ def intensity(theta, phi, t, nu, *args, **kwargs):
             (e.g. Granot & Sari 2002),
         - ``jet.ICCooling`` simple inverse-compton contribution to cooling
             (experimental).
+
         Flags can be combined with the | operator.
     thetaObs : float
         Viewing angle in radians. Jet models only.
