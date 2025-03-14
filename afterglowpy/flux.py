@@ -249,7 +249,7 @@ def intensity(theta, phi, t, nu, *args, **kwargs):
     the surface of the blast wave in the frame of the burst.
 
     .. math::
-        F_\nu = \int d\Omega I_\nu
+        F_\nu = \int \! d\Omega\ I_\nu
 
     Angular coordinates are in a spherical coordinate system, centered on the
     burst, with z-axis aligned on the jet axis.
