@@ -247,8 +247,8 @@ def intensity(theta, phi, t, nu, *args, **kwargs):
     The returned intensity is that emitted by the blast wave, not that
     directly observed from Earth.  To get the observed flux, integrate over
     the surface of the blast wave in the frame of the burst.
-    .. math::
 
+    .. math::
         F_\nu = \int d\Omega I_\nu
 
     Angular coordinates are in a spherical coordinate system, centered on the
