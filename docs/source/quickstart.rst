@@ -6,7 +6,7 @@ Quickstart
 1. ``t``: a 1-D array of observer-frame times, in seconds (s)
 2. ``nu``: a 1-D array, the same shape as ``t``, of observer-frame frequencies, in Hertz (Hz)
 3. ``jetType``: an integer specifying which jet model to use (top-hat: -1, Gaussian: 0, power law: 4).
-4. ``specType``: an integer specifying which spectral model to use (must be 0).
+4. ``specType``: an integer specifying which spectral model to use.
 5. Model Parameters (keywords): A model-dependent set of parameters, such as E\ :sub:`iso`, n\ :sub:`0`, etc.
 6. Numerical Parameters (keywords): A model-dependent set of keyword arguments specifying numerical settings, such as `tRes` (resolution of time integration), and `spread` (whether or not to include jet spreading).
 
