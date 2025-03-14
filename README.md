@@ -54,6 +54,8 @@ _afterglowpy_ is available via `pip`:
 $ pip install afterglowpy
 ```
 
+_afterglowpy_ is compatible with Numpy v1 and v2, Python 3.8+, and runs on MacOS, Linux, and Windows.
+
 If you are working on a local copy of this repo and would like to install from source, you can the run the following from the top level directory of the project.
 ```bash
 $ pip install -e .
