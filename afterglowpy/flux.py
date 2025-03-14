@@ -6,7 +6,7 @@ import warnings
 
 def fluxDensity(t, nu, *args, **kwargs):
     r"""
-    Compute the flux density F_nu of a GRB afterglow.
+    Compute the flux density F<sub>&nu;</sub> of a GRB afterglow.
 
     Utiliizes the single shell approximation described in Ryan et al 2020
     to compute the synchrotron emission from the forward shock of a blast
@@ -47,13 +47,14 @@ def fluxDensity(t, nu, *args, **kwargs):
     specType : int
         Flags for type of spectrum/emissivity function. Spectrum flags are
         available in ``afterglowpy.jet`` and include:
-        - ``jet.SimpleSpec`` broken power law with nu_m and nu_c
-            (Ryan+ 2020, default),
+
+        - ``jet.SimpleSpec`` broken power law with nu_m and nu_c (Ryan+ 2020,
+            default),
         - ``jet.DeepNewtonian`` better handling of late-time emission when
             some electrons become non-relativistic (e.g. Sironi+ 2013),
         - ``jet.EpsEBar`` interpret the epsilon_e parameter as
-                \bar{epsilon_e} = epsilon_e * (p-2) / (p-1)
-                (e.g. Granot & Sari 2002),
+            &epsilon;&#773;<sub>e</sub> = &epsilon;<sub>e</sub> (p-2) / (p-1)
+            (e.g. Granot & Sari 2002),
         - ``jet.ICCooling`` simple inverse-compton contribution to cooling
             (experimental).
         Flags can be combined with the | operator.
@@ -294,8 +295,8 @@ def intensity(theta, phi, t, nu, *args, **kwargs):
         - ``jet.DeepNewtonian`` better handling of late-time emission when
             some electrons become non-relativistic (e.g. Sironi+ 2013),
         - ``jet.EpsEBar`` interpret the epsilon_e parameter as
-                \bar{epsilon_e} = epsilon_e * (p-2) / (p-1)
-                (e.g. Granot & Sari 2002),
+            &epsilon;&#773;<sub>e</sub> = &epsilon;<sub>e</sub> (p-2) / (p-1)
+            (e.g. Granot & Sari 2002),
         - ``jet.ICCooling`` simple inverse-compton contribution to cooling
             (experimental).
         Flags can be combined with the | operator.
