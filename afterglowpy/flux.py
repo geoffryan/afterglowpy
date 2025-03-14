@@ -5,7 +5,6 @@ import warnings
 
 
 def fluxDensity(t, nu, *args, **kwargs):
-    
     r"""
     Compute the flux density F_nu of a GRB afterglow.
 
@@ -47,11 +46,17 @@ def fluxDensity(t, nu, *args, **kwargs):
         ``jet.Spherical``.
     specType : int
         Flags for type of spectrum/emissivity function. Spectrum flags are
-        available in ``afterglowpy.jet`` and include: ``jet.SimpleSpec``
-        broken power law with nu_m and nu_c (Ryan+ 2020, default),
-        ``jet.ICCooling`` simple inverse-compton contribution to cooling,
-        ``jet.DeepNewtonian`` better handling of late-time emission when 
-        some electrons become non-relativistic (e.g. Sironi+ 2013).
+        available in ``afterglowpy.jet`` and include:
+        - ``jet.SimpleSpec`` broken power law with nu_m and nu_c
+            (Ryan+ 2020, default),
+        - ``jet.DeepNewtonian`` better handling of late-time emission when 
+            some electrons become non-relativistic (e.g. Sironi+ 2013),
+        - ``jet.EpsEBar`` interpret the epsilon_e parameter as
+                \bar{epsilon_e} = epsilon_e * (p-2) / (p-1)
+                (e.g. Granot & Sari 2002),
+        - ``jet.ICCooling`` simple inverse-compton contribution to cooling
+            (experimental).
+        Flags can be combined with the | operator.
     thetaObs : float
         Viewing angle in radians. Jet models only.
     E0: float
@@ -114,6 +119,8 @@ def fluxDensity(t, nu, *args, **kwargs):
         Whether to include jet spreading. Defaults to True.
     counterjet : {'True', 'False'}, optional
         Whether to include counterjet emission. Defaults to False.
+    ignoreBounds : {'True', 'False'}, optional
+        Whether to ignore built-in parameter bounds checking.
     moment : array_like, optional
         An integer array the same shape as the larger of `t` or `nu`. Selects
         which image moment to compute. Observer's sky is on the x-y plane, 
@@ -285,8 +292,18 @@ def intensity(theta, phi, t, nu, *args, **kwargs):
         ``jet.PowerLaw``, ``jet.GaussianCore``, ``jet.PowerLawCore``, and
         ``jet.Spherical``.
     specType : int
-        Code for type of spectrum.  Options are: 0 broken power law
-        (Ryan+ 2020), 1 broken power law w/ inverse Compton cooling. Default: 0
+        Flags for type of spectrum/emissivity function. Spectrum flags are
+        available in ``afterglowpy.jet`` and include:
+        - ``jet.SimpleSpec`` broken power law with nu_m and nu_c
+            (Ryan+ 2020, default),
+        - ``jet.DeepNewtonian`` better handling of late-time emission when 
+            some electrons become non-relativistic (e.g. Sironi+ 2013),
+        - ``jet.EpsEBar`` interpret the epsilon_e parameter as
+                \bar{epsilon_e} = epsilon_e * (p-2) / (p-1)
+                (e.g. Granot & Sari 2002),
+        - ``jet.ICCooling`` simple inverse-compton contribution to cooling
+            (experimental).
+        Flags can be combined with the | operator.
     thetaObs : float
         Viewing angle in radians. Jet models only.
     E0: float
@@ -335,6 +352,8 @@ def intensity(theta, phi, t, nu, *args, **kwargs):
         Whether to include jet spreading. Defaults to True.
     counterjet : {'True', 'False'}, optional
         Whether to include counterjet emission. Defaults to False.
+    ignoreBounds : {'True', 'False'}, optional
+        Whether to ignore built-in parameter bounds checking.
     tRes : int, optional
         Time resolution, number of points per decade in t, for shock evolution.
         Defaults to 1000.
