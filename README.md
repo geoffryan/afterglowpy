@@ -96,5 +96,3 @@ Optional keyword arguments for all models are:
 - `latRes` latitudinal resolution for structured jets, number of shells per `thetaC`
 - `rtol` target relative tolerance of flux integration
 
-
-
