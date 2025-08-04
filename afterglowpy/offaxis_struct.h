@@ -62,6 +62,11 @@
 #define DEEP_NEWTONIAN_FLAG  32
 #define BULK_BM_FLAG  64
 #define FIXED_PL_FLAG  128
+#define TH_COOLING_ENABLED_ONLY_FLAG 256
+#define TH_EMISSION_FLAG 512
+#define IC_EMISSION_FLAG 1024
+#define SYNCHROTRON_CUT_OFF_FLAG 2048
+
 
 enum{INT_TRAP_FIXED, INT_TRAP_ADAPT, INT_SIMP_FIXED, INT_SIMP_ADAPT,
      INT_ROMB_ADAPT, INT_TRAP_NL, INT_HYBRID, INT_CADRE,
@@ -187,6 +192,10 @@ struct fluxParams
 
     int error;
     char *error_msg;
+
+    int synchrotron_cut_off;
+    int th_cooling_enabled_only;
+    int th_emission_enabled;
 };
 
 
@@ -221,7 +230,8 @@ double phi_integrand(double a_phi, void* params); // outer integral
 double emissivity(double nu, double R, double mu, double te,
                     double u, double us, double rho0, double Msw, double p,
                     double epse, double epsB, double ksiN,
-                    int specType); //emissivity of
+                    int specType, int synCutOff, int thCoolingEnabledOnly, 
+                    int thEmissionEnabled); //emissivity of
                                                              // a zone.
 
 void calc_absorption_length(double R, double mu, double delta,
@@ -325,7 +335,9 @@ void setup_fluxParams(struct fluxParams *pars,
                     int nmax_phi, int nmax_theta,
                     int spec_type,
                     double *mask, int nmask,
-                    int spread, int counterjet, int gamma_type);
+                    int spread, int counterjet, int gamma_type,
+                    int synchrotron_cut_off, int th_cooling_enabled_only,
+                    int th_emission_enabled);
 
 void set_jet_params(struct fluxParams *pars, double E_iso, double theta_h);
 void set_obs_params(struct fluxParams *pars,

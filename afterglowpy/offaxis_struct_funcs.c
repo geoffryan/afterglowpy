@@ -521,13 +521,33 @@ void calc_absorption_length(double R, double mu, double delta,
     //printf("%.6le    %.6le\n", *length_back, *length_front);
 }
 
+///////////////////////////////////////////////////////////////////
+#define TOLERANCE 1e-8
+#define MAX_ITER 50
+double solve_equation(double gr, double p, double y) {
+    double x = 1.0; // Guess X=1
+    double x_old;
+    int i = 0;      /* iteration counter */
+    do {
+        x_old = x;
+        x = 0.5*(-1+sqrt(1 + 4*pow(gr/(1+x), (2-p))*y)); 
+        i++;
+    } while (fabs(x-x_old)/x > TOLERANCE && i < MAX_ITER);
+
+    return x;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 double emissivity(double nu, double R, double mu, double te,
                     double u, double us, double rho0, double Msw,
                     double p, double epse,
-                    double epsB, double ksiN, int specType)
+                    double epsB, double ksiN, int specType, int synCutOff, int thCoolingEnbaledOnly, int thEmissionEnabled)
+                    // added synCutOff, changed global IC_COOLING_FLAG(value 1) to boolean variable
 {
+
+    // printf("[DEBUG] icEmissionEnabled parsed value: %d\n", icEmissionEnabled);
+
     if(us < 1.0e-5)
     {
         //shock is ~ at sound speed of warm ISM. Won't shock, approach invalid.
@@ -544,7 +564,7 @@ double emissivity(double nu, double R, double mu, double te,
     double nprime = 4.0 * n0 * g; // comoving number density
     double e_th = u*u/(g+1) * nprime * m_p * v_light * v_light;
     double B = sqrt(epsB * 8.0 * PI * e_th);
-    double a = (1.0 - mu * beta); // beaming factor
+    double a = (1.0 - mu * beta); // beaming factor; nothing to do with individual electrons ??
     double ashock = (1.0 - mu * betaS); // shock velocity beaming factor
     double DR0 = Msw / (16*M_PI * R*R * g*g * rho0);  //shock width in labframe
     double DR = DR0 / ashock; //shock width for constant-tobs slice
@@ -565,64 +585,76 @@ double emissivity(double nu, double R, double mu, double te,
     double nuprime = nu * g * a; // comoving observer frequency
     double g_m = epsebar * e_th / (ksiN * nprime * m_e * v_light * v_light);
     double g_c = 6 * PI * m_e * g * v_light / (sigma_T * B * B * te);
+   double g_max = sqrt((3 * e_e) / (sigma_T * B)); // synchrotron cut-off
+
     if((specType & DEEP_NEWTONIAN_FLAG) && g_m < 1.0)
         g_m = 1.0;
 
-    //Inverse Compton adjustment of g_c
-    if(specType & IC_COOLING_FLAG)
+    // Inverse Compton adjustment of g_c
+    // This follows Sari + Esin for the most part, except for the beta factors
+    // Replace with check if epsilon_e > epsilon_B, calculate Compton-Y parameter
+    if(specType & TH_COOLING_ENABLED_ONLY_FLAG)
     {
         double gr = g_c / g_m;
-        double y = beta * epse/epsB;
+        // This should be a square root in the large Y limit? What limit has he taken?
+        double y = beta * epse/epsB; // See Sari + Esin for beta factor
         double X = 1.0;
 
+        // gamma_c < gamma_m
         if(gr <= 1.0 || gr*gr-gr-y <= 0.0)
         {
             //Fast Cooling
-            X = 0.5*(1 + sqrt(1+4*y));
+            X = 0.5*(-1 + sqrt(1+4*y)); // happy with this
         }
+
         else
         {
             //Slow Cooling
-            double b = y * pow(gr, 2-p);
-            double Xa = 1 + b;
-            double Xb = pow(b, 1.0/(4-p)) + 1.0/(4-p);
-            double s = b*b / (b*b + 1);
-            X = Xa * pow(Xb/Xa, s);
-            int i;
-            for(i=0; i<5; i++)
-            {
-                double po = pow(X, p-2);
-                double f = X*X - X - b*po;
-                double df = 2*X - 1 - (p-2)*b*po/X;
-                double dX = -f/df;
-                X += dX;
-                if(fabs(dX) < 1.0e-4*X)
-                    break;
-            }
+            X = solve_equation(gr, p, y); // Calculate Compton-Y parameter numerically
         }
 
-        g_c /= X;
+        g_c /= (1+X);
     }
+
 
     double nu_m = 3.0 * g_m * g_m * e_e * B / (4.0 * PI * m_e * v_light);
     double nu_c = 3.0 * g_c * g_c * e_e * B / (4.0 * PI * m_e * v_light);
+    double nu_max = 3.0 * g_max * g_max * e_e * B / (4.0 * PI * m_e * v_light);
     double em = 0.5*(p - 1.0)*sqrt(3.0) * e_e*e_e*e_e * ksiN * nprime * B
-                    / (m_e*v_light*v_light);
-
+                    / (m_e*v_light*v_light); // Eq 21 in Ryan et al. 2020
     if(specType & DEEP_NEWTONIAN_FLAG)
         em *= epsebar * e_th 
                 / (ksiN*nprime * g_m * m_e * v_light*v_light);
-  
-    double freq = 0.0; // frequency dependent part of emissivity
-    double back_pow = 10.0;
-    double eff_k = 3 - Msw / (4*M_PI*R*R*R*rho0);
 
+    // Check for a switch that disables electron cooling completely
     if(specType & NO_COOLING_FLAG)
         nu_c = 1.0e200;
 
+    // IC related
+    double nu_m_ic = g_m * g_m * pow(1+beta, 2) * nu_m; // Comoving upscattered nu_m, https://www.astro.umd.edu/~richard/ASTR480/Beckmann_Longair_Radiation3.pdf, assuming head on collisions
+    double nu_c_ic = g_c * g_c * pow(1+beta, 2) * nu_c; // Comoving upscattered nu_c
+    double nu_max_ic = g_max * g_max * pow(1+beta, 2) * nu_max;
+    double em_ic = em * (1.0 / 3.0) * sigma_T * n0 * R; // Inverse Compton peak flux (Sari + Esin 2001, eq2.3 p4)
+    // This plays the role of peak flux? IC version same as IC version of peak flux?
+
+    // printf("nu_max is %e and nu_max_ic is %e\n", nu_max, nu_max_ic);
+
+  
+    double freq = 0.0; // frequency dependent part of emissivity
+    double freq_ic = 0.0; // Self-Compton emissivity
+    double back_pow = 10.0;
+    double eff_k = 3 - Msw / (4*M_PI*R*R*R*rho0); // This is part of an
+      // approach by Geoff to generalize the external medium profile beyond
+      // a single power law (such as k = 0 or k = 2). He does this by computing
+      // the total swept-up mass and passing it to this emission function as an
+      // argument.
+
+
     // set frequency dependence
-    if (nu_c > nu_m)
+    if (nu_c > nu_m) // slow cooling synchrotron spectrum
     {
+
+
         if (nuprime < nu_m)
         {
             freq = pow(nuprime / nu_m, 1.0 / 3.0 );
@@ -633,14 +665,63 @@ double emissivity(double nu, double R, double mu, double te,
             freq = pow(nuprime / nu_m, 0.5 * (1.0 - p));
             back_pow = (33+13*p - (15-p)*eff_k)/(12*(4-eff_k));
         }
+        else if (nuprime > nu_max){
+            
+            if (synCutOff)
+            {
+                printf("[DEBUG] nuprime: %e;  \n", nuprime);
+                freq = 0.0;
+                back_pow = 0.0;  
+            }
+            else
+            {
+                // treat it like nuprime > nu_c case
+                freq = pow(nu_c / nu_m, 0.5 * (1.0 - p))
+                    * pow(nuprime / nu_c, -0.5 * p);
+                back_pow = (-6 + 13 * p - (6 - p) * eff_k) / (12 * (4 - eff_k));
+            }
+        }
         else
         {
             freq = pow(nu_c / nu_m, 0.5 * (1.0 - p))
                     * pow(nuprime / nu_c, -0.5*p);
             back_pow = (-6+13*p - (6-p)*eff_k)/(12*(4-eff_k));
         }
+        
+        
+        
+
+        if (specType & TH_EMISSION_FLAG)    // why did Geoff use bitwise and?
+        {
+            if (nuprime < nu_m_ic)
+            {
+                freq_ic = pow(nuprime / nu_m_ic, 1.0 / 3.0 );
+            }
+            else if (nuprime < nu_c_ic)
+            {
+                freq_ic = pow(nuprime / nu_m_ic, 0.5 * (1.0 - p));
+            }
+            else if (nuprime > nu_max_ic){
+                if (synCutOff)
+                {
+                    freq_ic = 0.0;
+                }
+                else 
+                {
+                    freq_ic = pow(nu_c_ic / nu_m_ic, 0.5 * (1.0 - p))
+                        * pow(nuprime / nu_c_ic, -0.5*p);
+                }
+            }
+            else
+            {
+                freq_ic = pow(nu_c_ic / nu_m_ic, 0.5 * (1.0 - p))
+                        * pow(nuprime / nu_c_ic, -0.5*p);
+            }
+        }
+            
+        
     }
-    else
+    else // this is the fast-cooling case, with nu_c < nu_m
     {
         if (nuprime < nu_c)
         {
@@ -652,11 +733,55 @@ double emissivity(double nu, double R, double mu, double te,
             freq = sqrt(nu_c / nuprime);
             back_pow = (7-5*eff_k)/(12*(4-eff_k));
         }
+        else if (nuprime > nu_max){
+            if (synCutOff)
+            {
+                freq = 0.0;
+            }
+            else 
+            {
+                freq = sqrt(nu_c/nu_m) * pow(nuprime / nu_m, -0.5 * p);
+                back_pow = (-6+13*p - (6-p)*eff_k)/(12*(4-eff_k));
+            }
+        }
         else
         {
             freq = sqrt(nu_c/nu_m) * pow(nuprime / nu_m, -0.5 * p);
             back_pow = (-6+13*p - (6-p)*eff_k)/(12*(4-eff_k));
         }
+
+        
+
+        if(specType & TH_EMISSION_FLAG)
+        {
+            if (nuprime < nu_c_ic)
+            {
+                freq_ic = pow(nuprime / nu_m_ic, 1.0 / 3.0 );
+            }
+
+            else if (nuprime < nu_m_ic)
+            {
+                freq_ic = sqrt(nu_c_ic / nuprime);
+            }
+            else if (nuprime > nu_max_ic){
+                if (synCutOff)
+                {
+                    freq_ic = 0.0;
+                }
+                else
+                {
+                    freq_ic = sqrt(nu_c_ic/nu_m_ic) * pow(nuprime / nu_m_ic, -0.5 * p);
+                }
+            }
+
+            else
+            {
+                freq_ic = sqrt(nu_c_ic/nu_m_ic) * pow(nuprime / nu_m_ic, -0.5 * p);
+            }
+        }
+
+            
+        
     }
 
     if(em != em || em < 0.0)
@@ -672,27 +797,22 @@ double emissivity(double nu, double R, double mu, double te,
         return -1;
     }
 
-    double em_lab = em * freq / (g*g * a*a);
+    double em_lab = em * freq / (g*g * a*a); // Observer frame emissivity
+    double em_ic_lab = em_ic * freq_ic / (g*g * a*a); // Observer frame SSC emissivity
+    double em_tot_lab = em_lab + em_ic_lab; // Total emissivity including sync and SSC  // this is the line I comment out to switch off compton
 
-    // Self-Absorption
+    // Self-Absorption, not edited for SSC
     if(specType & (SSA_SMOOTH_FLAG | SSA_SHARP_FLAG))
     {
         // Co-moving frame absorption coefficient
-        //double abs_com_P = sqrt(3) * e_e*e_e*e_e * (p-1)*(p+2)*nprime*B*ksiN
-        //                    / (16*M_PI * m_e*m_e*v_light*v_light
-        //                        * g_m * nu_m*nu_m);
-        //TODO quick abs coeff fix?
-        if(GAMMA_FUNC_1_3 <= 0.0)
-            GAMMA_FUNC_1_3 = tgamma(1.0/3.0);
-        double abs_com_P = cbrt(2) * sqrt(3) * GAMMA_FUNC_1_3 * GAMMA_FUNC_1_3
-                            * (p-1) * e_e*e_e*e_e * nprime*B*ksiN
-                            / (10*M_PI * m_e*m_e*v_light*v_light
-                                * (3*p+2) * g_m * nu_m*nu_m);
+        double abs_com_P = sqrt(3) * e_e*e_e*e_e * (p-1)*(p+2)*nprime*B
+                            / (16*M_PI * m_e*m_e*v_light*v_light
+                                * g_m * nuprime*nuprime);
         double abs_com_freq;
         if(nuprime < nu_m)
-            abs_com_freq = pow(nuprime / nu_m, -5.0/3.0);
+            abs_com_freq = pow(nuprime / nu_m, 1.0/3.0);
         else
-            abs_com_freq = pow(nuprime / nu_m, -0.5*(p+4));
+            abs_com_freq = pow(nuprime / nu_m, -0.5*p);
 
         // Lab frame absorption coefficient
         double abs = abs_com_P * abs_com_freq * a*g;
@@ -708,15 +828,43 @@ double emissivity(double nu, double R, double mu, double te,
         double taua = la * abs;
         double taub = lb * abs;
 
+        /*
+        // (Signed) Optical depth through this shell.
+        // if negative, face is oriented away from observer.
+        double dtau;
+        if(mu == betaS)
+            dtau = 1.0e100; // HUGE VAL, just in case
+        else
+            dtau = abs * DR * (1 - mu*betaS) / (mu - betaS);
+        */
+
+
         // Now that we know the optical depth, we apply it in a way
         // according to the given specType
 
         if((specType & SSA_SMOOTH_FLAG) && (specType & SSA_SHARP_FLAG))
         {
-            //Special case: -use the optically thick limit *everywhere*
-            //              -ignore shadowing
+            //Special case: use the optically thick limit *everywhere*
 
-            em_lab /= taua;
+            double tau1 = taub;
+            double dtau = taua - taub;
+            double R_correction = 1.0;
+
+            if(taua < taub)
+            {
+                tau1 = taua;
+                dtau = taub - taua;
+                R_correction = (R-DR)/R;
+            }
+
+            em_lab *= R_correction*R_correction*exp(-tau1)/dtau;
+
+            /*
+            if(dtau <= 0.0)
+                em_lab = 0.0;
+            else
+                em_lab /= dtau;
+            */
         }
         else if(specType & SSA_SMOOTH_FLAG)
         {
@@ -746,19 +894,8 @@ double emissivity(double nu, double R, double mu, double te,
 
             //printf("F %.6le %.6le %.6le %.6le %.6le %.6le\n", abs,
             //        la, lb, taua, taub, abs_fac);
-           
-            //TODO: TEST AND CHECK THIS COOLING NONSENSE
-            double sharp_cooling_corr = 1.0;
-            if(nu_c < nu_m)
-                sharp_cooling_corr = pow(nu_c/nu_m, 1.0/3.0);
-
-            double tau = 0.5*(taua + taub);
-
-            double w = 1 / (1 + tau);
-            
-            double cooling_corr = w + (1-w) * sharp_cooling_corr;
-            
-            em_lab *= abs_fac * cooling_corr;
+                    
+            em_lab *= abs_fac;
         }
         else if(specType & SSA_SHARP_FLAG)
         {
@@ -769,7 +906,6 @@ double emissivity(double nu, double R, double mu, double te,
             //
             // e.g. use tau->infty limit if tau > 1.0
 
-            /*
             double tau1 = taub;
             double dtau = taua - taub;
             double R_correction = 1.0;
@@ -782,32 +918,27 @@ double emissivity(double nu, double R, double mu, double te,
             }
 
             double abs_fac = R_correction*R_correction*exp(-tau1)/dtau;
-            */
 
-            // Compute flux in optically thick limit
-            // Compute nu_a
-            // Use sharp spectrum explicitly, e.g. Granot & Sari 2002
+            if(abs_fac < 1.0)
+                em_lab *= abs_fac;
+
+            /*
+            // "Forward" face
+            if(dtau > 1.0)
+                em_lab /= dtau;
             
-           
-            // optical depth at nu_m.
-            //    tau = tau_m * { (nu/nu_m)^(-5/3) if nu < nu
-            //                  { (nu/nu_m)^(-(p+4)/2) if nu < nu
-            double tau_m = taua / abs_com_freq;
-
-            //
-
-            double nu_a;
-            if(tau_m < 1.0)
-                nu_a = nu_m * pow(tau_m, 0.6);
-            else
-                nu_a = nu_m * pow(tau_m, 2.0/(p+4.0));
-
-            //if(abs_fac < 1.0)
-            //    em_lab *= abs_fac;
+            // "Back" face --> assume shadowed by front
+            else if(dtau < -1.0)
+                em_lab = 0.0;
+            */
         }
     }
     if(specType < 0)
         em_lab = 1.0;
+        if(specType & TH_EMISSION_FLAG)
+        {
+                em_ic_lab = 1.0;
+        }
 
     if(specType & BULK_BM_FLAG)
     {
@@ -820,10 +951,20 @@ double emissivity(double nu, double R, double mu, double te,
         }
     }
 
-    if(specType & FIXED_PL_FLAG)
+    if(specType & FIXED_PL_FLAG) // Don't know what's going on here
         em_lab = epse/(g*g*a*a) * pow(nuprime, p-4);
 
-    return R * R * DR * em_lab;
+    if(specType & TH_EMISSION_FLAG)
+    {
+            return R * R * DR * em_tot_lab;
+        
+    }
+
+    else
+    {
+        return R * R * DR * em_lab;
+    }
+    
 }
 
 double get_u(double mu, struct fluxParams *pars)
@@ -914,7 +1055,10 @@ double costheta_integrand(double aomct, void* params) // inner integral
     
     double dFnu =  emissivity(pars->nu_obs, R, mu, t_e, u, us,
                                 rho0, Msw, pars->p, pars->epsilon_E,
-                                pars->epsilon_B, pars->ksi_N, pars->spec_type);
+                                pars->epsilon_B, pars->ksi_N, pars->spec_type, 
+                                pars->synchrotron_cut_off, 
+                                pars->th_cooling_enabled_only, 
+                                pars->th_emission_enabled);
 
     if(dFnu != dFnu || dFnu < 0.0)
     {
@@ -1823,7 +1967,10 @@ double intensity(double theta, double phi, double tobs, double nuobs,
 
     I = emissivity(pars->nu_obs, R, mu, t_e, u, us, rho0, Msw,
                         pars->p, pars->epsilon_E, pars->epsilon_B, 
-                        pars->ksi_N, pars->spec_type);
+                        pars->ksi_N, pars->spec_type, 
+                        pars->synchrotron_cut_off, 
+                        pars->th_cooling_enabled_only, 
+                        pars->th_emission_enabled);
 
     return I;
 }
@@ -2563,7 +2710,9 @@ void setup_fluxParams(struct fluxParams *pars,
                     int nmax_phi, int nmax_theta,
                     int spec_type,
                     double *mask, int nmask,
-                    int spread, int counterjet, int gamma_type)
+                    int spread, int counterjet, int gamma_type,
+                    int synchrotron_cut_off, int th_cooling_enabled_only,
+                    int th_emission_enabled)
 {
     pars->t_table = NULL;
     pars->R_table = NULL;
@@ -2628,6 +2777,8 @@ void setup_fluxParams(struct fluxParams *pars,
     pars->nmax_phi = nmax_phi;
     pars->nmax_theta = nmax_theta;
 
+    
+
     pars->atol_theta = 0.0;
 
     pars->mask = mask;
@@ -2644,6 +2795,9 @@ void setup_fluxParams(struct fluxParams *pars,
 
     pars->theta_mesh = empty_mesh;
     pars->phi_mesh = empty_mesh;
+    pars->synchrotron_cut_off = synchrotron_cut_off;
+    pars->th_cooling_enabled_only = th_cooling_enabled_only;
+    pars->th_emission_enabled = th_emission_enabled;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
