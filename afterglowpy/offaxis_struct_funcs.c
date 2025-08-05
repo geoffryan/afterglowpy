@@ -591,9 +591,45 @@ double emissivity(double nu, double R, double mu, double te,
         g_m = 1.0;
 
     // Inverse Compton adjustment of g_c
+    if(specType & IC_COOLING_FLAG)
+    {
+        double gr = g_c / g_m;
+        double y = beta * epse/epsB;
+        double X = 1.0;
+
+        if(gr <= 1.0 || gr*gr-gr-y <= 0.0)
+        {
+            //Fast Cooling
+            X = 0.5*(1 + sqrt(1+4*y));
+        }
+        else
+        {
+            //Slow Cooling
+            double b = y * pow(gr, 2-p);
+            double Xa = 1 + b;
+            double Xb = pow(b, 1.0/(4-p)) + 1.0/(4-p);
+            double s = b*b / (b*b + 1);
+            X = Xa * pow(Xb/Xa, s);
+            int i;
+            for(i=0; i<5; i++)
+            {
+                double po = pow(X, p-2);
+                double f = X*X - X - b*po;
+                double df = 2*X - 1 - (p-2)*b*po/X;
+                double dX = -f/df;
+                X += dX;
+                if(fabs(dX) < 1.0e-4*X)
+                    break;
+            }
+        }
+
+        g_c /= X;
+    }
+
+
     // This follows Sari + Esin for the most part, except for the beta factors
     // Replace with check if epsilon_e > epsilon_B, calculate Compton-Y parameter
-    if(specType & TH_COOLING_ENABLED_ONLY_FLAG)
+    if((specType & TH_COOLING_ENABLED_ONLY_FLAG) || (specType & TH_EMISSION_FLAG))
     {
         double gr = g_c / g_m;
         // This should be a square root in the large Y limit? What limit has he taken?
@@ -667,7 +703,7 @@ double emissivity(double nu, double R, double mu, double te,
         }
         else if (nuprime > nu_max){
             
-            if (synCutOff)
+            if (specType & SYNCHROTRON_CUT_OFF_FLAG)
             {
                 printf("[DEBUG] nuprime: %e;  \n", nuprime);
                 freq = 0.0;
@@ -702,7 +738,7 @@ double emissivity(double nu, double R, double mu, double te,
                 freq_ic = pow(nuprime / nu_m_ic, 0.5 * (1.0 - p));
             }
             else if (nuprime > nu_max_ic){
-                if (synCutOff)
+                if (specType & SYNCHROTRON_CUT_OFF_FLAG)
                 {
                     freq_ic = 0.0;
                 }
@@ -734,7 +770,7 @@ double emissivity(double nu, double R, double mu, double te,
             back_pow = (7-5*eff_k)/(12*(4-eff_k));
         }
         else if (nuprime > nu_max){
-            if (synCutOff)
+            if (specType & SYNCHROTRON_CUT_OFF_FLAG)
             {
                 freq = 0.0;
             }
@@ -764,7 +800,7 @@ double emissivity(double nu, double R, double mu, double te,
                 freq_ic = sqrt(nu_c_ic / nuprime);
             }
             else if (nuprime > nu_max_ic){
-                if (synCutOff)
+                if (specType & SYNCHROTRON_CUT_OFF_FLAG)
                 {
                     freq_ic = 0.0;
                 }
