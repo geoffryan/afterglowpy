@@ -705,7 +705,6 @@ double emissivity(double nu, double R, double mu, double te,
             
             if (specType & SYNCHROTRON_CUT_OFF_FLAG)
             {
-                printf("[DEBUG] nuprime: %e;  \n", nuprime);
                 freq = 0.0;
                 back_pow = 0.0;  
             }
