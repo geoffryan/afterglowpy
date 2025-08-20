@@ -24,7 +24,8 @@ Hz2eV = 4.13566553853599e-15
 eV2Hz = 1.0/Hz2eV
 
 
-def dP(costheta, amu, ate, au, ar, nu, n0, p, epsE, epsB, ksiN, specType):
+def dP(costheta, amu, ate, au, ar, nu, n0, p, epsE, epsB, ksiN, specType, 
+       synCutOff, thCoolingEnabledOnly, thEmissionEnabled):
 
     mu = costheta
     ib = np.searchsorted(amu, mu)
@@ -49,7 +50,8 @@ def dP(costheta, amu, ate, au, ar, nu, n0, p, epsE, epsB, ksiN, specType):
     Msw = rho0 * 4.0/3.0 * np.pi * r**3
 
     em = jet.emissivity(nu, r, mu, te, u, us, rho0, Msw, p, epsE,
-                        epsB, ksiN, specType)
+                        epsB, ksiN, specType, synCutOff, thCoolingEnabledOnly,
+                        thEmissionEnabled)
 
     return 2*np.pi * em
 
@@ -70,6 +72,9 @@ def fluxDensity(t, nu, **kwargs):
     epsilon_B = kwargs['epsilon_B']
     ksiN = kwargs['xi_N']
     dL = kwargs['d_L']
+    synchrotron_cut_off = kwargs['synchrotron_cut_off'] if 'synchrotron_cut_off' in kwargs.keys() else 0
+    th_cooling_enabled_only = kwargs['th_cooling_enabled_only'] if 'th_cooling_enabled_only' in kwargs.keys() else 0
+    th_emission_enabled = kwargs['th_emission_enabled'] if 'th_emission_enabled' in kwargs.keys() else 0
 
     # Energy injection variables (off by default)
     L0 = kwargs['L0'] if 'L0' in kwargs else 0.0
@@ -120,7 +125,8 @@ def fluxDensity(t, nu, **kwargs):
         amu = c * (ate - t[i]) / ar
 
         args = (amu, ate, au, ar, nu[i], n0, p, epsilon_e, epsilon_B, ksiN,
-                specType)
+                specType, synchrotron_cut_off, th_cooling_enabled_only,
+                th_emission_enabled)
 
         res = integrate.quad(dP, 0.0, 1.0, args, full_output=1, wopts=wopts,
                              epsrel=rtol)

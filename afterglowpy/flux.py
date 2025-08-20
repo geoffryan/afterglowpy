@@ -713,11 +713,13 @@ def parseArgs(args, kwargs):
     jetKeys = ['jetType', 'specType', 'thetaObs', 'E0', 'thetaCore',
                'thetaWing', 'b', 'L0', 'q', 'ts', 'n0', 'p', 'epsilon_e',
                'epsilon_B', 'xi_N', 'd_L', 'g0', 'LR', 'LO', 'LX', 'tAdd', 'z',
-               'envType', 'R0Env', 'kEnv', 'rho1Env']
+               'envType', 'R0Env', 'kEnv', 'rho1Env', 'synchrotron_cut_off', 
+               'th_cooling_enabled_only', 'th_emission_enabled']
     sphKeys = ['jetType', 'specType', 'uMax', 'uMin', 'Er',
                'k', 'MFast_solar', 'L0', 'q', 'ts', 'n0', 'p', 'epsilon_e',
                'epsilon_B', 'xi_N', 'd_L', 'g0', 'LR', 'LO', 'LX', 'tAdd', 'z',
-               'envType', 'R0Env', 'kEnv', 'rho1Env']
+               'envType', 'R0Env', 'kEnv', 'rho1Env', 'synchrotron_cut_off', 
+               'th_cooling_enabled_only', 'th_emission_enabled']
 
     jetType = args[0]
 

@@ -50,6 +50,10 @@ static const int int_type_default = INT_CADRE;
 static const int nmax_phi_default = 1000;
 static const int nmax_theta_default = 1000;
 
+static const int synchrotron_cut_off_default = 0;
+static const int th_cooling_enabled_only_default = 0;
+static const int th_emission_enabled_default = 0;
+
 static char jet_docstring[] = 
     "This module calculates emission from a semi-analytic GRB afterglow model.";
 static char fluxDensity_docstring[] = 
@@ -277,6 +281,10 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     int counterjet = counterjet_default;
     int gamma_type = gamma_type_default;
 
+    int synchrotron_cut_off = synchrotron_cut_off_default;
+    int th_cooling_enabled_only = th_cooling_enabled_only_default;
+    int th_emission_enabled = th_emission_enabled_default;
+
     static char *kwlist[] = {"t", "nu", "jetType", "specType",
                                 "thetaObs", "E0", "thetaCore", "thetaWing",
                                     "b",
@@ -291,12 +299,14 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
                                     "rtolPhi", "rtolTheta", "NPhi", "NTheta",
                                 "mask",
                                 "spread", "counterjet", "gammaType", "moment",
+                                "synchrotron_cut_off", "th_cooling_enabled_only", 
+                                "th_emission_enabled",
                                 NULL};
 
     //printf("About to parse args\n");
     //Parse Arguments
     if(!PyArg_ParseTupleAndKeywords(args, kwargs,
-                "OO|ii""ddddddddddddddd""iddd""d""dd""iiidddii""O""iii""O",
+                "OO|ii""ddddddddddddddd""iddd""d""dd""iiidddii""O""iii""O""iii",
                 kwlist,
                 &t_obj, &nu_obj,
                 &jet_type, &spec_type,
@@ -310,7 +320,9 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
                 &tRes, &latRes, &int_type, &rtol_struct, &rtol_phi,
                     &rtol_theta, &nmax_phi, &nmax_theta,
                 &mask_obj,
-                &spread, &counterjet, &gamma_type, &moment_obj))
+                &spread, &counterjet, &gamma_type, &moment_obj, 
+                &synchrotron_cut_off, &th_cooling_enabled_only, 
+                &th_emission_enabled))
     {
         PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
         return NULL;
@@ -326,6 +338,10 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
     }
 
     //printf("Args parsed\n");
+    // overrule spectype if Python values also passed
+    if (synchrotron_cut_off) spec_type = spec_type | SYNCHROTRON_CUT_OFF_FLAG;
+    if (th_cooling_enabled_only) spec_type = spec_type | TH_COOLING_ENABLED_ONLY_FLAG;
+    if (th_emission_enabled) spec_type = spec_type | TH_EMISSION_FLAG;
 
     //Grab NUMPY arrays
     PyArrayObject *t_arr;
@@ -478,7 +494,8 @@ static PyObject *jet_fluxDensity(PyObject *self, PyObject *args,
                         rtol_struct, rtol_phi, rtol_theta,
                         nmax_phi, nmax_theta,
                         spec_type, mask, masklen,
-                        spread, counterjet, gamma_type);
+                        spread, counterjet, gamma_type, synchrotron_cut_off, 
+                        th_cooling_enabled_only, th_emission_enabled);
 
     //printf("Ready to go!\n");
 
@@ -543,12 +560,16 @@ static PyObject *jet_emissivity(PyObject *self, PyObject *args)
 {
     int spec_type = 0;
     double nu, R, mu, te, u, us, rho0, Msw, p, epse, epsB, xi_N;
+    int synchrotron_cut_off = 0;
+    int th_cooling_enabled_only = 0;
+    int th_emission_enabled = 0;
 
 
     //Parse Arguments
-    if(!PyArg_ParseTuple(args, "dddddddddddd|i", &nu, &R, &mu, &te,
+    if(!PyArg_ParseTuple(args, "dddddddddddd|iiii", &nu, &R, &mu, &te,
                             &u, &us, &rho0, &Msw, &p, &epse, &epsB, &xi_N,
-                            &spec_type))
+                            &spec_type, &synchrotron_cut_off, 
+                            &th_cooling_enabled_only, &th_emission_enabled))
     {
         //PyErr_SetString(PyExc_RuntimeError, "Could not parse arguments.");
         return NULL;
@@ -556,7 +577,8 @@ static PyObject *jet_emissivity(PyObject *self, PyObject *args)
 
     // Calculate it!
     double em = emissivity(nu, R, mu, te, u, us, rho0, Msw, p, epse, epsB, 
-                           xi_N, spec_type);
+                           xi_N, spec_type, synchrotron_cut_off, 
+                           th_cooling_enabled_only, th_emission_enabled);
 
     //Build output
     PyObject *ret = Py_BuildValue("d", em);
@@ -612,6 +634,10 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
     int spread = spread_default;
     int counterjet = counterjet_default;
     int gamma_type = gamma_type_default;
+
+    int synchrotron_cut_off = synchrotron_cut_off_default;
+    int th_cooling_enabled_only = th_cooling_enabled_only_default;
+    int th_emission_enabled = th_emission_enabled_default;
 
     static char *kwlist[] = {"theta", "phi", "t", "nu", "jetType", "specType",
                                 "thetaObs", "E0", "thetaCore", "thetaWing",
@@ -787,7 +813,8 @@ static PyObject *jet_intensity(PyObject *self, PyObject *args, PyObject *kwargs)
                         rtol_struct, rtol_phi, rtol_theta,
                         nmax_phi, nmax_theta,
                         spec_type, mask, masklen,
-                        spread, counterjet, gamma_type);
+                        spread, counterjet, gamma_type, synchrotron_cut_off,
+                        th_cooling_enabled_only, th_emission_enabled);
 
     // Calculate the intensity!
     calc_intensity(jet_type, spec_type, theta, phi, t, nu, Inu, N, &fp);
@@ -862,6 +889,10 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
     int int_type = int_type_default;
     int nmax_phi = nmax_phi_default;
     int nmax_theta = nmax_theta_default;
+
+    int synchrotron_cut_off = synchrotron_cut_off_default;
+    int th_cooling_enabled_only = th_cooling_enabled_only_default;
+    int th_emission_enabled = th_emission_enabled_default;
 
     static char *kwlist[] = {"theta", "phi", "t", "jetType", "specType",
                                 "thetaObs", "E0", "thetaCore", "thetaWing",
@@ -1034,7 +1065,8 @@ static PyObject *jet_shockVals(PyObject *self, PyObject *args, PyObject *kwargs)
                         rtol_struct, rtol_phi, rtol_theta,
                         nmax_phi, nmax_theta,
                         spec_type, mask, masklen,
-                        spread, counterjet, gamma_type);
+                        spread, counterjet, gamma_type, synchrotron_cut_off,
+                        th_cooling_enabled_only, th_emission_enabled);
 
     // Calculate the intensity!
     calc_shockVals(jet_type, theta, phi, t, te, R, u, thj, N, &fp);
